@@ -3,6 +3,8 @@
  */
 #include "game.h"
 
+#include <stddef.h>
+
 const char *DOMAIN_NAMES[D_COUNT] = {
     "Terre", "Mer", "Air", "Espace", "Cyber", "Informationnel", "Electromagnétique"
 };
@@ -37,6 +39,7 @@ const TheaterDef THEATERS[TH_COUNT] = {
     { "Cyberespace",           "Réseaux électriques, hôpitaux, industrie : la ligne de front invisible.", D_CYBER },
     { "Champ informationnel",  "Désinformation, deepfakes, ingérences : la bataille des perceptions.", D_INFO },
     { "Spectre EM",            "Brouillage GNSS et guerre électronique. Un spectre perdu affaiblit l'air et la mer.", D_EM },
+    { "Territoires extérieurs", "Provinces conquises ou occupées : guérilla, attentats et sabotages. Les divisions stationnées sur place aident à les neutraliser.", D_TERRE },
 };
 
 /*                                                      budget energ  eau   alim  cohes infl  souv */
@@ -59,6 +62,9 @@ const ThreatDef THREATS[] = {
     { "Deepfakes politiques",              D_INFO,   false, {  0,    0,     0,     0,    -0.5f,-0.4f,  0    }, 3, 6, 2 },
     { "Brouillage GNSS",                   D_EM,     false, { -0.4f, 0,     0,     0,     0,    0,    -0.3f }, 3, 6, 2 },
     { "Accaparement des nappes",           D_TERRE,  false, {  0,    0,    -0.7f,  0,     0,    0,    -0.2f }, 3, 6, 3 },
+    { "Guérilla",                          D_TERRE,  false, { -0.2f, 0,     0,     0,    -0.1f, 0,    -0.2f }, 3, 7, 3 },
+    { "Attentat contre l'occupant",        D_TERRE,  false, {  0,    0,     0,     0,    -0.3f,-0.1f, -0.1f }, 3, 6, 2 },
+    { "Sabotage logistique",               D_TERRE,  false, { -0.4f,-0.2f,  0,     0,     0,    0,     0    }, 2, 5, 2 },
 };
 const int THREAT_TYPE_COUNT = (int)(sizeof(THREATS) / sizeof(THREATS[0]));
 
@@ -110,104 +116,35 @@ const RegimeDef REGIMES[RG_COUNT] = {
 };
 
 const NationDef NATIONS[N_COUNT] = {
-    { "France",              {  70, 120, 220 }, RG_DEMOCRATIE,   true,  100, 0.00f, true },
-    { "Royaume-Uni",         { 190,  60,  75 }, RG_DEMOCRATIE,   false,  40, 0.10f, true },
-    { "Irlande",             {  70, 170,  90 }, RG_DEMOCRATIE,   true,   45, 0.00f, false },
-    { "Benelux",             { 230, 150,  60 }, RG_DEMOCRATIE,   true,   55, 0.00f, false },
-    { "Allemagne",           { 125, 125, 125 }, RG_DEMOCRATIE,   true,   50, 0.10f, false },
-    { "Suisse",              { 215,  90,  90 }, RG_DEMOCRATIE,   false,  40, 0.00f, false },
-    { "Autriche",            { 225, 195, 195 }, RG_DEMOCRATIE,   true,   40, 0.05f, false },
-    { "Italie",              {  80, 165,  80 }, RG_DEMOCRATIE,   true,   40, 0.10f, false },
-    { "Espagne",             { 225, 195,  60 }, RG_DEMOCRATIE,   true,   45, 0.10f, false },
-    { "Portugal",            {  50, 125,  60 }, RG_DEMOCRATIE,   true,   45, 0.00f, false },
-    { "Danemark",            { 185,  95, 110 }, RG_DEMOCRATIE,   true,   45, 0.00f, false },
-    { "Scandinavie",         { 100, 150, 205 }, RG_TECHNOCRATIE, true,   40, 0.05f, false },
-    { "Pays baltes",         { 150, 120, 200 }, RG_DEMOCRATIE,   true,   40, 0.05f, false },
-    { "Pologne",             { 220, 120, 145 }, RG_DEMOCRATIE,   true,   30, 0.15f, false },
-    { "Europe centrale",     { 165,  95, 135 }, RG_AUTORITAIRE,  true,   15, 0.15f, false },
-    { "Balkans",             { 150, 150,  90 }, RG_AUTORITAIRE,  false,  10, 0.20f, false },
-    { "Roumanie",            { 200, 175,  95 }, RG_DEMOCRATIE,   true,   30, 0.10f, false },
-    { "Bulgarie",            {  90, 160, 140 }, RG_DEMOCRATIE,   true,   25, 0.10f, false },
-    { "Grèce",               { 110, 180, 230 }, RG_DEMOCRATIE,   true,   40, 0.10f, false },
-    { "Turquie",             { 195,  95,  60 }, RG_AUTORITAIRE,  false,   0, 0.35f, false },
-    { "Ukraine",             { 235, 210,  90 }, RG_DEMOCRATIE,   false,  35, 0.20f, false },
-    { "Fédération Boréale",  { 115,  55,  60 }, RG_TOTALITAIRE,  false, -60, 0.60f, true },
-    { "Maroc",               { 175,  75,  60 }, RG_AUTORITAIRE,  false,  10, 0.15f, false },
-    { "Algérie",             {  60, 135,  95 }, RG_AUTORITAIRE,  false, -15, 0.20f, false },
-    { "Tunisie",             { 200, 115, 115 }, RG_AUTORITAIRE,  false,  10, 0.10f, false },
-    { "Libye",               { 120, 105,  75 }, RG_JUNTE,        false, -10, 0.30f, false },
-    { "Égypte",              { 210, 180, 125 }, RG_JUNTE,        false,   0, 0.30f, false },
+    { "France",              {  70, 120, 220 }, RG_DEMOCRATIE,   true,  100, 0.00f, true, { C_FRANCAISE, C_CORSE, 255 }, { NULL, NULL } },
+    { "Royaume-Uni",         { 190,  60,  75 }, RG_DEMOCRATIE,   false,  40, 0.10f, true, { C_BRITANNIQUE, C_ECOSSAISE, 255 }, { "Gén. Hartley", "Gén. Whitmore" } },
+    { "Irlande",             {  70, 170,  90 }, RG_DEMOCRATIE,   true,   45, 0.00f, false, { C_IRLANDAISE, 255, 255 }, { "Gén. Byrne", "Gén. Doyle" } },
+    { "Benelux",             { 230, 150,  60 }, RG_DEMOCRATIE,   true,   55, 0.00f, false, { C_NEERLANDAISE, C_FRANCAISE, 255 }, { "Gén. Janssens", "Gén. de Vries" } },
+    { "Allemagne",           { 125, 125, 125 }, RG_DEMOCRATIE,   true,   50, 0.10f, false, { C_ALLEMANDE, 255, 255 }, { "Gén. Brandt", "Gén. Kessler" } },
+    { "Suisse",              { 215,  90,  90 }, RG_DEMOCRATIE,   false,  40, 0.00f, false, { C_ALLEMANDE, C_FRANCAISE, C_ITALIENNE }, { "Gén. Favre", "Gén. Steiner" } },
+    { "Autriche",            { 225, 195, 195 }, RG_DEMOCRATIE,   true,   40, 0.05f, false, { C_ALLEMANDE, 255, 255 }, { "Gén. Huber", "Gén. Gruber" } },
+    { "Italie",              {  80, 165,  80 }, RG_DEMOCRATIE,   true,   40, 0.10f, false, { C_ITALIENNE, 255, 255 }, { "Gén. Ferrari", "Gén. Lombardi" } },
+    { "Espagne",             { 225, 195,  60 }, RG_DEMOCRATIE,   true,   45, 0.10f, false, { C_ESPAGNOLE, 255, 255 }, { "Gén. Navarro", "Gén. Castillo" } },
+    { "Portugal",            {  50, 125,  60 }, RG_DEMOCRATIE,   true,   45, 0.00f, false, { C_PORTUGAISE, 255, 255 }, { "Gén. Almeida", "Gén. Sousa" } },
+    { "Danemark",            { 185,  95, 110 }, RG_DEMOCRATIE,   true,   45, 0.00f, false, { C_SCANDINAVE, 255, 255 }, { "Gén. Larsen", "Gén. Holm" } },
+    { "Scandinavie",         { 100, 150, 205 }, RG_TECHNOCRATIE, true,   40, 0.05f, false, { C_SCANDINAVE, C_FINNOISE, 255 }, { "Gén. Lindqvist", "Gén. Virtanen" } },
+    { "Pays baltes",         { 150, 120, 200 }, RG_DEMOCRATIE,   true,   40, 0.05f, false, { C_BALTE, 255, 255 }, { "Gén. Kalnins", "Gén. Tamm" } },
+    { "Pologne",             { 220, 120, 145 }, RG_DEMOCRATIE,   true,   30, 0.15f, false, { C_POLONAISE, 255, 255 }, { "Gén. Kowalski", "Gén. Nowak" } },
+    { "Europe centrale",     { 165,  95, 135 }, RG_AUTORITAIRE,  true,   15, 0.15f, false, { C_TCHEQUE, C_SLOVAQUE, C_HONGROISE }, { "Gén. Novák", "Gén. Szabó" } },
+    { "Balkans",             { 150, 150,  90 }, RG_AUTORITAIRE,  false,  10, 0.20f, false, { C_SLAVE_SUD, C_ALBANAISE, 255 }, { "Gén. Petrović", "Gén. Hoxha" } },
+    { "Roumanie",            { 200, 175,  95 }, RG_DEMOCRATIE,   true,   30, 0.10f, false, { C_ROUMAINE, 255, 255 }, { "Gén. Popescu", "Gén. Ionescu" } },
+    { "Bulgarie",            {  90, 160, 140 }, RG_DEMOCRATIE,   true,   25, 0.10f, false, { C_BULGARE, 255, 255 }, { "Gén. Dimitrov", "Gén. Ivanov" } },
+    { "Grèce",               { 110, 180, 230 }, RG_DEMOCRATIE,   true,   40, 0.10f, false, { C_GRECQUE, 255, 255 }, { "Gén. Papadakis", "Gén. Nikolaou" } },
+    { "Turquie",             { 195,  95,  60 }, RG_AUTORITAIRE,  false,   0, 0.35f, false, { C_TURQUE, 255, 255 }, { "Gén. Yılmaz", "Gén. Demir" } },
+    { "Ukraine",             { 235, 210,  90 }, RG_DEMOCRATIE,   false,  35, 0.20f, false, { C_UKRAINIENNE, 255, 255 }, { "Gén. Kovalenko", "Gén. Bondarenko" } },
+    { "Fédération Boréale",  { 115,  55,  60 }, RG_TOTALITAIRE,  false, -60, 0.60f, true, { C_RUSSE, C_BIELORUSSE, 255 }, { "Gén. Volkov", "Gén. Sokolov" } },
+    { "Maroc",               { 175,  75,  60 }, RG_AUTORITAIRE,  false,  10, 0.15f, false, { C_ARABE_MAGHREB, C_AMAZIGHE, 255 }, { "Gén. Alaoui", "Gén. Bennani" } },
+    { "Algérie",             {  60, 135,  95 }, RG_AUTORITAIRE,  false, -15, 0.20f, false, { C_ARABE_MAGHREB, C_AMAZIGHE, 255 }, { "Gén. Benali", "Gén. Mansouri" } },
+    { "Tunisie",             { 200, 115, 115 }, RG_AUTORITAIRE,  false,  10, 0.10f, false, { C_ARABE_MAGHREB, 255, 255 }, { "Gén. Trabelsi", "Gén. Ben Salah" } },
+    { "Libye",               { 120, 105,  75 }, RG_JUNTE,        false, -10, 0.30f, false, { C_ARABE_MAGHREB, 255, 255 }, { "Gén. Al-Mukhtar", "Gén. Haftari" } },
+    { "Égypte",              { 210, 180, 125 }, RG_JUNTE,        false,   0, 0.30f, false, { C_ARABE_EGYPTE, 255, 255 }, { "Gén. Farouk", "Gén. Mostafa" } },
 };
 
-/* nation, pop (M), croissance %/tour, aridite, aliment, eau, energie, richesse */
-const ProvinceDef PROVINCES[PROV_COUNT] = {
-    { N_FRANCE,      18.0f,  0.02f, 0.20f, 16.0f, 15.0f, 20.0f, 0.45f },  /* Ile-de-France & Nord */
-    { N_FRANCE,       9.0f,  0.03f, 0.15f, 16.0f, 11.0f,  6.0f, 0.38f },  /* Bretagne & Normandie */
-    { N_FRANCE,       9.0f,  0.00f, 0.20f, 11.0f, 10.0f, 12.0f, 0.40f },  /* Grand Est */
-    { N_FRANCE,       9.0f,  0.03f, 0.40f, 13.0f, 10.0f,  8.0f, 0.38f },  /* Aquitaine */
-    { N_FRANCE,      10.0f,  0.03f, 0.35f,  8.0f, 14.0f, 16.0f, 0.44f },  /* Rhone-Alpes */
-    { N_FRANCE,      12.6f,  0.04f, 0.55f, 10.0f,  8.0f,  8.0f, 0.38f },  /* Occitanie & Provence */
-    { N_FRANCE,       0.4f,  0.02f, 0.60f,  0.3f,  0.5f,  0.2f, 0.30f },  /* Corse */
-    { N_UK,          61.6f,  0.03f, 0.15f, 45.0f, 60.0f, 50.0f, 0.44f },
-    { N_UK,           7.4f,  0.00f, 0.05f,  8.0f, 12.0f, 12.0f, 0.40f },
-    { N_IRLANDE,      5.3f,  0.05f, 0.05f,  8.0f,  7.0f,  3.0f, 0.55f },
-    { N_BENELUX,     18.0f,  0.02f, 0.10f, 20.0f, 18.0f, 15.0f, 0.50f },
-    { N_BENELUX,     12.4f,  0.02f, 0.15f,  9.0f, 11.0f,  9.0f, 0.47f },
-    { N_ALLEMAGNE,   24.0f, -0.02f, 0.18f, 16.0f, 24.0f, 20.0f, 0.48f },
-    { N_ALLEMAGNE,   20.0f, -0.02f, 0.12f, 22.0f, 20.0f, 22.0f, 0.47f },
-    { N_ALLEMAGNE,   25.0f,  0.00f, 0.20f, 22.0f, 26.0f, 18.0f, 0.50f },
-    { N_ALLEMAGNE,   14.0f, -0.05f, 0.25f, 13.0f, 12.0f, 14.0f, 0.40f },
-    { N_SUISSE,       9.2f,  0.03f, 0.15f,  5.0f, 14.0f,  9.0f, 0.70f },
-    { N_AUTRICHE,     9.2f,  0.02f, 0.25f,  8.0f, 12.0f,  8.0f, 0.48f },
-    { N_ITALIE,      27.0f, -0.03f, 0.35f, 25.0f, 28.0f, 18.0f, 0.42f },
-    { N_ITALIE,      12.0f, -0.04f, 0.50f, 10.0f, 10.0f,  7.0f, 0.36f },
-    { N_ITALIE,      12.0f, -0.06f, 0.70f, 11.0f,  8.0f,  6.0f, 0.24f },
-    { N_ITALIE,       4.6f, -0.06f, 0.80f,  4.0f,  3.0f,  3.0f, 0.22f },
-    { N_ITALIE,       1.5f, -0.05f, 0.70f,  1.5f,  1.4f,  1.5f, 0.26f },
-    { N_ESPAGNE,     13.0f,  0.02f, 0.60f, 11.0f,  9.0f, 12.0f, 0.38f },
-    { N_ESPAGNE,     14.0f,  0.02f, 0.65f, 13.0f, 11.0f, 10.0f, 0.38f },
-    { N_ESPAGNE,     12.0f,  0.01f, 0.85f, 14.0f,  7.0f, 12.0f, 0.26f },
-    { N_ESPAGNE,      8.0f, -0.03f, 0.30f,  8.0f, 11.0f,  7.0f, 0.30f },
-    { N_PORTUGAL,    10.2f, -0.03f, 0.70f,  7.0f,  8.0f,  8.0f, 0.27f },
-    { N_DANEMARK,     6.0f,  0.02f, 0.08f, 12.0f,  6.0f,  7.0f, 0.55f },
-    { N_SCANDINAVIE,  5.6f,  0.04f, 0.03f,  4.0f, 14.0f, 22.0f, 0.70f },
-    { N_SCANDINAVIE, 10.7f,  0.04f, 0.05f, 10.0f, 16.0f, 14.0f, 0.52f },
-    { N_SCANDINAVIE,  5.6f,  0.00f, 0.03f,  5.0f,  9.0f,  6.0f, 0.48f },
-    { N_BALTES,       5.8f, -0.08f, 0.10f,  7.0f,  7.0f,  4.0f, 0.26f },
-    { N_POLOGNE,     17.0f, -0.04f, 0.25f, 21.0f, 15.0f, 14.0f, 0.27f },
-    { N_POLOGNE,     20.0f, -0.04f, 0.30f, 22.0f, 17.0f, 12.0f, 0.24f },
-    { N_EUROPE_C,    10.6f, -0.02f, 0.30f,  9.0f,  9.0f, 10.0f, 0.30f },
-    { N_EUROPE_C,    15.0f, -0.05f, 0.45f, 18.0f, 13.0f,  9.0f, 0.24f },
-    { N_BALKANS,      5.8f, -0.06f, 0.40f,  5.0f,  8.0f,  5.0f, 0.22f },
-    { N_BALKANS,     12.0f, -0.08f, 0.50f, 13.0f, 11.0f,  8.0f, 0.12f },
-    { N_BALKANS,      4.5f, -0.05f, 0.60f,  4.0f,  5.0f,  3.0f, 0.10f },
-    { N_ROUMANIE,    21.5f, -0.07f, 0.45f, 26.0f, 20.0f, 16.0f, 0.17f },
-    { N_BULGARIE,     6.2f, -0.10f, 0.50f,  7.0f,  6.0f,  6.0f, 0.14f },
-    { N_GRECE,       10.0f, -0.06f, 0.75f,  9.0f,  7.0f,  7.0f, 0.22f },
-    { N_TURQUIE,     22.0f,  0.08f, 0.50f, 17.0f, 15.0f, 12.0f, 0.16f },
-    { N_TURQUIE,     18.0f,  0.08f, 0.65f, 18.0f, 13.0f, 10.0f, 0.14f },
-    { N_TURQUIE,     28.0f,  0.10f, 0.70f, 25.0f, 20.0f, 16.0f, 0.11f },
-    { N_TURQUIE,     21.0f,  0.15f, 0.65f, 15.0f, 20.0f, 14.0f, 0.08f },
-    { N_UKRAINE,     12.0f, -0.12f, 0.35f, 16.0f, 12.0f,  6.0f, 0.06f },
-    { N_UKRAINE,     11.0f, -0.12f, 0.45f, 22.0f, 12.0f, 12.0f, 0.06f },
-    { N_UKRAINE,      7.0f, -0.15f, 0.55f, 10.0f,  6.0f, 10.0f, 0.05f },
-    { N_UKRAINE,      6.0f, -0.12f, 0.65f, 12.0f,  4.0f,  5.0f, 0.05f },
-    { N_BOREALE,      9.0f, -0.08f, 0.20f, 11.0f, 10.0f,  5.0f, 0.09f },
-    { N_BOREALE,     30.0f, -0.05f, 0.20f, 18.0f, 28.0f, 40.0f, 0.15f },
-    { N_BOREALE,      8.0f, -0.10f, 0.08f,  4.0f, 14.0f, 20.0f, 0.12f },
-    { N_BOREALE,     25.0f, -0.03f, 0.60f, 34.0f, 18.0f, 30.0f, 0.10f },
-    { N_BOREALE,     18.0f, -0.08f, 0.45f, 22.0f, 18.0f, 28.0f, 0.10f },
-    { N_MAROC,       26.0f,  0.15f, 0.80f, 18.0f, 13.0f,  8.0f, 0.05f },
-    { N_MAROC,       13.0f,  0.18f, 0.95f,  7.0f,  5.0f,  6.0f, 0.04f },
-    { N_ALGERIE,     26.0f,  0.18f, 0.80f, 13.0f, 11.0f, 20.0f, 0.06f },
-    { N_ALGERIE,     13.0f,  0.18f, 0.85f,  6.0f,  5.0f, 10.0f, 0.05f },
-    { N_ALGERIE,     10.0f,  0.20f, 1.00f,  2.0f,  4.0f, 40.0f, 0.07f },
-    { N_TUNISIE,     12.8f,  0.10f, 0.85f,  9.0f,  7.0f,  6.0f, 0.06f },
-    { N_LIBYE,        5.0f,  0.15f, 1.00f,  2.0f,  3.0f, 22.0f, 0.10f },
-    { N_LIBYE,        2.5f,  0.15f, 1.00f,  1.0f,  2.0f, 18.0f, 0.10f },
-    { N_EGYPTE,      90.0f,  0.30f, 0.95f, 65.0f, 70.0f, 50.0f, 0.04f },
-    { N_EGYPTE,      30.0f,  0.35f, 1.00f, 12.0f, 15.0f, 15.0f, 0.03f },
-};
 
 const DilemmaDef DILEMMAS[] = {
     { "Offre du Consortium Hydra",
@@ -352,8 +289,8 @@ const char *SPENDING_DESC[SP_COUNT] = {
 const char *DIFFICULTY_NAMES[DIFF_COUNT] = { "Facile", "Normale", "Difficile" };
 
 const char *BUDGET_LINE_NAMES[BL_COUNT] = {
-    "Impôts", "Commerce extérieur", "Droits de douane", "Fonds européens",
-    "Défense M2MC", "Armée", "Dépenses publiques", "Dissuasion", "Importations",
+    "Impôts et réquisitions", "Commerce extérieur", "Droits de douane", "Fonds européens", "Réparations reçues",
+    "Défense M2MC", "Armée", "Dépenses publiques", "Recherche militaire", "Dissuasion", "Importations", "Réparations versées",
 };
 
 const char *SCORE_PART_NAMES[SC_COUNT] = {
@@ -375,11 +312,79 @@ const char *VICTORY_DESC[VIC_COUNT] = {
 
 const char *NUKE_POSTURES[3] = { "Minimale", "Crédible", "Renforcée" };
 
+/*  nom, abrege, description, milieu, attaque, defense, antiaerien, naval, cout, entretien, biens, formation,
+    vitesse, portee, technologie, niveau requis, poids dans le plafond */
 const UnitDef UNIT_TYPES[U_TYPE_COUNT] = {
-    { "Infanterie",           "INF", "Peu coûteuse, solide en défense.",                    2.0f, 4.0f, 3.0f, 0.25f, 0.4f, 2 },
-    { "Mécanisée",            "MEC", "Polyvalente et mobile.",                               4.0f, 4.5f, 5.0f, 0.40f, 0.8f, 3 },
-    { "Blindée",              "BLI", "Percée offensive, gênée par la montagne.",             7.0f, 3.5f, 8.0f, 0.60f, 1.2f, 4 },
-    { "Infanterie de marine", "MAR", "Débarque sans pénalité par les liaisons maritimes.",   3.5f, 3.5f, 5.0f, 0.40f, 0.6f, 3 },
+    { "Infanterie", "INF", "Le socle de l'armée : bon marché, solide en défense.",
+      DOM_LAND, 2.0f, 4.0f, 0.5f, 0, 3, 0.25f, 0.4f, 2, 1, 0, T_INF, 0, 1.0f },
+    { "Mécanisée", "MEC", "Infanterie sur véhicules blindés : polyvalente, avance de 2 provinces.",
+      DOM_LAND, 4.0f, 4.5f, 1.0f, 0, 5, 0.40f, 0.8f, 3, 2, 0, T_BLINDES, 0, 1.0f },
+    { "Blindée (MGCS)", "BLI", "Chars de nouvelle génération : percée, 2 provinces par tour, gênés par la montagne.",
+      DOM_LAND, 7.0f, 3.5f, 0.5f, 0, 8, 0.60f, 1.2f, 4, 2, 0, T_BLINDES, 0, 1.0f },
+    { "Infanterie de marine", "MAR", "Débarque sans pénalité par les liaisons maritimes.",
+      DOM_LAND, 3.5f, 3.5f, 0.5f, 0, 5, 0.40f, 0.6f, 3, 1, 0, T_MARINE, 0, 1.0f },
+    { "Troupes de montagne", "MNT", "Chasseurs alpins : +30% en montagne, aucune pénalité de terrain.",
+      DOM_LAND, 3.0f, 4.5f, 0.5f, 0, 4, 0.30f, 0.5f, 3, 1, 0, T_INF, 1, 1.0f },
+    { "Feux longue portée", "ART", "Lance-roquettes et canons : appuient les batailles des provinces voisines.",
+      DOM_LAND, 3.0f, 2.0f, 0.0f, 0, 5, 0.35f, 0.8f, 3, 1, 1, T_FEUX, 0, 1.0f },
+    { "Essaims de drones", "DRN", "Drones kamikazes et de reconnaissance : frappes bon marché, vulnérables à la DCA et au brouillage.",
+      DOM_LAND, 5.0f, 1.5f, 0.0f, 0, 3, 0.20f, 0.9f, 2, 2, 0, T_AIR, 1, 0.5f },
+    { "Robots de combat", "ROB", "Plateformes terrestres autonomes : très résistantes, sans soldats exposés.",
+      DOM_LAND, 5.0f, 6.0f, 1.0f, 0, 9, 0.50f, 1.5f, 4, 2, 0, T_INF, 2, 0.25f },
+    { "Forces spéciales", "FS", "Raids et sabotages : désorganisent les défenseurs avant l'assaut.",
+      DOM_LAND, 3.0f, 2.0f, 0.0f, 0, 4, 0.30f, 0.3f, 3, 1, 0, T_INF, 1, 0.5f },
+    { "Défense sol-air", "DCA", "Batteries SAMP/T : abattent avions et drones ennemis sur place et alentour.",
+      DOM_LAND, 0.5f, 2.0f, 6.0f, 0, 5, 0.35f, 0.7f, 3, 1, 0, T_GE, 1, 0.5f },
+    { "Missiles hypersoniques", "HYP", "Frappes dans la profondeur jusqu'à 2 provinces : brisent l'organisation adverse.",
+      DOM_LAND, 6.0f, 0.5f, 0.0f, 0, 10, 0.60f, 1.0f, 4, 1, 2, T_FEUX, 2, 0.5f },
+    { "Chasseurs (SCAF)", "CHA", "Supériorité aérienne et appui des batailles à 2 provinces.",
+      DOM_AIR, 5.0f, 3.0f, 3.0f, 0, 10, 0.60f, 1.5f, 4, 4, 2, T_AIR, 0, 0.5f },
+    { "Drones MALE", "MAL", "Surveillance et frappes de précision à 2 provinces.",
+      DOM_AIR, 3.0f, 1.0f, 0.0f, 0, 4, 0.30f, 0.6f, 2, 4, 2, T_AIR, 1, 0.25f },
+    { "Frégates (FDI)", "FRE", "Escorte, défense aérienne et blocus des côtes ennemies.",
+      DOM_SEA, 0.0f, 0.0f, 3.0f, 4, 8, 0.40f, 1.0f, 4, 4, 0, T_MARINE, 0, 0.5f },
+    { "Sous-marins (SNA)", "SNA", "Chasseurs de flottes et de convois : redoutables au blocus.",
+      DOM_SEA, 0.0f, 0.0f, 0.0f, 7, 12, 0.50f, 1.2f, 5, 4, 0, T_MARINE, 1, 0.5f },
+    { "Porte-avions", "PA", "Base aérienne flottante : appui aérien sur toutes les côtes à portée.",
+      DOM_SEA, 6.0f, 0.0f, 4.0f, 3, 25, 1.50f, 2.5f, 8, 4, 0, T_MARINE, 2, 1.0f },
+    { "Drones navals", "USV", "Embarcations kamikazes : bon marché, harcèlent les flottes et les ports.",
+      DOM_SEA, 0.0f, 0.0f, 0.0f, 3, 3, 0.20f, 0.6f, 2, 4, 0, T_MARINE, 1, 0.25f },
+};
+
+const TechDef TECHS[T_COUNT] = {
+    { "Infanterie & robotique", "Infanterie, montagne, forces spéciales, robots (niveau 2). +6% par niveau." },
+    { "Blindés",                "Mécanisées et chars. +6% par niveau." },
+    { "Aviation & drones",      "Chasseurs, drones MALE et essaims (niveau 1). +6% par niveau." },
+    { "Marine",                 "Frégates, SNA et drones navals (niveau 1), porte-avions (niveau 2). +6% par niveau." },
+    { "Feux & missiles",        "Artillerie longue portée, missiles hypersoniques (niveau 2). +6% par niveau." },
+    { "Guerre électronique",    "DCA (niveau 1), brouillage des drones et des avions ennemis : -5% d'efficacité adverse par niveau." },
+    { "Logistique",             "Récupération de l'organisation +3% par niveau, attrition réduite." },
+    { "Nucléaire",              "Crédibilité +4 par niveau, armes tactiques au niveau 3." },
+};
+
+const char *GENERAL_TRAITS[GT_COUNT] = { "Offensif", "Défensif", "Logisticien", "Arme blindée", "Montagnard" };
+
+const char *FRENCH_GENERALS[20] = {
+    "Gén. Lefèvre", "Gén. Morel", "Gén. Garnier", "Gén. Fontaine", "Gén. Rousseau", "Gén. Vincent",
+    "Gén. Mercier", "Gén. Blanchard", "Gén. Guérin", "Gén. Boyer", "Gén. Lambert", "Gén. Faure",
+    "Gén. Chevalier", "Gén. Moreau", "Gén. Girard", "Gén. Bonnet", "Gén. Dupuis", "Gén. Leroy",
+    "Gén. Marchand", "Gén. Perrin",
+};
+
+const char *RELIGION_NAMES[REL_COUNT] = { "Catholiques", "Protestants", "Orthodoxes", "Musulmans", "Sans religion" };
+
+const char *CULTURE_POLICY_NAMES[CP_COUNT] = { "Assimilation", "Pluralisme", "Répression des minorités" };
+const char *CULTURE_POLICY_DESC[CP_COUNT] = {
+    "Intégration rapide à la culture française. Les minorités s'agitent un peu plus.",
+    "Toutes les cultures sont reconnues : militance des minorités très réduite, assimilation lente, souverainistes renforcés.",
+    "Régimes autoritaires seulement : militance des minorités écrasée, mais conscience en hausse, exil et réprobation internationale.",
+};
+
+/* nation-patrie de chaque culture (irredentisme), -1 si aucune */
+const int CULTURE_HOMELAND[CULT_COUNT] = {
+    N_FRANCE, -1, N_UK, -1, N_IRLANDE, N_BENELUX, N_ALLEMAGNE, N_ITALIE, N_ESPAGNE, -1, -1, N_PORTUGAL,
+    N_SCANDINAVIE, N_SCANDINAVIE, N_BALTES, N_POLOGNE, N_EUROPE_C, N_EUROPE_C, N_EUROPE_C, N_BALKANS, N_BALKANS,
+    N_ROUMANIE, N_BULGARIE, N_GRECE, N_TURQUIE, -1, N_UKRAINE, N_BOREALE, N_BOREALE, N_ALGERIE, -1, N_EGYPTE,
 };
 
 const DecreeDef DECREES[RG_COUNT][2] = {
@@ -397,22 +402,3 @@ const DecreeDef DECREES[RG_COUNT][2] = {
       { "Propagande totale", "Pendant 12 tours : cohésion soutenue, courants autoritaires renforcés. Influence -6.", 16, 2 } },
 };
 
-/* minerais et usines en 2030 (meme ordre que les provinces) */
-const float PROVINCE_MINERALS[PROV_COUNT] = {
-    2, 1, 3, 1, 2, 1, 0,      4, 3, 0,   1, 1,   3, 1, 1, 4,   0, 2,
-    1, 1, 1, 1, 1,            2, 2, 3, 2,   2,   0,   3, 10, 4,   0,   4, 3,   3, 2,
-    1, 3, 2,   3, 2, 2,       3, 3, 4, 4,   2, 3, 8, 2,   1, 3, 15, 6, 8,
-    2, 8,   2, 1, 4,   2,   1, 1,   2, 2,
-};
-const float PROVINCE_INDUSTRY[PROV_COUNT] = {
-    6, 2, 4, 2, 5, 2, 0,      16, 2, 2,  6, 4,   8, 6, 8, 5,   3, 3,
-    9, 3, 2, 1, 0,            5, 4, 2, 2,   2,   2,   2, 4, 2,    1,   4, 4,   4, 3,
-    1, 2, 0,   3, 1, 1,       6, 3, 4, 2,   2, 2, 3, 1,   2, 8, 2, 4, 3,
-    2, 0,   2, 1, 0,   1,   0, 0,   5, 1,
-};
-const unsigned char PROVINCE_TERRAIN[PROV_COUNT] = {
-    0, 0, 1, 0, 2, 1, 1,      0, 1, 0,   0, 0,   1, 0, 1, 0,   2, 2,
-    1, 1, 1, 1, 1,            1, 1, 1, 2,   1,   0,   2, 1, 1,    0,   0, 0,   1, 0,
-    2, 2, 2,   1, 1, 2,       0, 1, 1, 2,   1, 0, 0, 0,   0, 0, 1, 0, 0,
-    1, 2,   1, 1, 0,   0,   0, 0,   0, 0,
-};

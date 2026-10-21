@@ -1,7 +1,8 @@
 /*
  * BOUCLIER 2050 - societe : climat local, population par strates (parts,
- * militance, conscience politique), alphabetisation, ascension sociale,
- * migrations, revoltes, integration et changements de regime.
+ * militance, conscience politique), cultures et religions, minorites,
+ * chomage, alphabetisation, ascension sociale, migrations, revoltes,
+ * secessions, integration et changements de regime.
  */
 #include "game_internal.h"
 
@@ -66,6 +67,90 @@ int Soc_NationProvinces(const Game *g, int n)
 }
 
 /* ------------------------------------------------------------------ */
+/* Cultures et religions                                               */
+/* ------------------------------------------------------------------ */
+
+bool Soc_Accepted(const Game *g, int n, int c)
+{
+    (void)g;
+    for (int k = 0; k < 3; k++) if (NATIONS[n].cultures[k] == c) return true;
+    return false;
+}
+
+/* part de la population d'une culture non acceptee par le proprietaire */
+float Soc_NonAccepted(const Game *g, int p)
+{
+    const Province *pr = &g->prov[p];
+    float v = 0;
+    for (int c = 0; c < CULT_COUNT; c++) if (!Soc_Accepted(g, pr->owner, c)) v += pr->culture[c];
+    return v;
+}
+
+/* poids politique des minorites : les citoyens europeens au sein de l'Union s'agitent peu */
+static float MinorityWeight(const Game *g, int p)
+{
+    const Province *pr = &g->prov[p];
+    bool eu = g->nat[pr->owner].eu;
+    float v = 0;
+    for (int c = 0; c < CULT_COUNT; c++) {
+        if (Soc_Accepted(g, pr->owner, c) || pr->culture[c] <= 0) continue;
+        int h = CULTURE_HOMELAND[c];
+        v += pr->culture[c] * (eu && h >= 0 && g->nat[h].eu ? 0.25f : 1.0f);
+    }
+    return v;
+}
+
+int Soc_MainCulture(const Province *pr)
+{
+    int best = 0;
+    for (int c = 1; c < CULT_COUNT; c++) if (pr->culture[c] > pr->culture[best]) best = c;
+    return best;
+}
+
+int Soc_MainReligion(const Province *pr)
+{
+    int best = 0;
+    for (int r = 1; r < REL_COUNT; r++) if (pr->religion[r] > pr->religion[best]) best = r;
+    return best;
+}
+
+/* religion majoritaire d'une nation */
+static int NationReligion(const Game *g, int n)
+{
+    float v[REL_COUNT] = { 0 };
+    for (int p = 0; p < PROV_COUNT; p++)
+        if (g->prov[p].owner == n)
+            for (int r = 0; r < REL_COUNT; r++) v[r] += g->prov[p].religion[r] * g->prov[p].pop;
+    int best = 0;
+    for (int r = 1; r < REL_COUNT; r++) if (v[r] > v[best]) best = r;
+    return best;
+}
+
+static void NormalizeShares(float *v, int count)
+{
+    float t = 0;
+    for (int i = 0; i < count; i++) { if (v[i] < 0) v[i] = 0; t += v[i]; }
+    if (t <= 0) return;
+    for (int i = 0; i < count; i++) v[i] /= t;
+}
+
+const char *Soc_CulturePolicyBlocked(const Game *g, int policy)
+{
+    if (policy == g->culturePolicy) return "Politique actuelle";
+    if (policy == CP_REPRESSION && g->nat[N_FRANCE].regime < RG_AUTORITAIRE) return "Réservée aux régimes autoritaires";
+    if (g->res[R_COHESION] < 5) return "Cohésion insuffisante";
+    return NULL;
+}
+
+void Soc_SetCulturePolicy(Game *g, int policy)
+{
+    if (Soc_CulturePolicyBlocked(g, policy)) return;
+    g->culturePolicy = policy;
+    AddRes(g, R_COHESION, -3);
+    Game_Log(g, EV_EVENT, "Politique culturelle : %s.", CULTURE_POLICY_NAMES[policy]);
+}
+
+/* ------------------------------------------------------------------ */
 /* Regime                                                              */
 /* ------------------------------------------------------------------ */
 
@@ -103,14 +188,15 @@ void Soc_SetRegime(Game *g, Regime r)
         Game_Log(g, EV_BAD, "L'Union européenne suspend la France.");
     } else if (IsDemocratic(r) && !fr->eu && g->aggressionMemory < 30 && g->nukesUsed == 0) {
         bool warEu = false;
-        for (int n = 1; n < N_COUNT; n++) if (g->nat[n].atWar && g->nat[n].eu) warEu = true;
+        for (int n = 1; n < N_COUNT; n++) if (War_AtWar(g, N_FRANCE, n) && g->nat[n].eu) warEu = true;
         if (!warEu) {
             fr->eu = true;
             Game_Log(g, EV_GOOD, "La France réintègre l'Union européenne.");
         }
     }
-    g->nextElection = r == RG_DEMOCRATIE ? g->turn + 4 : -1;
-    g->government = r == RG_UTOPIE ? I_ECOLO : r == RG_DEMOCRATIE ? I_LIBERAL : -1;
+    fr->nextElection = r == RG_DEMOCRATIE ? g->turn + 4 : -1;
+    if (r < RG_AUTORITAIRE && g->culturePolicy == CP_REPRESSION) g->culturePolicy = CP_ASSIMILATION;
+    g->nat[N_FRANCE].government = r == RG_UTOPIE ? I_ECOLO : r == RG_DEMOCRATIE ? I_LIBERAL : -1;
     g->decreeCooldown[0] = g->decreeCooldown[1] = 0;
 }
 
@@ -145,6 +231,8 @@ static float Attractiveness(const Game *g, int p)
     float a = pr->hab * 0.6f + PROVINCES[p].wealth * pr->prosperity * 80 - pr->damage * 60 - Soc_ProvinceMilitancy(pr) * 2;
     if (pr->revolt) a -= 20;
     if (g->nat[pr->owner].failed) a -= 15;
+    a -= pr->unemployment * 40;
+    if (pr->ctrl != pr->owner) a -= 15;
     return a;
 }
 
@@ -152,15 +240,16 @@ static float Attractiveness(const Game *g, int p)
 static int BorderTheater(int q, bool sea)
 {
     switch (q) {
-    case PV_FR_NORD:  return sea ? TH_ATLANTIQUE : TH_NORD;
-    case PV_FR_OUEST: return TH_ATLANTIQUE;
-    case PV_FR_EST:   return TH_EST;
-    case PV_FR_RA:    return TH_ALPES;
-    case PV_FR_SO:    return TH_PYRENEES;
-    case PV_FR_SUD:   return sea ? TH_MEDITERRANEE : TH_PYRENEES;
-    case PV_FR_CORSE: return TH_MEDITERRANEE;
+    case PV_FR_HDF: case PV_FR_IDF: case PV_FR_CVL: return sea ? TH_ATLANTIQUE : TH_NORD;
+    case PV_FR_NOR: case PV_FR_BRE: case PV_FR_PDL: return TH_ATLANTIQUE;
+    case PV_FR_GES: case PV_FR_BFC: return TH_EST;
+    case PV_FR_ARA: return TH_ALPES;
+    case PV_FR_PAC: return sea ? TH_MEDITERRANEE : TH_ALPES;
+    case PV_FR_OCC: return sea ? TH_MEDITERRANEE : TH_PYRENEES;
+    case PV_FR_NAQ: return sea ? TH_ATLANTIQUE : TH_PYRENEES;
+    case PV_FR_COR: return TH_MEDITERRANEE;
     }
-    return PROVINCE_LABEL[q][1] > (int)((MAP_LAT1 - 44.0f) / MAP_STEP) ? TH_MEDITERRANEE : TH_EST;
+    return TH_EXTERIEUR;
 }
 
 static void Migrations(Game *g)
@@ -177,6 +266,8 @@ static void Migrations(Game *g)
         if (g->nat[pr->owner].failed) push += 0.005f;
         if (Soc_ProvinceMilitancy(pr) > 6) push += 0.003f;
         if (pr->owner == N_FRANCE && g->nat[N_FRANCE].regime == RG_TOTALITAIRE) push += 0.002f;
+        push += pr->unemployment * 0.01f;
+        if (pr->owner == N_FRANCE && g->culturePolicy == CP_REPRESSION) push += Soc_NonAccepted(g, p) * 0.004f;
 
         float out = pr->pop * push;
         float aSrc = Attractiveness(g, p);
@@ -195,7 +286,7 @@ static void Migrations(Game *g)
             if (q < 0) break;
             if (weights[k] <= 0) continue;
             float m = out * weights[k] / total;
-            if (g->prov[q].owner == N_FRANCE && pr->owner != N_FRANCE) {
+            if (g->prov[q].owner == N_FRANCE && g->prov[q].ctrl == N_FRANCE && pr->owner != N_FRANCE) {
                 float acc = MIGRATION_ACCEPT[g->migrationDoctrine];
                 float refused = m * (1 - acc);
                 refusedByTheater[BorderTheater(q, Map_SeaLink(p, q))] += refused;
@@ -208,10 +299,12 @@ static void Migrations(Game *g)
             flows[q] += m;
             pr->emig += m;
             g->prov[q].immig += m;
-            if (g->prov[q].core != pr->core || pr->foreign > 0) {
-                Province *dst = &g->prov[q];
-                float share = g->prov[q].core != pr->core ? 1.0f : pr->foreign;
-                dst->foreign = (dst->foreign * dst->pop + m * share) / (dst->pop + m);
+            /* les migrants emportent leur culture et leur religion */
+            Province *dst = &g->prov[q];
+            if (m > 0 && dst->pop + m > 0) {
+                float k = m / (dst->pop + m);
+                for (int c = 0; c < CULT_COUNT; c++) dst->culture[c] += (pr->culture[c] - dst->culture[c]) * k;
+                for (int r = 0; r < REL_COUNT; r++) dst->religion[r] += (pr->religion[r] - dst->religion[r]) * k;
             }
         }
     }
@@ -232,16 +325,30 @@ static void Migrations(Game *g)
 /* Militance, conscience, revoltes                                     */
 /* ------------------------------------------------------------------ */
 
-static bool FranceAtWar(const Game *g)
+/* agitation propre aux minorites selon la politique culturelle */
+static float MinorityUnrest(const Game *g, int p, int s)
 {
-    for (int n = 1; n < N_COUNT; n++) if (g->nat[n].atWar) return true;
-    return false;
+    const Province *pr = &g->prov[p];
+    if (s == S_ELITES || pr->core != pr->owner) return 0;   /* territoire non integre : voir l'integration */
+    float na = MinorityWeight(g, p);
+    float k = 0.3f;
+    if (pr->owner == N_FRANCE) {
+        static const float pol[CP_COUNT] = { 0.4f, 0.15f, 0.06f };
+        k = pol[g->culturePolicy];
+    } else if (g->nat[pr->owner].regime >= RG_AUTORITAIRE) {
+        k = 0.15f;
+    }
+    /* une minorite religieuse est plus remuante sous un regime autoritaire */
+    float rel = 1 - pr->religion[NationReligion(g, pr->owner)];
+    if (rel > 0.3f && g->nat[pr->owner].regime >= RG_AUTORITAIRE) k += 0.1f;
+    return na * k;
 }
 
 static void FrancePopulation(Game *g, int p, float support, bool war)
 {
     Province *pr = &g->prov[p];
     const RegimeDef *rg = &REGIMES[g->nat[N_FRANCE].regime];
+    static const float JOBLESS[S_COUNT] = { 0.6f, 0.3f, 0.05f };
 
     for (int s = 0; s < S_COUNT; s++) {
         float m = pr->mil[s];
@@ -252,16 +359,19 @@ static void FrancePopulation(Game *g, int p, float support, bool war)
         float up = need < 0.97f ? (0.97f - need) * 1.5f : 0;   /* petits manques toleres */
         if (war) up += rg->warWeariness * (s == S_ELITES ? 0.05f : 0.15f);
         if (pr->core != N_FRANCE) up += (1 - pr->integration / 100.0f) * 0.4f;
-        if (s != S_ELITES) up += pr->foreign * 0.5f;
-        if (g->res[R_BUDGET] < 0) up += s == S_ELITES ? 0.15f : 0.1f;
+        up += MinorityUnrest(g, p, s);
+        up += fmaxf(0, pr->unemployment - 0.07f) * JOBLESS[s];
+        if (g->res[R_BUDGET] < 0) up += fminf(1, -g->res[R_BUDGET] / 15.0f) * (s == S_ELITES ? 0.15f : 0.1f);
         if (g->res[R_COHESION] < 30) up += 0.1f;
         if (rate > 0.3f) up += (rate - 0.3f) * 0.6f;
-        if (support < 0.45f) up += (0.45f - support) * 0.4f;
+        float sup = Pol_StrataSupport(g, p, s);
+        if (sup < 0.45f) up += (0.45f - sup) * 0.3f;
+        if (support < 0.45f) up += (0.45f - support) * 0.15f;
         up *= 1 + pr->con[s] / 10.0f;
 
         /* facteurs d'apaisement */
         float down = rg->sat[s] + rg->repression * 0.25f;
-        if (g->government >= 0) down += GOV_SAT[g->government][s];
+        if (g->nat[N_FRANCE].government >= 0) down += GOV_SAT[g->nat[N_FRANCE].government][s];
         if (rate < 0.3f) down += (0.3f - rate) * 0.4f;
         if (s != S_ELITES) down += (g->spending[SP_SOCIAL] - 0.4f) * 0.15f;
         if (g->proj[P_MEDIAS].state == 2) down += 0.03f;
@@ -272,24 +382,52 @@ static void FrancePopulation(Game *g, int p, float support, bool war)
         float c = 0.015f * pr->literacy + (need < 0.97f ? (0.97f - need) * 0.3f : 0) + rg->repression * 0.04f - 0.03f;
         if (support < 0.45f) c += 0.05f;
         if (g->boostTurns > 0) c += 0.02f;
+        if (g->culturePolicy == CP_REPRESSION && s != S_ELITES) c += Soc_NonAccepted(g, p) * 0.05f;
         pr->con[s] = Clampf(pr->con[s] + c, 0, 10);
     }
 }
 
-static void ForeignPopulation(Game *g, int p)
+/* meme modele que pour la France, avec la fiscalite et les depenses par defaut */
+static void AiPopulation(Game *g, int p)
 {
     Province *pr = &g->prov[p];
-    const Nation *na = &g->nat[pr->owner];
-    float target = 2;
-    if (pr->core != pr->owner) target += 3 * (1 - pr->integration / 100.0f);
-    if (pr->hab < 45) target += (45 - pr->hab) / 10;
-    if (na->failed) target += 2;
-    if (na->atWar || na->warTarget >= 0) target += 1;
-    target -= REGIMES[na->regime].repression * 2;
+    int n = pr->owner;
+    const Nation *na = &g->nat[n];
+    const RegimeDef *rg = &REGIMES[na->regime];
+    float support = Pol_NationSupport(g, n);
+    bool war = War_AtWarAny(g, n);
+    static const float JOBLESS[S_COUNT] = { 0.6f, 0.3f, 0.05f };
     for (int s = 0; s < S_COUNT; s++) {
-        pr->mil[s] = Clampf(pr->mil[s] + (target - pr->mil[s]) * 0.1f, 0, 10);
-        pr->con[s] = Clampf(pr->con[s] + 0.01f * pr->literacy - 0.008f, 0, 10);
+        float m = pr->mil[s];
+        float need = Eco_NeedSat(g, n, s);
+        float up = need < 0.97f ? (0.97f - need) * 1.5f : 0;
+        if (war) up += rg->warWeariness * (s == S_ELITES ? 0.05f : 0.12f);
+        if (pr->core != n) up += (1 - pr->integration / 100.0f) * 0.4f;
+        if (pr->ctrl != n) up += 0.3f;   /* occupation etrangere */
+        up += MinorityUnrest(g, p, s);
+        up += fmaxf(0, pr->unemployment - 0.07f) * JOBLESS[s];
+        if (na->failed) up += 0.15f;
+        if (pr->hab < 45) up += (45 - pr->hab) / 100.0f;
+        float sup = Pol_StrataSupport(g, p, s);
+        if (sup < 0.45f) up += (0.45f - sup) * 0.3f;
+        if (support < 0.45f) up += (0.45f - support) * 0.15f;
+        up *= 1 + pr->con[s] / 10.0f;
+        float down = rg->sat[s] + rg->repression * 0.25f + 0.05f;
+        pr->mil[s] = Clampf(m + up - down - 0.06f * (m - 2.5f), 0, 10);
+        float c = 0.012f * pr->literacy + (need < 0.97f ? (0.97f - need) * 0.3f : 0) + rg->repression * 0.04f - 0.03f;
+        pr->con[s] = Clampf(pr->con[s] + c, 0, 10);
     }
+}
+
+/* nation qui revendique une province (patrie de sa culture majoritaire ou nation d'origine) */
+static int Claimant(const Game *g, int p)
+{
+    const Province *pr = &g->prov[p];
+    if (pr->core != pr->owner && g->nat[pr->core].alive) return pr->core;
+    int c = Soc_MainCulture(pr);
+    int h = CULTURE_HOMELAND[c];
+    if (h >= 0 && h != pr->owner && g->nat[h].alive && !Soc_Accepted(g, pr->owner, c) && pr->culture[c] > 0.6f) return h;
+    return -1;
 }
 
 static void Revolts(Game *g, int p)
@@ -298,10 +436,14 @@ static void Revolts(Game *g, int p)
     float mil = Soc_ProvinceMilitancy(pr);
     const RegimeDef *rg = &REGIMES[g->nat[pr->owner].regime];
 
+    if (pr->ctrl != pr->owner) return;   /* l'occupation est l'affaire des partisans */
     if (pr->owner != N_FRANCE) {
-        if (pr->core != pr->owner && mil > 7.5f && g->nat[pr->core].alive && Randf(g) < 0.08f) {
-            Game_Log(g, EV_WAR, "Soulèvement : %s se libère et rejoint %s.", PROVINCE_NAMES[p], NATIONS[pr->core].name);
-            War_Capture(g, p, pr->core);
+        int c = Claimant(g, p);
+        if (c >= 0 && mil > 7.5f && !War_AtWar(g, pr->owner, c) && Randf(g) < 0.06f) {
+            Game_Log(g, EV_WAR, "Soulèvement : %s se libère et rejoint %s.", PROVINCE_NAMES[p], NATIONS[c].name);
+            War_Annex(g, p, c);
+            pr->core = c;
+            pr->integration = 100;
         }
         return;
     }
@@ -335,9 +477,12 @@ static void Revolts(Game *g, int p)
         return;
     }
     if (pr->revolt > 8) {
-        if (pr->core != N_FRANCE && g->nat[pr->core].alive) {
-            Game_Log(g, EV_WAR, "Sécession : %s rejoint %s.", PROVINCE_NAMES[p], NATIONS[pr->core].name);
-            War_Capture(g, p, pr->core);
+        int c = Claimant(g, p);
+        if (c >= 0) {
+            Game_Log(g, EV_WAR, "Sécession : %s rejoint %s.", PROVINCE_NAMES[p], NATIONS[c].name);
+            War_Annex(g, p, c);
+            pr->core = c;
+            pr->integration = 100;
         } else {
             AddRes(g, R_COHESION, -2);
             AddRes(g, R_SOUVERAINETE, -1);
@@ -360,7 +505,7 @@ static void SocialProgress(Game *g, int p)
     float stab = 1 - Soc_ProvinceMilitancy(pr) / 6.0f;
     float growth = 0.002f * stab * pr->hab / 100.0f + 0.001f * (pr->literacy - 0.6f);
     if (fr) {
-        if (g->government == I_LIBERAL) growth *= 1.5f;
+        if (g->nat[N_FRANCE].government == I_LIBERAL) growth *= 1.5f;
         growth += (g->spending[SP_EDUCATION] - 0.5f) * 0.001f;
         growth *= 0.7f + 0.6f * fminf(1, g->eco[N_FRANCE].sat[G_GOODS]);
     }
@@ -399,42 +544,72 @@ void Soc_Turn(Game *g)
     /* 4. migrations */
     Migrations(g);
 
-    /* 5. militance, conscience, revoltes, integration, progres social */
+    /* 5. militance, conscience, revoltes, integration, assimilation, progres social */
     float support = Pol_RegimeSupport(g);
-    bool war = FranceAtWar(g);
+    bool war = War_AtWarAny(g, N_FRANCE);
     for (int p = 0; p < PROV_COUNT; p++) {
         Province *pr = &g->prov[p];
         if (pr->owner == N_FRANCE) FrancePopulation(g, p, support, war);
-        else ForeignPopulation(g, p);
+        else AiPopulation(g, p);
         Revolts(g, p);
         SocialProgress(g, p);
 
-        float assim = REGIMES[g->nat[pr->owner].regime].assimilation;
-        if (pr->owner == N_FRANCE && g->government == I_CONSERV) assim *= 0.8f;
-        if (pr->core != pr->owner && !pr->revolt) {
+        int o = pr->owner;
+        float assim = REGIMES[g->nat[o].regime].assimilation;
+        if (o == N_FRANCE && g->nat[N_FRANCE].government == I_CONSERV) assim *= 0.8f;
+        if (pr->core != o && pr->ctrl == o && !pr->revolt) {
             pr->integration = Clampf(pr->integration + 2.0f * assim, 0, 100);
             if (pr->integration >= 100) {
-                pr->core = pr->owner;
-                pr->foreign = Clampf(pr->foreign + 0.3f, 0, 1);
-                if (pr->owner == N_FRANCE)
+                pr->core = o;
+                if (o == N_FRANCE)
                     Game_Log(g, EV_GOOD, "%s est désormais pleinement intégrée à la France.", PROVINCE_NAMES[p]);
             }
         }
-        pr->foreign = Clampf(pr->foreign - 0.004f * assim, 0, 1);
+        /* assimilation des cultures non acceptees vers la culture principale du proprietaire */
+        float rate = 0.005f * assim;
+        if (o == N_FRANCE) {
+            static const float pol[CP_COUNT] = { 2.0f, 0.6f, 2.5f };
+            rate *= pol[g->culturePolicy];
+        }
+        int target = NATIONS[o].cultures[0];
+        if (pr->ctrl == o && target < CULT_COUNT) {
+            float moved = 0;
+            for (int c = 0; c < CULT_COUNT; c++) {
+                if (Soc_Accepted(g, o, c) || pr->culture[c] <= 0) continue;
+                float d = pr->culture[c] * rate;
+                pr->culture[c] -= d;
+                moved += d;
+            }
+            pr->culture[target] += moved;
+        }
+        /* secularisation lente avec l'instruction */
+        float sec = 0.0004f * pr->literacy * pr->prosperity;
+        for (int r = 0; r < RL_SANS; r++) {
+            float d = pr->religion[r] * sec;
+            pr->religion[r] -= d;
+            pr->religion[RL_SANS] += d;
+        }
+        NormalizeShares(pr->culture, CULT_COUNT);
+        NormalizeShares(pr->religion, REL_COUNT);
+
+        /* irredentisme : la patrie d'une minorite importante en veut au proprietaire */
+        int mc = Soc_MainCulture(pr);
+        int h = CULTURE_HOMELAND[mc];
+        if (h >= 0 && h != o && g->nat[h].alive && !Soc_Accepted(g, o, mc)) AddAiRel(g, h, o, -0.3f);
     }
+    if (g->culturePolicy == CP_REPRESSION) AddRes(g, R_INFLUENCE, -0.3f);
 
     /* 6. cohesion et souverainete */
     float milSum = 0, popSum = 0;
     int occupied = 0;
     for (int p = 0; p < PROV_COUNT; p++) {
         const Province *pr = &g->prov[p];
-        if (pr->owner == N_FRANCE) {
+        if (pr->owner == N_FRANCE && pr->ctrl == N_FRANCE) {
             float w = pr->pop * (pr->core == N_FRANCE ? 1.0f : 0.4f);
             milSum += Soc_ProvinceMilitancy(pr) * w;
             popSum += w;
-        } else if (PROVINCES[p].nation == N_FRANCE) {
-            occupied++;
         }
+        if (pr->owner == N_FRANCE && pr->core == N_FRANCE && pr->ctrl != N_FRANCE) occupied++;
     }
     float avgMil = popSum > 0 ? milSum / popSum : 5;
     float target = Clampf(88 - avgMil * 12, 0, 100);

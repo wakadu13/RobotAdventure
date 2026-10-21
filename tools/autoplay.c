@@ -32,14 +32,14 @@ static void BotDefend(Game *g)
         if (!u->active || u->owner != N_FRANCE || u->training || u->target >= 0) continue;
         bool front = false;
         for (int k = 0; k < MAX_ADJ && PROVINCE_ADJ[u->prov][k] >= 0; k++)
-            if (War_AtWar(g, N_FRANCE, g->prov[PROVINCE_ADJ[u->prov][k]].owner)) front = true;
+            if (War_AtWar(g, N_FRANCE, g->prov[PROVINCE_ADJ[u->prov][k]].ctrl)) front = true;
         if (front) continue;
         for (int k = 0; k < MAX_ADJ && PROVINCE_ADJ[u->prov][k] >= 0; k++) {
             int q = PROVINCE_ADJ[u->prov][k];
-            if (g->prov[q].owner != N_FRANCE) continue;
+            if (g->prov[q].ctrl != N_FRANCE) continue;
             bool qFront = false;
             for (int j = 0; j < MAX_ADJ && PROVINCE_ADJ[q][j] >= 0; j++)
-                if (War_AtWar(g, N_FRANCE, g->prov[PROVINCE_ADJ[q][j]].owner)) qFront = true;
+                if (War_AtWar(g, N_FRANCE, g->prov[PROVINCE_ADJ[q][j]].ctrl)) qFront = true;
             if (qFront) { War_Order(g, i, q); break; }
         }
     }
@@ -49,11 +49,12 @@ static void BotDefend(Game *g)
 static void BotAttack(Game *g, float minOdds)
 {
     for (int p = 0; p < PROV_COUNT; p++) {
-        if (!War_AtWar(g, N_FRANCE, g->prov[p].owner)) continue;
+        if (!War_AtWar(g, N_FRANCE, g->prov[p].ctrl)) continue;
         int idx[MAX_UNITS], c = 0;
         for (int i = 0; i < MAX_UNITS; i++) {
             const Unit *u = &g->units[i];
             if (!u->active || u->owner != N_FRANCE || u->training || u->target >= 0 || u->org < 0.5f) continue;
+            if (UNIT_TYPES[u->type].domain != DOM_LAND) continue;
             if (War_OrderBlocked(g, i, p)) continue;
             War_Order(g, i, p);
             idx[c++] = i;
@@ -61,6 +62,15 @@ static void BotAttack(Game *g, float minOdds)
         if (c && War_BattleOdds(g, p, N_FRANCE) < minOdds)
             for (int k = 0; k < c; k++) War_Order(g, idx[k], g->units[idx[k]].prov);
     }
+}
+
+/* signe le traite par defaut des que le score le permet */
+static void SeekPeace(Game *g, int n, int minTurns)
+{
+    if (War_Turns(g, N_FRANCE, n) < minTurns) return;
+    War_TreatyDraft(g, n);
+    if (!War_TreatyBlocked(g, &g->treaty)) War_ProposeTreaty(g);
+    g->treaty.active = false;
 }
 
 /* gestion courante : defense M2MC, projets, usines, diplomatie, commerce */
@@ -110,9 +120,9 @@ static void Manage(Game *g)
                 Game_FactionAction(g, best, A_RENSEIGNEMENT);
     }
     for (int n = 1; n < N_COUNT; n++) {
-        if (!g->nat[n].atWar) continue;
+        if (!War_AtWar(g, N_FRANCE, n)) continue;
         Nuke_Warning(g, n);
-        War_ProposePeace(g, n);
+        SeekPeace(g, n, 4);
     }
     BotDefend(g);
     BotAttack(g, 0.85f);
@@ -120,9 +130,12 @@ static void Manage(Game *g)
 
 static void Recruit(Game *g, float reserve)
 {
-    static const int types[] = { U_INF, U_MECA, U_BLINDE, U_INF };
-    for (int k = 0; k < 4; k++)
-        if (g->res[R_BUDGET] > reserve && Eco_Net(g) > 3) War_Recruit(g, types[(g->turn + k) % 4], PV_FR_EST);
+    static const int types[] = { U_INF, U_MECA, U_BLINDE, U_ARTILLERIE, U_DRONES, U_INF };
+    static const int sites[] = { PV_FR_GES, PV_FR_HDF, PV_FR_BFC, PV_FR_ARA };
+    for (int k = 0; k < 6; k++)
+        if (g->res[R_BUDGET] > reserve && Eco_Net(g) > 3)
+            for (int s = 0; s < 4; s++)
+                if (War_Recruit(g, types[(g->turn + k) % 6], sites[(g->turn + s) % 4])) break;
 }
 
 static void WarOnWeakest(Game *g, float ratio)
@@ -136,12 +149,12 @@ static void WarOnWeakest(Game *g, float ratio)
 /* conquete moderee : gestion courante + quelques guerres contre des voisins faibles */
 static void PlayStrategist(Game *g)
 {
+    if (g->turn > 8 && War_UnitLoad(g, N_FRANCE) < War_ArmyMax(g, N_FRANCE) * 0.8f) Recruit(g, 12);
     Manage(g);
     if (g->turn == 4) Soc_ChangeRegime(g, RG_AUTORITAIRE);
-    Recruit(g, 40);
-    bool atWar = false;
-    for (int n = 1; n < N_COUNT; n++) if (g->nat[n].atWar) atWar = true;
-    if (!atWar && Soc_NationProvinces(g, N_FRANCE) < 12 && g->turn > 12 && g->res[R_COHESION] > 50) WarOnWeakest(g, 0.5f);
+    bool atWar = War_AtWarAny(g, N_FRANCE);
+    if (g->turn == 5) Mil_SetResearchBudget(g, 3);
+    if (!atWar && Soc_NationProvinces(g, N_FRANCE) < 22 && g->turn > 12 && g->res[R_COHESION] > 50) WarOnWeakest(g, 0.5f);
     BotAttack(g, 0.6f);
 }
 
@@ -152,12 +165,11 @@ static void PlayConqueror(Game *g)
     if (g->turn == 2) Soc_ChangeRegime(g, RG_AUTORITAIRE);
     if (g->turn == 16) Soc_ChangeRegime(g, RG_JUNTE);
     Recruit(g, 15);
-    bool atWar = false;
-    for (int n = 1; n < N_COUNT; n++) if (g->nat[n].atWar) atWar = true;
+    bool atWar = War_AtWarAny(g, N_FRANCE);
     if (!atWar && g->turn > 10) WarOnWeakest(g, 0.7f);
     BotDefend(g);
     BotAttack(g, 0.5f);
-    for (int n = 1; n < N_COUNT; n++) if (g->nat[n].atWar && g->nat[n].warTurns > 12) War_ProposePeace(g, n);
+    for (int n = 1; n < N_COUNT; n++) if (War_AtWar(g, N_FRANCE, n)) SeekPeace(g, n, 12);
 }
 
 static void Run(const char *label, void (*strat)(Game *), int games, int diff)

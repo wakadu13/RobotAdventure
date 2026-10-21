@@ -14,14 +14,19 @@
 
 #define TOTAL_TURNS   120     /* 120 trimestres : 2030 -> 2060 */
 #define START_YEAR    2030
-#define MAX_THREATS   128
-#define MAX_UNITS     640
-#define MAX_LOG       160
+#define MAX_THREATS   160
+#define MAX_UNITS     900
+#define MAX_GENERALS  64
+#define MAX_LOG       200
 #define LOG_LEN       170
 #define BASE_CP       3       /* points de commandement par tour */
 #define THREAT_SCALE  0.6f    /* intensite globale des effets des menaces */
 #define HISTORY_LEN   (TOTAL_TURNS + 1)
-#define SAVE_VERSION  3
+#define SAVE_VERSION  4
+#define STACK_LAND    10      /* divisions terrestres par province et par nation */
+#define STACK_AIR     6
+#define STACK_SEA     8
+#define TECH_MAX      5
 
 typedef enum { D_TERRE, D_MER, D_AIR, D_ESPACE, D_CYBER, D_INFO, D_EM, D_COUNT } Domain;
 
@@ -35,6 +40,7 @@ typedef enum {
     TH_NORD, TH_EST, TH_ALPES, TH_PYRENEES,
     TH_ATLANTIQUE, TH_MEDITERRANEE, TH_OUTREMER,
     TH_CIEL, TH_ORBITE, TH_CYBER, TH_INFO, TH_SPECTRE,
+    TH_EXTERIEUR,
     TH_COUNT
 } TheaterId;
 
@@ -57,16 +63,32 @@ typedef enum {
 
 typedef enum { S_TRAVAILLEURS, S_MOYENNES, S_ELITES, S_COUNT } Strata;
 typedef enum { I_ECOLO, I_SOCIAL, I_LIBERAL, I_CONSERV, I_SOUVER, I_AUTOR, I_COUNT } Ideology;
+typedef enum { RL_CATHOLIQUES, RL_PROTESTANTS, RL_ORTHODOXES, RL_MUSULMANS, RL_SANS } Religion;
 typedef enum { G_FOOD, G_WATER, G_ENERGY, G_MINERALS, G_GOODS, G_COUNT } Good;
 typedef enum { SP_EDUCATION, SP_ADMIN, SP_SOCIAL, SP_COUNT } Spending;
-typedef enum { U_INF, U_MECA, U_BLINDE, U_MARINE, U_TYPE_COUNT } UnitType;
+typedef enum { CP_ASSIMILATION, CP_PLURALISME, CP_REPRESSION, CP_COUNT } CulturePolicy;
 typedef enum { DIFF_FACILE, DIFF_NORMAL, DIFF_DIFFICILE, DIFF_COUNT } Difficulty;
+typedef enum { DOM_LAND, DOM_AIR, DOM_SEA } UnitDomain;
 
 typedef enum {
-    BL_TAXES, BL_TRADE, BL_TARIFF, BL_EU,                     /* recettes */
-    BL_DEFENSE, BL_ARMY, BL_SPENDING, BL_NUKE, BL_IMPORTS,     /* depenses */
+    U_INF, U_MECA, U_BLINDE, U_MARINE, U_MONTAGNE, U_ARTILLERIE, U_DRONES, U_ROBOTS, U_FS, U_DCA, U_HYPER,
+    U_CHASSE, U_MALE,
+    U_FREGATE, U_SNA, U_PA, U_USV,
+    U_TYPE_COUNT
+} UnitType;
+
+typedef enum { T_INF, T_BLINDES, T_AIR, T_MARINE, T_FEUX, T_GE, T_LOG, T_NUC, T_COUNT } TechArea;
+
+typedef enum {
+    GT_OFFENSIF, GT_DEFENSIF, GT_LOGISTICIEN, GT_BLINDES, GT_MONTAGNE, GT_COUNT
+} GeneralTrait;
+
+typedef enum {
+    BL_TAXES, BL_TRADE, BL_TARIFF, BL_EU, BL_REPARATIONS,                          /* recettes */
+    BL_DEFENSE, BL_ARMY, BL_SPENDING, BL_RESEARCH, BL_NUKE, BL_IMPORTS, BL_REP_PAID, /* depenses */
     BL_COUNT
 } BudgetLine;
+#define BL_FIRST_EXPENSE BL_DEFENSE
 
 typedef enum {
     SC_SURVIE, SC_POPULATION, SC_PROSPERITE, SC_TERRITOIRE, SC_STABILITE,
@@ -117,18 +139,18 @@ typedef struct {
 typedef struct {
     const char *name;
     const char *desc;
-    float taxEff;          /* multiplicateur des recettes */
-    float mobilization;    /* divisions mobilisables par million d'habitants */
-    float repression;      /* baisse de militance par tour */
-    float warWeariness;    /* cohesion perdue par tour de guerre */
-    float aggressionCost;  /* cohesion perdue en declarant une guerre */
-    float influence;       /* influence gagnee/perdue par tour */
-    float assimilation;    /* vitesse d'integration des territoires et des migrants */
-    float growth;          /* modificateur de croissance demographique (%/tour) */
-    float projectCost;     /* multiplicateur du cout des projets */
-    float quality;         /* qualite militaire */
-    float sat[S_COUNT];    /* satisfaction de chaque strate (reduit la militance) */
-    const char *mechanic;  /* mecanique propre au regime */
+    float taxEff;
+    float mobilization;
+    float repression;
+    float warWeariness;
+    float aggressionCost;
+    float influence;
+    float assimilation;
+    float growth;
+    float projectCost;
+    float quality;
+    float sat[S_COUNT];
+    const char *mechanic;
 } RegimeDef;
 
 typedef struct { const char *name; const char *desc; int cooldown; float budget; } DecreeDef;
@@ -140,28 +162,38 @@ typedef struct {
     bool eu;
     float relation;        /* relation initiale avec la France */
     float aggressiveness;  /* propension a la guerre (IA) */
-    bool nuclear;          /* puissance nucleaire */
+    bool nuclear;          /* puissance nucleaire en 2030 */
+    unsigned char cultures[3];   /* cultures acceptees (255 = aucune) */
+    const char *general[2];      /* noms de generaux */
 } NationDef;
 
 typedef struct {
     NationId nation;
-    float pop;             /* millions d'habitants en 2030 */
-    float growth;          /* croissance naturelle (%/tour) */
-    float aridity;         /* exposition au rechauffement 0..1 */
-    float food, water, energy;   /* production (1 unite = besoin d'1 million d'habitants) */
-    float wealth;          /* recettes fiscales par million d'habitants (Md/tour) */
+    float pop;
+    float growth;
+    float aridity;
+    float food, water, energy;
+    float wealth;
 } ProvinceDef;
 
 typedef struct {
     const char *name;
     const char *shortName;
     const char *desc;
-    float atk, def;        /* valeurs d'attaque et de defense */
-    float cost;            /* cout de recrutement (Md) */
-    float upkeep;          /* entretien (Md/tour) */
-    float goods;           /* biens industriels consommes par tour */
-    int train;             /* tours de formation */
+    UnitDomain domain;
+    float atk, def;        /* combat terrestre (ou appui pour l'air) */
+    float aa;              /* defense antiaerienne */
+    float naval;           /* combat naval */
+    float cost, upkeep, goods;
+    int train;
+    int speed;             /* provinces par tour */
+    int range;             /* portee d'appui (artillerie, missiles, aviation) */
+    TechArea tech;
+    int techLevel;         /* niveau requis */
+    float capWeight;       /* poids dans le plafond de mobilisation */
 } UnitDef;
+
+typedef struct { const char *name; const char *desc; } TechDef;
 
 extern const char       *DOMAIN_NAMES[D_COUNT];
 extern const char       *RESOURCE_NAMES[R_COUNT];
@@ -170,6 +202,10 @@ extern const char       *STRATA_NAMES[S_COUNT];
 extern const char       *IDEOLOGY_NAMES[I_COUNT];
 extern const char       *IDEOLOGY_DESC[I_COUNT];
 extern const float       IDEOLOGY_AFFINITY[RG_COUNT][I_COUNT];
+extern const char       *RELIGION_NAMES[REL_COUNT];
+extern const char       *CULTURE_POLICY_NAMES[CP_COUNT];
+extern const char       *CULTURE_POLICY_DESC[CP_COUNT];
+extern const int         CULTURE_HOMELAND[CULT_COUNT];
 extern const char       *GOOD_NAMES[G_COUNT];
 extern const float       GOOD_BASE_PRICE[G_COUNT];
 extern const char       *SPENDING_NAMES[SP_COUNT];
@@ -181,6 +217,9 @@ extern const char       *VICTORY_NAMES[VIC_COUNT];
 extern const char       *VICTORY_DESC[VIC_COUNT];
 extern const char       *NUKE_POSTURES[3];
 extern const UnitDef     UNIT_TYPES[U_TYPE_COUNT];
+extern const TechDef     TECHS[T_COUNT];
+extern const char       *GENERAL_TRAITS[GT_COUNT];
+extern const char       *FRENCH_GENERALS[20];
 extern const DecreeDef   DECREES[RG_COUNT][2];
 extern const TheaterDef  THEATERS[TH_COUNT];
 extern const ThreatDef   THREATS[];
@@ -196,7 +235,7 @@ extern const NationDef   NATIONS[N_COUNT];
 extern const ProvinceDef PROVINCES[PROV_COUNT];
 extern const float       PROVINCE_MINERALS[PROV_COUNT];
 extern const float       PROVINCE_INDUSTRY[PROV_COUNT];
-extern const unsigned char PROVINCE_TERRAIN[PROV_COUNT];   /* 0 plaine, 1 collines, 2 montagne */
+extern const unsigned char PROVINCE_TERRAIN[PROV_COUNT];
 extern const float       STRATA_SHARE[S_COUNT];
 extern const char       *MIGRATION_DOCTRINES[3];
 extern const char       *MIGRATION_DESC[3];
@@ -204,11 +243,10 @@ extern const float       MIGRATION_ACCEPT[3];
 extern const char       *ALERT_LEVELS[3];
 extern const char       *ALERT_DESC[3];
 
-/* dilemmes dynamiques (hors tirage aleatoire) */
-#define DLM_ALLY_CALL      100   /* un allie europeen est attaque */
-#define DLM_PEACE_OFFER    101   /* un ennemi propose la paix */
-#define DLM_COUP_LEGAL     102   /* les autoritaires gagnent les elections */
-#define DLM_NUKE_BLACKMAIL 103   /* chantage nucleaire */
+#define DLM_ALLY_CALL      100
+#define DLM_PEACE_OFFER    101
+#define DLM_COUP_LEGAL     102
+#define DLM_NUKE_BLACKMAIL 103
 
 /* ---- etat dynamique ---- */
 typedef struct {
@@ -220,6 +258,7 @@ typedef struct {
     int turnsLeft;
     bool detected;
     bool fresh;
+    short prov;            /* province visee (territoires exterieurs), -1 sinon */
 } Threat;
 
 typedef struct {
@@ -238,24 +277,28 @@ typedef struct {
 } LogEntry;
 
 typedef struct {
-    int owner;
-    int core;              /* nation d'origine de la population */
+    int owner;             /* proprietaire legal */
+    int ctrl;              /* controle militaire (occupant) */
+    int core;              /* nation d'origine */
     float pop;
-    float share[S_COUNT];  /* part de chaque strate */
-    float mil[S_COUNT];    /* militance par strate (0..10) */
-    float con[S_COUNT];    /* conscience politique par strate (0..10) */
-    float literacy;        /* alphabetisation (0..1) */
-    float ideo[I_COUNT];   /* soutien aux courants politiques */
-    float foreign;         /* part de population non integree (0..1) */
-    float hab;             /* habitabilite (0..100) */
-    float integration;     /* integration d'un territoire conquis (0..100) */
-    float damage;          /* devastation par la guerre (0..1) */
-    float fallout;         /* contamination nucleaire durable (0..1) */
-    float prosperity;      /* multiplicateur de richesse */
-    float industry;        /* usines */
-    int factoryBuild;      /* tours restants de construction d'usine (0 = aucune) */
-    int revolt;            /* tours de revolte en cours */
-    float emig, immig;     /* flux du dernier tour (millions) */
+    float share[S_COUNT];
+    float mil[S_COUNT];
+    float con[S_COUNT];
+    float ideo[S_COUNT][I_COUNT];
+    float culture[CULT_COUNT];
+    float religion[REL_COUNT];
+    float literacy;
+    float hab;
+    float integration;
+    float damage;
+    float fallout;
+    float prosperity;
+    float industry;
+    float unemployment;
+    float jobs;            /* emplois / population active */
+    int factoryBuild;
+    int revolt;
+    float emig, immig;
 } Province;
 
 typedef struct {
@@ -263,36 +306,64 @@ typedef struct {
     unsigned char type;
     signed char owner;
     short prov;
-    short target;          /* province visee (-1 = aucun ordre) */
-    float str;             /* effectifs (0..1) */
-    float org;             /* organisation (0..1) */
-    int training;          /* tours de formation restants */
+    short target;          /* destination (-1 = aucun ordre) */
+    float str;
+    float org;
+    int training;
 } Unit;
+
+typedef struct {
+    bool active;
+    signed char owner;
+    short prov;            /* province de commandement (-1 = reserve) */
+    unsigned char skill;   /* 1..5 */
+    unsigned char trait;
+    float xp;
+    char name[28];
+} General;
 
 typedef struct {
     float supply[G_COUNT], demand[G_COUNT];
     float imports[G_COUNT], exports[G_COUNT];
-    float sat[G_COUNT];    /* (production + importations) / besoins */
+    float stock[G_COUNT];
+    float sat[G_COUNT];
 } NationEconomy;
 
 typedef struct {
     bool alive;
     Regime regime;
     float relation;        /* -100..100 envers la France */
-    float army;            /* puissance de l'armee (divisions equivalentes, derivee des unites) */
-    bool atWar;            /* en guerre contre la France */
-    int warTurns;
-    int truce;
-    int warTarget;         /* guerre IA contre IA (-1 aucune) */
-    int warTargetTurns;
+    float army;            /* puissance de l'armee (derivee des unites) */
     bool eu;
     bool trade;
     bool failed;
-    bool deterred;         /* dissuadee de toucher au sol francais */
-    bool warned;           /* ultime avertissement nucleaire deja adresse */
+    bool deterred;
+    bool warned;
+    bool embargo;          /* embargo francais */
+    bool embargoFrance;    /* embargo contre la France */
     int startProvinces;
     bool actedThisTurn;
+    int government;        /* courant au pouvoir (-1 aucun) */
+    int nextElection;
+    int nukeStatus;        /* 0 aucun, 1 programme, 2 puissance nucleaire */
+    float nukeProgress;
+    float treasury;
+    float foodBonus, waterBonus;
+    float blockade;        /* part du littoral sous blocus */
+    float reparations;     /* versees a la France par tour (negatif : la France paie) */
+    int reparationTurns;
+    unsigned char tech[T_COUNT];
 } Nation;
+
+typedef struct {
+    bool active;
+    int other;
+    bool proposedByAi;
+    bool cede[PROV_COUNT];  /* provinces cedees au vainqueur */
+    int winner;
+    float reparations;
+    int reparationTurns;
+} Treaty;
 
 typedef struct {
     unsigned rng;
@@ -302,7 +373,6 @@ typedef struct {
     float res[R_COUNT];
     float lastDelta[R_COUNT];
 
-    /* defense M2MC et guerre hybride */
     int capacity[D_COUNT];
     int pendingCap[D_COUNT];
     int pendingTurns[D_COUNT];
@@ -312,11 +382,20 @@ typedef struct {
     Faction fac[F_COUNT];
     Project proj[P_COUNT];
 
-    /* monde */
     Nation nat[N_COUNT];
     Province prov[PROV_COUNT];
     Unit units[MAX_UNITS];
+    General generals[MAX_GENERALS];
     float aggressionMemory;
+
+    /* relations internationales */
+    bool war[N_COUNT][N_COUNT];
+    short warSince[N_COUNT][N_COUNT];
+    short truce[N_COUNT][N_COUNT];
+    bool ally[N_COUNT][N_COUNT];
+    float airel[N_COUNT][N_COUNT];     /* relations entre nations */
+    short battles[N_COUNT][N_COUNT];   /* batailles gagnees par la ligne contre la colonne */
+    Treaty treaty;
 
     /* economie */
     NationEconomy eco[N_COUNT];
@@ -324,24 +403,29 @@ typedef struct {
     float taxRate[S_COUNT];
     float spending[SP_COUNT];
     float tariff;
-    float budget[BL_COUNT];  /* dernier bilan budgetaire */
+    float budget[BL_COUNT];
     float migrantsIn, migrantsRefused, migrantsOut;
 
+    /* recherche militaire */
+    int researchArea;
+    float researchProgress;
+    float researchBudget;
+
     /* politique */
-    int government;          /* courant au pouvoir (-1 aucun) */
-    int nextElection;
     int regimeCooldown;
     int decreeCooldown[2];
     int sobrietyTurns, mobilizationTurns, boostTurns, propagandaTurns;
     int migrationDoctrine;
+    int culturePolicy;
     int alertLevel;
     int commandPoints;
 
     /* dissuasion */
-    int nukePosture;         /* 0 minimale, 1 credible, 2 renforcee */
+    int nukePosture;
     float credibility;
     int nukesUsed;
-    bool umbrella;           /* parapluie nucleaire europeen */
+    int tacticalUsed;
+    bool umbrella;
 
     bool aiDefense;
     float climateMitigation;
@@ -349,9 +433,9 @@ typedef struct {
 
     int pendingDilemma;
     int dilemmaParam;
+    int dilemmaParam2;
     bool dilemmaUsed[32];
 
-    /* rapport de fin de tour */
     bool reportReady;
     int reportLogStart;
     float reportRes[R_COUNT];
@@ -376,7 +460,7 @@ typedef struct {
     int statBattlesLost;
 } Game;
 
-/* game.c : coeur, guerre hybride, projets, dilemmes, sauvegarde, score */
+/* game.c */
 void        Game_Init(Game *g, unsigned seed, int difficulty);
 void        Game_EndTurn(Game *g);
 bool        Game_Save(const Game *g, const char *path);
@@ -403,48 +487,67 @@ int         Game_Score(const Game *g, int parts[SC_COUNT]);
 VictoryType Game_Victory(const Game *g);
 void        Game_Log(Game *g, LogKind kind, const char *fmt, ...);
 
-/* economy.c : marche mondial, impots, depenses, usines */
+/* economy.c */
 void        Eco_Turn(Game *g);
-void        Eco_Budget(const Game *g, float lines[BL_COUNT]);   /* bilan previsionnel */
+void        Eco_Budget(const Game *g, float lines[BL_COUNT]);
 float       Eco_Net(const Game *g);
 float       Eco_ProvinceTax(const Game *g, int p);
 float       Eco_SpendingCost(const Game *g, int sp);
 float       Eco_NeedSat(const Game *g, int nation, int strata);
+float       Eco_NationUnemployment(const Game *g, int nation);
 float       Eco_FactoryCost(const Game *g);
 const char *Eco_FactoryBlocked(const Game *g, int p);
 bool        Eco_BuildFactory(Game *g, int p);
 void        Eco_SetTax(Game *g, int strata, float rate);
 void        Eco_SetSpending(Game *g, int sp, float level);
 void        Eco_SetTariff(Game *g, float t);
+const char *Eco_EmbargoBlocked(const Game *g, int n);
+bool        Eco_ToggleEmbargo(Game *g, int n);
+bool        Eco_TradeAllowed(const Game *g, int n);
 
-/* society.c : climat, population, migrations, regime */
+/* society.c */
 float       Soc_Habitability(const Game *g, int p);
 float       Soc_ProvinceMilitancy(const Province *p);
 float       Soc_ProvinceConsciousness(const Province *p);
 float       Soc_RevoltThreshold(const Province *p);
 float       Soc_NationPop(const Game *g, int n);
 int         Soc_NationProvinces(const Game *g, int n);
+bool        Soc_Accepted(const Game *g, int n, int culture);
+float       Soc_NonAccepted(const Game *g, int p);
+int         Soc_MainCulture(const Province *p);
+int         Soc_MainReligion(const Province *p);
 float       Soc_RegimeChangeCost(const Game *g, int regime);
 const char *Soc_RegimeBlocked(const Game *g, int regime);
 bool        Soc_ChangeRegime(Game *g, int regime);
+const char *Soc_CulturePolicyBlocked(const Game *g, int policy);
+void        Soc_SetCulturePolicy(Game *g, int policy);
 void        Soc_Turn(Game *g);
 
-/* politics.c : ideologies, elections, decrets de regime */
+/* politics.c */
 void        Pol_InitProvince(Game *g, int p);
 void        Pol_Turn(Game *g);
+void        Pol_NationIdeology(const Game *g, int n, float out[I_COUNT]);
 void        Pol_NationalIdeology(const Game *g, float out[I_COUNT]);
+float       Pol_StrataSupport(const Game *g, int p, int strata);
 float       Pol_RegimeSupport(const Game *g);
+float       Pol_NationSupport(const Game *g, int n);
 const char *Pol_DecreeBlocked(const Game *g, int k);
 bool        Pol_Decree(Game *g, int k);
 const char *Pol_GovernmentEffect(int ideology);
 
-/* war.c : armees, batailles, diplomatie, IA */
+/* war.c : armees, batailles, guerres, alliances, traites */
 bool        War_AtWar(const Game *g, int a, int b);
+bool        War_AtWarAny(const Game *g, int n);
+int         War_Turns(const Game *g, int a, int b);
+float       War_Score(const Game *g, int a, int b);
 float       War_ArmyMax(const Game *g, int n);
+float       War_UnitLoad(const Game *g, int n);
 int         War_UnitCount(const Game *g, int n);
 float       War_Quality(const Game *g, int n);
 bool        War_Adjacent(const Game *g, int nationA, int nationB);
+bool        War_Friendly(const Game *g, int nation, int p);
 bool        War_ProvinceAttackable(const Game *g, int p);
+int         War_StackCount(const Game *g, int n, int p, UnitDomain dom);
 float       War_RecruitCost(const Game *g, int type);
 const char *War_RecruitBlocked(const Game *g, int type, int p);
 bool        War_Recruit(Game *g, int type, int p);
@@ -455,26 +558,54 @@ float       War_BattleOdds(const Game *g, int p, int attacker);
 float       War_ArmyUpkeep(const Game *g);
 const char *War_DeclareBlocked(const Game *g, int n);
 bool        War_Declare(Game *g, int n);
-const char *War_PeaceBlocked(const Game *g, int n);
-bool        War_ProposePeace(Game *g, int n);
 const char *War_DiploBlocked(const Game *g, int n, int action);
-bool        War_Diplomacy(Game *g, int n, int action);   /* 0 relations, 1 commerce */
+bool        War_Diplomacy(Game *g, int n, int action);   /* 0 relations, 1 commerce, 2 alliance */
 const char *War_UltimatumBlocked(const Game *g, int p);
 bool        War_Ultimatum(Game *g, int p);
+void        War_StartWar(Game *g, int a, int b, bool callAllies);
 void        War_InitUnits(Game *g);
 void        War_Turn(Game *g);
-void        War_MakePeace(Game *g, int n, bool log);
-void        War_Capture(Game *g, int p, int newOwner);
+void        War_Occupy(Game *g, int p, int ctrl);
+void        War_Annex(Game *g, int p, int newOwner);
+/* traites */
+void        War_TreatyDraft(Game *g, int other);
+float       War_TreatyCost(const Game *g, const Treaty *t);
+const char *War_TreatyBlocked(const Game *g, const Treaty *t);
+bool        War_ProposeTreaty(Game *g);
+void        War_SignTreaty(Game *g, const Treaty *t);
+void        War_WhitePeace(Game *g, int a, int b, bool log);
 
-/* nuclear.c : dissuasion */
+/* military.c : generaux et technologies */
+float       Mil_TechCost(const Game *g, int area);
+float       Mil_ResearchPoints(const Game *g);
+void        Mil_SetResearch(Game *g, int area);
+void        Mil_SetResearchBudget(Game *g, float md);
+bool        Mil_UnitUnlocked(const Game *g, int n, int type);
+float       Mil_TechBonus(const Game *g, int n, int type);
+int         Mil_GeneralAt(const Game *g, int n, int p);
+float       Mil_GeneralBonus(const Game *g, int n, int p, int type, bool attack);
+const char *Mil_PromoteBlocked(const Game *g);
+bool        Mil_Promote(Game *g);
+const char *Mil_AssignBlocked(const Game *g, int gen, int p);
+bool        Mil_Assign(Game *g, int gen, int p);
+void        Mil_BattleXp(Game *g, int n, int p, bool won);
+void        Mil_Init(Game *g);
+void        Mil_Turn(Game *g);
+
+/* nuclear.c */
+bool        Nuke_IsPower(const Game *g, int n);
 float       Nuke_Upkeep(const Game *g);
 void        Nuke_SetPosture(Game *g, int posture);
 const char *Nuke_UmbrellaBlocked(const Game *g);
 void        Nuke_ToggleUmbrella(Game *g);
 const char *Nuke_StrikeBlocked(const Game *g, int p);
 bool        Nuke_Strike(Game *g, int p);
+const char *Nuke_TacticalBlocked(const Game *g, int p);
+bool        Nuke_Tactical(Game *g, int p);
 const char *Nuke_WarningBlocked(const Game *g, int n);
 bool        Nuke_Warning(Game *g, int n);
+const char *Nuke_CounterBlocked(const Game *g, int n, int kind);
+bool        Nuke_Counter(Game *g, int n, int kind);   /* 0 pression diplomatique, 1 sabotage cyber */
 bool        Nuke_Deters(Game *g, int n);
 void        Nuke_Turn(Game *g);
 

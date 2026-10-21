@@ -48,12 +48,33 @@ static inline float NeedWeight(const Province *pr)
     return pr->core == pr->owner ? 1.0f : 0.3f + 0.7f * pr->integration / 100.0f;
 }
 
-/* efficacite d'une province pour son proprietaire (integration, revolte, guerre) */
+/* efficacite d'une province pour son proprietaire (integration, revolte, guerre).
+   Une province occupee par l'ennemi ne produit plus rien pour son proprietaire. */
 static inline float ProvinceEfficiency(const Province *pr)
 {
+    if (pr->ctrl != pr->owner) return 0;
     float e = pr->core == pr->owner ? 1.0f : 0.4f + 0.6f * pr->integration / 100.0f;
     if (pr->revolt) e *= 0.3f;
     return e * (1 - pr->damage * 0.5f) * (1 - pr->fallout * 0.7f);
+}
+
+static inline bool IsAlly(const Game *g, int a, int b) { return a == b || g->ally[a][b]; }
+
+static inline void AddAiRel(Game *g, int a, int b, float v)
+{
+    if (a == b) return;
+    if (a == N_FRANCE) { g->nat[b].relation = Clampf(g->nat[b].relation + v, -100, 100); return; }
+    if (b == N_FRANCE) { g->nat[a].relation = Clampf(g->nat[a].relation + v, -100, 100); return; }
+    g->airel[a][b] = g->airel[b][a] = Clampf(g->airel[a][b] + v, -100, 100);
+}
+
+/* relation entre deux nations quelconques */
+static inline float Relation(const Game *g, int a, int b)
+{
+    if (a == b) return 100;
+    if (a == N_FRANCE) return g->nat[b].relation;
+    if (b == N_FRANCE) return g->nat[a].relation;
+    return g->airel[a][b];
 }
 
 /* passerelles entre modules */
@@ -62,5 +83,7 @@ void Soc_SetRegime(Game *g, Regime r);
 void Pol_ScheduleElection(Game *g);
 int  War_SpawnUnit(Game *g, int owner, int type, int prov, int training);
 void Nuke_ResolveBlackmail(Game *g, bool give);
+void Hybrid_SpawnExterior(Game *g, int p, int strength);
+float Eco_ProvinceSupply(const Game *g, int p, int good);
 
 #endif
