@@ -11,7 +11,8 @@ CC      ?= gcc
 CFLAGS  ?= -std=c99 -O2 -Wall -Wextra
 BUILD   := build
 TARGET  := $(BUILD)/bouclier2050
-SRC     := src/main.c src/game.c
+SIM     := src/game.c src/world.c src/society.c src/war.c src/map_data.c
+SRC     := src/main.c $(SIM)
 
 ifeq ($(OS),Windows_NT)
     TARGET := $(TARGET).exe
@@ -40,11 +41,11 @@ endif
 
 all: $(TARGET)
 
-$(TARGET): $(SRC) src/game.h | $(BUILD)
+$(TARGET): $(SRC) src/game.h src/game_internal.h src/map_data.h | $(BUILD)
 	$(CC) $(CFLAGS) $(RAYLIB_CFLAGS) $(SRC) -o $@ $(RAYLIB_LIBS) -lm
 
-$(BUILD)/autoplay: src/game.c src/game.h tools/autoplay.c | $(BUILD)
-	$(CC) $(CFLAGS) src/game.c tools/autoplay.c -o $@ -lm
+$(BUILD)/autoplay: $(SIM) src/game.h tools/autoplay.c | $(BUILD)
+	$(CC) $(CFLAGS) $(SIM) tools/autoplay.c -o $@ -lm
 
 $(BUILD):
 	mkdir -p $(BUILD)
