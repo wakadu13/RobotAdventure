@@ -95,7 +95,9 @@ android)
     PLATFORM=$(ls -d "$SDK"/platforms/android-* | sort -V | tail -n 1)
     TC="$NDK/toolchains/llvm/prebuilt/linux-x86_64"
     CCA="$TC/bin/aarch64-linux-android$API-clang"
-    # raylib pour Android (OpenGL ES 2) avec la glue native de NativeActivity
+    # raylib pour Android (OpenGL ES 2) avec la glue native de NativeActivity.
+    # Les NDK recents ont retire ALooper_pollAll : raylib 5.5 l'a remplace par ALooper_pollOnce.
+    sed -i 's/ALooper_pollAll(/ALooper_pollOnce(/g' "$RAYLIB/src/platforms/rcore_android.c"
     objs=""
     for f in $RL_SRC; do
         $CCA -c -O2 -fPIC -DPLATFORM_ANDROID -DGRAPHICS_API_OPENGL_ES2 -I"$RAYLIB/src" -I"$NDK/sources/android/native_app_glue" \
