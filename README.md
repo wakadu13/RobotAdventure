@@ -40,9 +40,17 @@ cultures.
 - **IA militaire** : armées interarmes dosées selon la richesse et l'accès à la mer, offensives préparées
   (concentration des divisions à deux pas, aviation placée à portée, flottes pour couvrir les
   débarquements), renforts vers le point le plus menacé, généraux affectés selon leur trait.
+- **Logistique** : le ravitaillement part du territoire national et des dépôts ; une poche coupée est
+  encerclée et s'use. Fortifications (trois niveaux) et dépôts se construisent région par région.
+- **Brouillard de guerre** : l'ennemi n'est visible qu'au contact, à portée de l'aviation et des flottes,
+  ou sous reconnaissance satellitaire ; un assaut à l'aveugle est pénalisé.
+- **Groupes d'armées** : quatre groupes auxquels on confie un front à tenir ou une offensive contre une
+  nation ; les ordres se répartissent automatiquement.
+- **Missions navales** : patrouille et blocus, frappe à terre (porte-avions, frégates, sous-marins),
+  guerre au commerce contre les convois ennemis, escorte des nôtres.
 - **Négociation** : l'ennemi pèse sa lassitude (durée de la guerre, blocus, armée épuisée, agitation,
   dissuasion) ; il accepte, ou fait une contre-proposition qu'on peut accepter ou amender (trois
-  propositions par trimestre).
+  propositions par trimestre). Une offre de paix refusée revient plus tard, plus généreuse.
 
 ### Dissuasion nucléaire
 - La posture (minimale, crédible, renforcée) fixe la crédibilité. Une nation dissuadée ne touche
@@ -73,8 +81,18 @@ Huit opérations contre une nation précise (onglet NATIONS, vue Opérations), s
   antisatellite (débris et réprobation) ;
 - électromagnétique : brouillage de son aviation et de ses drones.
 
-Chaque opération peut être attribuée à la France : relations, influence, riposte cyber, voire casus
-belli. Les ennemis capables mènent aussi des cyberattaques contre notre réseau.
+Chaque opération peut être attribuée à son auteur : relations, influence, riposte cyber, voire casus
+belli. Les autres nations y recourent aussi, entre elles comme contre la France.
+
+### Organisations internationales et dette
+- **OTAN** : article 5 (les membres volent au secours d'un allié attaqué selon la cohésion de
+  l'Alliance), crises quand deux membres s'affrontent, sortie et retour de la France.
+- **Conseil de sécurité** : une agression peut valoir une résolution ; les membres permanents
+  (France, Royaume-Uni, Fédération Boréale, États-Unis et Chine hors carte) peuvent opposer leur veto.
+  Les **sanctions** coupent le commerce et les ressources ; les longues guerres finissent par un
+  cessez-le-feu des casques bleus. La France peut saisir le Conseil.
+- **Dette publique** : les déficits sont financés par l'emprunt ; la note (AAA à CCC) fixe le taux
+  d'intérêt. Au-delà, crise de la dette : plan de sauvetage européen avec austérité, ou défaut.
 
 ### Ressources stratégiques et montée des eaux
 - **Terres rares, uranium, semi-conducteurs** : gisements (Kiruna, Kola, Ukraine, Turquie, Limousin…),
@@ -85,7 +103,9 @@ belli. Les ennemis capables mènent aussi des cyberattaques contre notre réseau
   des fonderies.
 - **Montée des eaux** liée au réchauffement : les deltas et les côtes basses (Pays-Bas, Flandre, Venise,
   delta du Nil, Camargue, Vendée…) sont submergés peu à peu, visible sur la carte ; submersions marines
-  lors des tempêtes. Les digues des pays riches et le Plan Adaptation Climat limitent les dégâts.
+  lors des tempêtes. Les digues des pays riches et le Plan Adaptation Climat limitent les dégâts. Les ports
+  trop submergés ne peuvent plus accueillir de flotte, et l'adaptation des côtes a un coût.
+- Les autres nations achètent aussi leurs ressources sur le marché et les échangent entre alliés.
 
 ### Économie (à la Victoria)
 - Production d'alimentation, d'eau, d'énergie, de minerais et de biens industriels.
@@ -120,10 +140,14 @@ belli. Les ennemis capables mènent aussi des cyberattaques contre notre réseau
   résilience, puissance, réputation et pénalités.
 - Il est multiplié selon la difficulté et selon le type de victoire : survie, transition réussie,
   hégémonie, utopie réalisée ou ordre nouveau.
-- **Défaite** si la Cohésion ou la Souveraineté tombe à 0, si le Budget passe sous -60, si Paris
+- **Défaite** si la Cohésion ou la Souveraineté tombe à 0, en cas de défaut sur la dette, si Paris
   est occupée, ou en cas d'échange nucléaire.
 
 ### Confort
+- Tutoriel pas à pas (menu principal).
+- Huit modes de carte : politique, climat, militance, population, cultures, relations, logistique,
+  ressources ; historique de chaque nation (population, armée, relation).
+- Écrans tactiles : pincer pour zoomer, bouton ORDRE pour envoyer les unités.
 - Rapport de fin de tour, désactivable.
 - Trois niveaux de difficulté.
 - Sauvegarde manuelle (`F5`, menu) et automatique tous les 4 tours ; chargement par `F9` ou par le
@@ -141,7 +165,17 @@ belli. Les ennemis capables mènent aussi des cyberattaques contre notre réseau
 | Onglets | `1` à `9`, `0` |
 | Mode de carte | `M` |
 | Sauvegarder / charger | `F5` / `F9` |
+| Enregistrer le rejeu de la partie | `F6` |
 | Plein écran / menu | `F11` / `Échap` |
+
+## Téléchargement
+
+Les releases GitHub fournissent des paquets prêts à jouer pour **Windows** (x64), **Linux** (x64),
+**macOS** (Apple Silicon) et **Android** (arm64). Ils sont construits par
+`.github/workflows/release.yml` à chaque tag `v*`, avec `tools/release/build.sh`, utilisable aussi
+en local (`tools/release/build.sh windows ~/raylib` compile la version Windows depuis Linux avec
+MinGW-w64). Pour signer l'APK avec une clé stable, ajoutez les secrets `ANDROID_KEYSTORE_B64` et
+`ANDROID_KEYSTORE_PASS` ; sinon une clé de débogage est générée.
 
 ## Compilation
 
@@ -178,7 +212,9 @@ Machines anciennes : compilez raylib en OpenGL 2.1
 - `make test` vérifie les mécaniques rares : frappes stratégiques et tactiques, riposte, prolifération et
   contre-prolifération, avertissement, chantage, les douze décrets, élections, usines, recrutement,
   parapluie européen, traités et contre-propositions, défaite à Paris, généraux, technologies, embargo,
-  cultures, opérations ciblées, ressources stratégiques, montée des eaux, sauvegarde.
+  cultures, opérations ciblées, ressources stratégiques, montée des eaux, ravitaillement et encerclement,
+  brouillard, fortifications, groupes d'armées, missions navales, dette et plan de sauvetage, ONU,
+  article 5, offres de paix, commandes et rejeu déterministe, sauvegarde.
 - `make sim` (ou `./build/autoplay [parties] [difficulté 0-2]`) joue des parties automatiques sans
   interface.
 
@@ -187,15 +223,20 @@ Taux de victoire indicatifs des bots (qui jouent leur stratégie sans erreur) :
 | Stratégie | Facile | Normale | Difficile |
 |---|---|---|---|
 | Passive (ne fait rien) | 0 % | 0 %, effondrement vers 2041 | 0 % |
-| Gestionnaire défensif | 100 % | 100 % | 63 % |
-| Stratège (régime autoritaire, armée, guerres choisies) | 100 % | 10 % | 0 % |
+| Gestionnaire défensif | 100 % | 100 % | 33 % |
+| Stratège (régime autoritaire, groupes d'armées, opérations, guerres choisies) | 100 % | 43 % | 0 % |
 | Conquérant total (junte, guerres en chaîne) | 0 % | 0 % : coalitions, révoltes, faillite | 0 % |
 
-Les bots n'affectent pas de généraux, ne mènent pas d'opérations et ne gèrent ni les minorités ni
-l'occupation ; le stratège dépense en outre tout son budget et son influence, puis cède à la guerre
-hybride. Depuis que l'IA adverse prépare ses offensives, ses conquêtes lui coûtent encore plus cher. Un
-joueur qui stationne des troupes dans les territoires occupés, choisit sa politique culturelle et garde
-des réserves s'en sort mieux.
+Le stratège utilise les groupes d'armées, les généraux, la reconnaissance et le brouillage, la guerre
+au commerce et le pluralisme culturel ; il dépense en revanche toute son influence et finit souvent
+emporté par la guerre hybride de fin de partie. La dette héritée dépend de la difficulté (220, 300 ou
+420 Md).
+
+## Multijoueur
+
+Pas encore jouable, mais préparé : les actions passent par des commandes sérialisables, la simulation
+est déterministe et vérifiable par somme de contrôle, et une partie peut être rejouée. Voir
+[docs/MULTIJOUEUR.md](docs/MULTIJOUEUR.md).
 
 ## Organisation du code
 
@@ -207,16 +248,20 @@ src/game.c          tour de jeu, guerre hybride M2MC, projets, dilemmes, score, 
 src/society.c       climat, montée des eaux, population, strates, cultures, migrations, révoltes, régimes
 src/economy.c       production, emploi, stocks, marché mondial, embargos, blocus, impôts, usines, trésor des IA
 src/politics.c      courants par strate, élections, décrets, vie politique des IA
-src/war.c           unités, batailles, blocus, ravitaillement, IA militaire, alliances, traités
+src/war.c           unités, batailles, ravitaillement, brouillard, forts, groupes, missions navales, IA, traités
 src/military.c      généraux et technologies militaires
 src/ops.c           opérations cyber, informationnelles, spatiales et électromagnétiques
 src/resources.c     ressources stratégiques (terres rares, uranium, semi-conducteurs)
 src/nuclear.c       dissuasion, prolifération, armes tactiques
+src/intl.c          ONU, OTAN, sanctions
+src/command.c       commandes, somme de contrôle et rejeu (base du multijoueur)
 src/map_data.c/.h   carte générée (grille 0,125°, 130 régions, adjacences, cultures, religions)
 src/main.c          interface raylib
 tools/gen_map.py    générateur de la carte depuis un GeoJSON des pays
 tools/autoplay.c    banc d'essai d'équilibrage
 tools/tests.c       tests des mécaniques
+tools/release/      paquets Windows, Linux, macOS et Android
+docs/MULTIJOUEUR.md architecture prévue pour le multijoueur
 ```
 
 Pour régénérer la carte : `python3 tools/gen_map.py countries.geo.json`, avec le fichier

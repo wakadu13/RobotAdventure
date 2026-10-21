@@ -80,6 +80,47 @@ int main(void){ int fails=0; Game g;
  /* montee des eaux */
  Game_Init(&g, 72, 1); g.temp=3.4f; for(int i=0;i<40 && g.state==GAME_RUNNING;i++){ g.pendingDilemma=-1; g.res[R_COHESION]=60; g.res[R_SOUVERAINETE]=60; Game_EndTurn(&g);}
  CHECK(g.seaLevel>0.8f); CHECK(g.prov[PV_NL_N].flooded>0.2f); CHECK(g.prov[PV_FR_IDF].flooded==0);
+ /* ravitaillement : une poche isolee est encerclee, un depot la ravitaille */
+ Game_Init(&g, 80, 1); g.commandPoints=3; g.res[R_BUDGET]=100; CHECK(War_Declare(&g, N_ESPAGNE)); War_Occupy(&g, PV_ES_MAD, N_FRANCE);
+ War_UpdateSupply(&g); CHECK(War_SupplyLevel(&g, N_FRANCE, PV_FR_IDF)>0.99f); CHECK(War_SupplyLevel(&g, N_FRANCE, PV_ES_MAD)<0.25f);
+ CHECK(War_BuildDepot(&g, PV_ES_MAD)); CHECK(War_SupplyLevel(&g, N_FRANCE, PV_ES_MAD)>0.9f);
+ /* fortifications */
+ CHECK(War_Fortify(&g, PV_FR_OCC)); for(int i=0;i<3;i++){ g.pendingDilemma=-1; Game_EndTurn(&g);} CHECK(g.prov[PV_FR_OCC].fort>=1 || g.prov[PV_FR_OCC].ctrl!=N_FRANCE);
+ /* brouillard de guerre */
+ Game_Init(&g, 81, 1); CHECK(War_Visible(&g, PV_FR_IDF)); CHECK(War_Visible(&g, PV_DE_BW)); CHECK(!War_Visible(&g, PV_RU_MOS));
+ g.nat[N_BOREALE].recon=3; War_UpdateIntel(&g); CHECK(War_Visible(&g, PV_RU_MOS));
+ /* groupes d'armees : tenir le front face a l'Espagne */
+ Game_Init(&g, 82, 1); for(int i=0;i<MAX_UNITS;i++) if(g.units[i].active&&g.units[i].owner==N_FRANCE) War_SetGroup(&g, i, 1);
+ War_SetGroupOrder(&g, 1, GM_HOLD, N_ESPAGNE);
+ for(int i=0;i<4;i++){ g.pendingDilemma=-1; Game_EndTurn(&g);} 
+ { int front=0; for(int i=0;i<MAX_UNITS;i++){ const Unit*u=&g.units[i]; if(u->active&&u->owner==N_FRANCE&&u->group==1&&(u->prov==PV_FR_NAQ||u->prov==PV_FR_OCC)) front++; } CHECK(front>=2); }
+ /* missions navales */
+ Game_Init(&g, 83, 1); War_StartWar(&g, N_BOREALE, N_FRANCE, false); g.pendingDilemma=-1;
+ { int sna=-1, fr=-1; for(int i=0;i<MAX_UNITS;i++){ if(g.units[i].active&&g.units[i].owner==N_FRANCE&&g.units[i].type==U_SNA) sna=i; if(g.units[i].active&&g.units[i].owner==N_FRANCE&&g.units[i].type==U_INF) fr=i; }
+   CHECK(sna>=0); CHECK(War_SetMission(&g, sna, NM_RAID)); CHECK(!War_SetMission(&g, fr, NM_RAID)); g.pendingDilemma=-1; Game_EndTurn(&g); CHECK(g.nat[N_BOREALE].raid>0); }
+ /* dette : emprunt, crise, plan de sauvetage, defaut */
+ Game_Init(&g, 84, 1); CHECK(Eco_Rating(&g)<=2); { float d=g.debt; CHECK(Eco_Borrow(&g)); CHECK(g.debt>d); }
+ g.debt=5000; CHECK(Eco_Rating(&g)==RATING_COUNT-1); CHECK(Eco_BorrowBlocked(&g)!=NULL); g.res[R_BUDGET]=-30; g.pendingDilemma=-1; Game_EndTurn(&g);
+ CHECK(g.pendingDilemma==DLM_BAILOUT); Game_ResolveDilemma(&g, 0); CHECK(g.austerityTurns>0); CHECK(g.state==GAME_RUNNING);
+ Game_Init(&g, 85, 1); g.debt=5000; g.res[R_BUDGET]=-30; g.pendingDilemma=-1; Game_EndTurn(&g); Game_ResolveDilemma(&g, 1); CHECK(g.state==GAME_LOST_BUDGET);
+ /* ONU : une resolution contre un proliferant ; sanctions coupent le commerce */
+ Game_Init(&g, 86, 1); g.commandPoints=3; g.res[R_INFLUENCE]=60; g.nat[N_ALGERIE].nukeStatus=1;
+ CHECK(Intl_ResolutionBlocked(&g, N_ALGERIE)==NULL); Intl_ProposeResolution(&g, N_ALGERIE); CHECK(g.unCooldown>0);
+ g.nat[N_MAROC].sanctions=5; CHECK(!Eco_TradeAllowed(&g, N_MAROC));
+ /* OTAN : l'article 5 joue quand la Federation Boreale attaque la Pologne */
+ { int joined=0; for(int k=0;k<5;k++){ Game_Init(&g, 90+k, 1); War_StartWar(&g, N_BOREALE, N_POLOGNE, true); for(int n=1;n<N_COUNT;n++) if(n!=N_POLOGNE&&g.war[n][N_BOREALE]&&g.nat[n].nato) joined++; } CHECK(joined>=3); }
+ /* offres de paix : un refus rend la suivante plus tardive et plus genereuse */
+ Game_Init(&g, 95, 1); g.commandPoints=3; War_Declare(&g, N_ESPAGNE); g.pendingDilemma=DLM_PEACE_OFFER; g.dilemmaParam=N_ESPAGNE; War_TreatyDraft(&g, N_ESPAGNE);
+ Game_ResolveDilemma(&g, 1); CHECK(g.nat[N_ESPAGNE].peaceRefusals==1); CHECK(g.nat[N_ESPAGNE].peaceCooldown>0);
+ /* multijoueur : commandes serialisees et rejeu deterministe */
+ { static Replay rp; static Game h; rp.seed=123; rp.difficulty=1; Replay_Clear(&rp); Game_Init(&g, rp.seed, rp.difficulty);
+   Command cmds[] = { { CMD_TAX, N_FRANCE, S_ELITES, 0, 0, 0.35f }, { CMD_RECRUIT, N_FRANCE, U_INF, PV_FR_GES, 0, 0 }, { CMD_END_TURN, N_FRANCE, 0,0,0,0 },
+                      { CMD_RESEARCH, N_FRANCE, T_FEUX, 0,0,0 }, { CMD_END_TURN, N_FRANCE, 0,0,0,0 }, { CMD_END_TURN, N_FRANCE, 0,0,0,0 } };
+   for(int k=0;k<6;k++){ unsigned char buf[CMD_BYTES]; Command c2; Cmd_Serialize(&cmds[k], buf); CHECK(Cmd_Deserialize(buf, &c2));
+     CHECK(c2.type==cmds[k].type && c2.a==cmds[k].a && c2.b==cmds[k].b && c2.f==cmds[k].f);
+     if(g.pendingDilemma>=0){ Command d={ CMD_DILEMMA, N_FRANCE, 0,0,0,0 }; Cmd_Apply(&g,&d); Replay_Record(&rp,&d); }
+     Cmd_Apply(&g, &c2); Replay_Record(&rp, &c2); }
+   Replay_Run(&rp, &h); CHECK(Game_Checksum(&g)==Game_Checksum(&h)); CHECK(g.turn==h.turn && g.turn>=2); }
  /* sauvegarde */
  Game_Init(&g, 47, 1); for(int i=0;i<6;i++){ g.pendingDilemma=-1; Game_EndTurn(&g);} 
  { static Game h; CHECK(Game_Save(&g, "build/test.sav")); CHECK(Game_Load(&h, "build/test.sav")); CHECK(memcmp(&g,&h,sizeof g)==0); }

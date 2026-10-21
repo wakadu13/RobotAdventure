@@ -22,7 +22,9 @@
 #define BASE_CP       3       /* points de commandement par tour */
 #define THREAT_SCALE  0.6f    /* intensite globale des effets des menaces */
 #define HISTORY_LEN   (TOTAL_TURNS + 1)
-#define SAVE_VERSION  5
+#define SAVE_VERSION  6
+#define GROUP_COUNT   4       /* groupes d'armees francais */
+#define RATING_COUNT  7
 #define STACK_LAND    10      /* divisions terrestres par province et par nation */
 #define STACK_AIR     6
 #define STACK_SEA     8
@@ -70,6 +72,8 @@ typedef enum { CP_ASSIMILATION, CP_PLURALISME, CP_REPRESSION, CP_COUNT } Culture
 typedef enum { DIFF_FACILE, DIFF_NORMAL, DIFF_DIFFICILE, DIFF_COUNT } Difficulty;
 typedef enum { DOM_LAND, DOM_AIR, DOM_SEA } UnitDomain;
 typedef enum { SR_TERRES_RARES, SR_URANIUM, SR_PUCES, SR_COUNT } StratRes;
+typedef enum { GM_NONE, GM_HOLD, GM_ATTACK, GM_COUNT } GroupMode;
+typedef enum { NM_PATROL, NM_STRIKE, NM_RAID, NM_ESCORT, NM_COUNT } NavalMission;
 typedef enum {
     OP_RESEAU, OP_VOL_TECH, OP_LOGISTIQUE, OP_INGERENCE, OP_DESTAB, OP_RECON, OP_BROUILLAGE, OP_ASAT, OP_COUNT
 } OpType;
@@ -90,6 +94,7 @@ typedef enum {
 typedef enum {
     BL_TAXES, BL_TRADE, BL_TARIFF, BL_EU, BL_REPARATIONS,                          /* recettes */
     BL_DEFENSE, BL_ARMY, BL_SPENDING, BL_RESEARCH, BL_NUKE, BL_IMPORTS, BL_REP_PAID, /* depenses */
+    BL_INTEREST, BL_COASTAL,
     BL_COUNT
 } BudgetLine;
 #define BL_FIRST_EXPENSE BL_DEFENSE
@@ -242,6 +247,11 @@ extern const DepositDef  DEPOSITS[];
 extern const int         DEPOSIT_COUNT;
 extern const unsigned char UNIT_STRAT[U_TYPE_COUNT][SR_COUNT];
 extern const float       PROVINCE_SEA_EXPOSURE[PROV_COUNT];
+extern const char       *GROUP_MODE_NAMES[GM_COUNT];
+extern const char       *NAVAL_MISSION_NAMES[NM_COUNT];
+extern const char       *NAVAL_MISSION_DESC[NM_COUNT];
+extern const char       *RATING_NAMES[RATING_COUNT];
+extern const float       RATING_RATE[RATING_COUNT];
 extern const char       *GENERAL_TRAITS[GT_COUNT];
 extern const char       *FRENCH_GENERALS[20];
 extern const DecreeDef   DECREES[RG_COUNT][2];
@@ -253,7 +263,7 @@ extern const ProjectDef  PROJECTS[P_COUNT];
 extern const ActionDef   ACTIONS[A_COUNT];
 extern const DilemmaDef  DILEMMAS[];
 extern const int         DILEMMA_COUNT;
-extern const DilemmaDef  DYN_DILEMMAS[4];
+extern const DilemmaDef  DYN_DILEMMAS[6];
 extern const RegimeDef   REGIMES[RG_COUNT];
 extern const NationDef   NATIONS[N_COUNT];
 extern const ProvinceDef PROVINCES[PROV_COUNT];
@@ -271,6 +281,8 @@ extern const char       *ALERT_DESC[3];
 #define DLM_PEACE_OFFER    101
 #define DLM_COUP_LEGAL     102
 #define DLM_NUKE_BLACKMAIL 103
+#define DLM_BAILOUT        104
+#define DLM_UN_VETO        105
 
 /* ---- etat dynamique ---- */
 typedef struct {
@@ -325,6 +337,9 @@ typedef struct {
     float fabs;            /* production de semi-conducteurs */
     bool mineClosed;       /* gisement inexploite */
     float flooded;         /* part des terres submergees */
+    short depot;           /* depot logistique : nation + 1 (0 : aucun) */
+    unsigned char fort;    /* niveau de fortification (0-3) */
+    unsigned char fortBuild;
     int revolt;
     float emig, immig;
 } Province;
@@ -338,6 +353,8 @@ typedef struct {
     float str;
     float org;
     int training;
+    unsigned char group;   /* groupe d'armees francais (0 : aucun) */
+    unsigned char mission; /* mission navale */
 } Unit;
 
 typedef struct {
@@ -389,6 +406,11 @@ typedef struct {
     bool opsThisTurn;
     int negoTurn, negoRounds;  /* negociations de paix en cours */
     short aiTarget, aiThreat;  /* objectif offensif et point menace (IA) */
+    bool nato;                 /* membre de l'OTAN */
+    short sanctions;           /* sanctions internationales (tours) */
+    short peaceCooldown;       /* delai avant une nouvelle offre de paix */
+    short peaceRefusals;       /* offres refusees par la France */
+    float raid;                /* pertes commerciales dues a la guerre au commerce */
 } Nation;
 
 typedef struct {
@@ -426,6 +448,18 @@ typedef struct {
     float aggressionMemory;
     float seaLevel;            /* elevation du niveau de la mer (m) */
     int stratShock[SR_COUNT];  /* crise d'approvisionnement mondiale (tours) */
+
+    /* armee */
+    struct { int mode; int target; } groups[GROUP_COUNT];
+    bool visible[PROV_COUNT];                 /* brouillard de guerre (vue francaise) */
+    unsigned char supply[N_COUNT][PROV_COUNT]; /* ravitaillement 0-100 */
+    bool aggressor[N_COUNT][N_COUNT];         /* a a attaque b */
+
+    /* organisations internationales et dette */
+    float natoCohesion;
+    int unCooldown;
+    float debt;
+    int bailouts, austerityTurns;
 
     /* relations internationales */
     bool war[N_COUNT][N_COUNT];
@@ -485,6 +519,9 @@ typedef struct {
     float histCohesion[HISTORY_LEN];
     float histTemp[HISTORY_LEN];
     float histScore[HISTORY_LEN];
+    float histNatPop[N_COUNT][HISTORY_LEN];
+    float histNatArmy[N_COUNT][HISTORY_LEN];
+    float histNatRel[N_COUNT][HISTORY_LEN];
 
     LogEntry log[MAX_LOG];
     int logCount;
@@ -543,6 +580,14 @@ void        Eco_SetTariff(Game *g, float t);
 const char *Eco_EmbargoBlocked(const Game *g, int n);
 bool        Eco_ToggleEmbargo(Game *g, int n);
 bool        Eco_TradeAllowed(const Game *g, int n);
+int         Eco_Rating(const Game *g);
+float       Eco_InterestRate(const Game *g);   /* taux annuel */
+float       Eco_DebtRatio(const Game *g);
+const char *Eco_BorrowBlocked(const Game *g);
+bool        Eco_Borrow(Game *g);
+const char *Eco_RepayBlocked(const Game *g);
+bool        Eco_Repay(Game *g);
+void        Eco_ResolveBailout(Game *g, bool accept);
 
 /* society.c */
 float       Soc_Habitability(const Game *g, int p);
@@ -616,6 +661,32 @@ float       War_Exhaustion(const Game *g, int n);
 void        War_SignTreaty(Game *g, const Treaty *t);
 void        War_WhitePeace(Game *g, int a, int b, bool log);
 
+/* war.c : ravitaillement, brouillard, fortifications, groupes, missions navales */
+float       War_SupplyLevel(const Game *g, int n, int p);
+bool        War_Visible(const Game *g, int p);
+void        War_UpdateIntel(Game *g);
+void        War_UpdateSupply(Game *g);
+float       War_FortCost(const Game *g, int p);
+const char *War_FortBlocked(const Game *g, int p);
+bool        War_Fortify(Game *g, int p);
+const char *War_DepotBlocked(const Game *g, int p);
+bool        War_BuildDepot(Game *g, int p);
+void        War_SetGroup(Game *g, int unit, int group);
+void        War_SetGroupOrder(Game *g, int group, int mode, int target);
+const char *War_MissionBlocked(const Game *g, int unit, int mission);
+bool        War_SetMission(Game *g, int unit, int mission);
+bool        War_PortFlooded(const Game *g, int p);
+
+/* intl.c : ONU, OTAN, sanctions */
+void        Intl_Init(Game *g);
+void        Intl_Turn(Game *g);
+void        Intl_OnWar(Game *g, int a, int b);
+const char *Intl_ResolutionBlocked(const Game *g, int n);
+bool        Intl_ProposeResolution(Game *g, int n);
+const char *Intl_NatoBlocked(const Game *g);
+void        Intl_ToggleNato(Game *g);
+void        Intl_ResolveVeto(Game *g, bool veto);
+
 /* military.c : generaux et technologies */
 float       Mil_TechCost(const Game *g, int area);
 float       Mil_ResearchPoints(const Game *g);
@@ -656,6 +727,40 @@ const char *Strat_RecruitBlocked(const Game *g, int n, int type);
 void        Strat_PayRecruit(Game *g, int n, int type);
 void        Strat_Init(Game *g);
 void        Strat_Turn(Game *g);
+
+/* command.c : commandes serialisables, somme de controle, rejeu (base du multijoueur) */
+typedef enum {
+    CMD_END_TURN, CMD_RECRUIT, CMD_ORDER, CMD_DISBAND, CMD_DECLARE_WAR, CMD_DIPLOMACY, CMD_OPERATION, CMD_POSTURE,
+    CMD_INVEST, CMD_FACTION_ACTION, CMD_PROJECT, CMD_TAX, CMD_SPENDING, CMD_RESEARCH, CMD_FORTIFY, CMD_DEPOT,
+    CMD_GROUP, CMD_GROUP_ORDER, CMD_MISSION, CMD_DILEMMA, CMD_BORROW, CMD_REPAY, CMD_RESOLUTION, CMD_FACTORY,
+    CMD_COUNT
+} CmdType;
+
+typedef struct {
+    unsigned char type;
+    signed char player;    /* nation du joueur */
+    short a, b, c;
+    float f;
+} Command;
+
+#define CMD_BYTES  12
+#define REPLAY_MAX 8192
+
+typedef struct {
+    unsigned seed;
+    int difficulty;
+    int count;
+    Command cmds[REPLAY_MAX];
+} Replay;
+
+bool        Cmd_Apply(Game *g, const Command *c);
+void        Cmd_Serialize(const Command *c, unsigned char out[CMD_BYTES]);
+bool        Cmd_Deserialize(const unsigned char in[CMD_BYTES], Command *c);
+unsigned    Game_Checksum(const Game *g);
+void        Replay_Clear(Replay *r);
+bool        Replay_Record(Replay *r, const Command *c);
+void        Replay_Run(const Replay *r, Game *g);
+bool        Replay_Save(const Replay *r, const char *path);
 
 /* nuclear.c */
 bool        Nuke_IsPower(const Game *g, int n);

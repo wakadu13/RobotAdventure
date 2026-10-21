@@ -149,6 +149,54 @@ static void WarOnWeakest(Game *g, float ratio)
 }
 
 /* conquete moderee : gestion courante + quelques guerres contre des voisins faibles */
+/* le stratege joue comme un joueur attentif : groupes d'armees, generaux, operations, garnisons */
+static void StrategistStaff(Game *g)
+{
+    int enemy = -1;
+    for (int n = 1; n < N_COUNT && enemy < 0; n++) if (War_AtWar(g, N_FRANCE, n)) enemy = n;
+    /* un groupe d'assaut (2/3 des divisions) et un groupe de garnison */
+    int k = 0;
+    for (int i = 0; i < MAX_UNITS; i++) {
+        const Unit *u = &g->units[i];
+        if (!u->active || u->owner != N_FRANCE || UNIT_TYPES[u->type].domain != DOM_LAND) continue;
+        War_SetGroup(g, i, (k++ % 3) == 2 ? 2 : 1);
+    }
+    if (enemy >= 0) {
+        War_SetGroupOrder(g, 1, GM_ATTACK, enemy);
+        War_SetGroupOrder(g, 2, GM_HOLD, enemy);
+        /* reconnaissance puis brouillage de l'ennemi */
+        if (!Ops_Blocked(g, enemy, OP_RECON)) Ops_Run(g, enemy, OP_RECON);
+        else if (!Ops_Blocked(g, enemy, OP_BROUILLAGE)) Ops_Run(g, enemy, OP_BROUILLAGE);
+        /* les sous-marins menent la guerre au commerce */
+        for (int i = 0; i < MAX_UNITS; i++)
+            if (g->units[i].active && g->units[i].owner == N_FRANCE && g->units[i].type == U_SNA) War_SetMission(g, i, NM_RAID);
+    } else {
+        War_SetGroupOrder(g, 1, GM_NONE, 0);
+        War_SetGroupOrder(g, 2, GM_NONE, 0);
+    }
+    /* generaux : la ou se trouvent le plus de divisions */
+    int gi = 0;
+    for (int i = 0; i < MAX_GENERALS; i++) {
+        const General *gen = &g->generals[i];
+        if (!gen->active || gen->owner != N_FRANCE) continue;
+        int best = -1, bc = 0;
+        for (int p = 0; p < PROV_COUNT; p++) {
+            if (!War_Friendly(g, N_FRANCE, p) || Mil_GeneralAt(g, N_FRANCE, p) >= 0) continue;
+            int c = War_StackCount(g, N_FRANCE, p, DOM_LAND);
+            if (c > bc) { bc = c; best = p; }
+        }
+        if (best >= 0 && (gen->prov < 0 || War_StackCount(g, N_FRANCE, gen->prov, DOM_LAND) < bc)) Mil_Assign(g, i, best);
+        gi++;
+    }
+    if (gi < 3) Mil_Promote(g);
+    /* territoires conquis : pluralisme et garnisons */
+    bool conquered = false;
+    for (int p = 0; p < PROV_COUNT; p++) if (g->prov[p].owner == N_FRANCE && g->prov[p].core != N_FRANCE) conquered = true;
+    if (conquered && g->culturePolicy != CP_PLURALISME) Soc_SetCulturePolicy(g, CP_PLURALISME);
+    for (int t = 0; t < TH_COUNT; t++)
+        if (THEATERS[t].domain == D_TERRE && t == TH_EXTERIEUR && Game_ThreatCount(g, t) > 0) Game_ChangePosture(g, t, 1);
+}
+
 static void PlayStrategist(Game *g)
 {
     if (g->turn > 8 && War_UnitLoad(g, N_FRANCE) < War_ArmyMax(g, N_FRANCE) * 0.8f) Recruit(g, 12);
@@ -157,7 +205,7 @@ static void PlayStrategist(Game *g)
     bool atWar = War_AtWarAny(g, N_FRANCE);
     if (g->turn == 5) Mil_SetResearchBudget(g, 3);
     if (!atWar && Soc_NationProvinces(g, N_FRANCE) < 22 && g->turn > 12 && g->res[R_COHESION] > 50) WarOnWeakest(g, 0.5f);
-    BotAttack(g, 0.6f);
+    StrategistStaff(g);
 }
 
 /* conquerant : junte, armee maximale, guerres en chaine */

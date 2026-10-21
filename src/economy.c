@@ -153,7 +153,7 @@ float Eco_NationUnemployment(const Game *g, int n)
 bool Eco_TradeAllowed(const Game *g, int n)
 {
     const Nation *na = &g->nat[n];
-    return na->alive && !na->embargo && !na->embargoFrance && !War_AtWar(g, N_FRANCE, n);
+    return na->alive && !na->embargo && !na->embargoFrance && !War_AtWar(g, N_FRANCE, n) && na->sanctions <= 0;
 }
 
 const char *Eco_EmbargoBlocked(const Game *g, int n)
@@ -228,7 +228,8 @@ static void WorldMarket(Game *g)
             if (!g->nat[n].alive) continue;
             NationEconomy *ne = &g->eco[n];
             float b = ne->supply[k] - ne->demand[k];
-            float flow = 1 - 0.7f * g->nat[n].blockade;   /* le blocus coupe les routes maritimes */
+            float flow = (1 - 0.7f * g->nat[n].blockade) * (1 - g->nat[n].raid);   /* blocus et guerre au commerce */
+            if (g->nat[n].sanctions > 0) flow *= 0.6f;                                 /* sanctions internationales */
             if (n != N_FRANCE && g->nat[n].embargo) flow *= 0.8f;
             if (n != N_FRANCE && g->nat[n].embargoFrance) flow *= 0.9f;
             if (b > 0) {
@@ -320,14 +321,104 @@ static float TradeValue(const Game *g, bool imports)
     return v;
 }
 
-void Eco_Budget(const Game *g, float l[BL_COUNT])
+static float Taxes(const Game *g)
 {
     float taxes = 0;
     for (int p = 0; p < PROV_COUNT; p++)
         if (g->prov[p].owner == N_FRANCE) taxes += Eco_ProvinceTax(g, p);
-    taxes *= 1.3f * (0.9f + 0.2f * g->spending[SP_ADMIN]) * DiffIncome(g) * (0.7f + 0.005f * g->res[R_ENERGIE]);
+    taxes *= 1.4f * (0.9f + 0.2f * g->spending[SP_ADMIN]) * DiffIncome(g) * (0.7f + 0.005f * g->res[R_ENERGIE]);
     if (g->nat[N_FRANCE].government == I_SOCIAL) taxes *= 0.95f;
     if (g->boostTurns > 0) taxes *= 1.1f;
+    return taxes;
+}
+
+/* ------------------------------------------------------------------ */
+/* Dette publique                                                      */
+/* ------------------------------------------------------------------ */
+
+/* dette rapportee aux recettes fiscales annuelles */
+float Eco_DebtRatio(const Game *g)
+{
+    return g->debt / fmaxf(20, Taxes(g) * 4);
+}
+
+int Eco_Rating(const Game *g)
+{
+    static const float thr[RATING_COUNT - 1] = { 1.5f, 2.5f, 3.5f, 5.0f, 6.5f, 8.0f };
+    float r = Eco_DebtRatio(g);
+    int i = 0;
+    while (i < RATING_COUNT - 1 && r >= thr[i]) i++;
+    if (g->bailouts > 0 && i < 3) i = 3;   /* les marches se souviennent */
+    return i;
+}
+
+float Eco_InterestRate(const Game *g)
+{
+    return RATING_RATE[Eco_Rating(g)];
+}
+
+const char *Eco_BorrowBlocked(const Game *g)
+{
+    if (g->state != GAME_RUNNING) return "Partie terminée";
+    if (Eco_Rating(g) >= RATING_COUNT - 1) return "Les marchés refusent de nous prêter";
+    if (g->austerityTurns > 0) return "Plan d'austérité en cours";
+    return NULL;
+}
+
+bool Eco_Borrow(Game *g)
+{
+    if (Eco_BorrowBlocked(g)) return false;
+    g->debt += 10;
+    g->res[R_BUDGET] += 10;
+    return true;
+}
+
+const char *Eco_RepayBlocked(const Game *g)
+{
+    if (g->debt < 10) return "Dette presque nulle";
+    if (g->res[R_BUDGET] < 10) return "Trésorerie insuffisante (10 Md)";
+    return NULL;
+}
+
+bool Eco_Repay(Game *g)
+{
+    if (Eco_RepayBlocked(g)) return false;
+    g->debt -= 10;
+    g->res[R_BUDGET] -= 10;
+    return true;
+}
+
+void Eco_ResolveBailout(Game *g, bool accept)
+{
+    if (!accept) {
+        Game_Log(g, EV_BAD, "La France fait défaut sur sa dette.");
+        g->state = GAME_LOST_BUDGET;
+        return;
+    }
+    g->bailouts++;
+    g->debt *= 0.7f;
+    g->res[R_BUDGET] = 5;
+    g->austerityTurns = 12;
+    for (int s = 0; s < SP_COUNT; s++) if (g->spending[s] > 0.2f) g->spending[s] = 0.2f;
+    AddRes(g, R_SOUVERAINETE, -15);
+    AddRes(g, R_COHESION, -8);
+    Game_Log(g, EV_BAD, "Plan de sauvetage : la troïka impose l'austérité pour trois ans.");
+}
+
+/* cout d'adaptation des cotes face a la montee des eaux */
+static float CoastalCost(const Game *g, int n)
+{
+    float c = 0, rise = fmaxf(0, g->seaLevel - 0.2f);
+    for (int p = 0; p < PROV_COUNT; p++) {
+        if (g->prov[p].owner != n || PROVINCE_SEA_EXPOSURE[p] <= 0) continue;
+        c += PROVINCE_SEA_EXPOSURE[p] * g->prov[p].pop * rise * 0.25f + g->prov[p].flooded * g->prov[p].pop * 0.05f;
+    }
+    return c;
+}
+
+void Eco_Budget(const Game *g, float l[BL_COUNT])
+{
+    float taxes = Taxes(g);
 
     float imp = TradeValue(g, true);
     l[BL_TAXES]   = taxes;
@@ -343,6 +434,8 @@ void Eco_Budget(const Game *g, float l[BL_COUNT])
         else l[BL_REP_PAID] -= na->reparations;
     }
     l[BL_RESEARCH] = g->researchBudget;
+    l[BL_INTEREST] = g->debt * Eco_InterestRate(g) / 4;
+    l[BL_COASTAL] = CoastalCost(g, N_FRANCE);
     l[BL_DEFENSE] = Game_DefenseUpkeep(g);
     l[BL_ARMY]    = War_ArmyUpkeep(g);
     l[BL_SPENDING] = 0;
@@ -366,7 +459,7 @@ void Eco_SetTax(Game *g, int s, float rate)
     g->taxRate[s] = Clampf(rate, 0.05f, max);
 }
 
-void Eco_SetSpending(Game *g, int sp, float level) { g->spending[sp] = Clampf(level, 0, 1); }
+void Eco_SetSpending(Game *g, int sp, float level) { g->spending[sp] = Clampf(level, 0, g->austerityTurns > 0 ? 0.25f : 1); }
 void Eco_SetTariff(Game *g, float t) { g->tariff = Clampf(t, 0, 0.5f); }
 
 /* ------------------------------------------------------------------ */
@@ -418,7 +511,8 @@ static void AiEconomy(Game *g)
         float trade = 0;
         for (int k = 0; k < G_COUNT; k++) trade += (g->eco[n].exports[k] - g->eco[n].imports[k]) * g->price[k];
         float rep = na->reparationTurns > 0 ? -na->reparations : 0;
-        na->treasury += income * 0.35f - upkeep * 0.5f + trade * 0.15f + rep;
+        na->treasury += income * 0.35f - upkeep * 0.5f + trade * 0.15f + rep - na->raid * 3 - CoastalCost(g, n) * 0.5f
+                      - (na->sanctions > 0 ? 1.5f : 0);
         if (na->failed) na->treasury = fminf(na->treasury, 4);
         na->treasury = Clampf(na->treasury, -20, 60);
 

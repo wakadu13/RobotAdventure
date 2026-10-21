@@ -214,7 +214,7 @@ const DilemmaDef DILEMMAS[] = {
 };
 const int DILEMMA_COUNT = (int)(sizeof(DILEMMAS) / sizeof(DILEMMAS[0]));
 
-const DilemmaDef DYN_DILEMMAS[4] = {
+const DilemmaDef DYN_DILEMMAS[6] = {
     { "Article 42.7 : un allié est attaqué",
       "Un État membre de l'Union européenne est envahi et invoque la clause d'assistance mutuelle. Les capitales regardent Paris.",
       "Entrer en guerre à ses côtés", "Guerre contre l'agresseur, +5 Influence, relation de l'allié +30",
@@ -231,6 +231,14 @@ const DilemmaDef DYN_DILEMMAS[4] = {
       "La Fédération Boréale menace d'employer l'arme nucléaire si nous ne cessons pas les hostilités. Bluffe-t-elle ?",
       "Céder et signer la paix", "Paix immédiate, -8 Cohésion, -10 crédibilité",
       "Tenir bon", "Risque de frappe si notre dissuasion est peu crédible" },
+    { "Crise de la dette",
+      "Les marchés refusent de nous prêter. L'Union européenne et le FMI proposent un plan de sauvetage, en échange d'une austérité sévère.",
+      "Accepter le plan de sauvetage", "Dette -30%, dépenses publiques bridées 12 tours, -15 Souveraineté, -8 Cohésion",
+      "Faire défaut", "La France cesse de payer : défaite" },
+    { "Conseil de sécurité : un allié mis en cause",
+      "Une résolution de l'ONU condamne un de nos alliés et prévoit des sanctions internationales. La France peut opposer son veto.",
+      "Opposer notre veto", "Résolution bloquée, -6 Influence, relation de l'allié +15",
+      "Laisser voter", "Sanctions contre notre allié, relation -20" },
 };
 
 const char *MIGRATION_DOCTRINES[3] = { "Accueil organisé", "Contrôle équilibré", "Fermeture stricte" };
@@ -291,6 +299,7 @@ const char *DIFFICULTY_NAMES[DIFF_COUNT] = { "Facile", "Normale", "Difficile" };
 const char *BUDGET_LINE_NAMES[BL_COUNT] = {
     "Impôts et réquisitions", "Commerce extérieur", "Droits de douane", "Fonds européens", "Réparations, réquisitions",
     "Défense M2MC", "Armée", "Dépenses publiques", "Recherche militaire", "Dissuasion", "Importations", "Réparations versées",
+    "Intérêts de la dette", "Adaptation côtière",
 };
 
 const char *SCORE_PART_NAMES[SC_COUNT] = {
@@ -473,3 +482,15 @@ const float PROVINCE_SEA_EXPOSURE[PROV_COUNT] = {
     [PV_RO_MOL] = 0.1f, [PV_UA_OD] = 0.1f, [PV_TN_N] = 0.08f, [PV_LY_TRI] = 0.05f, [PV_ES_VAL] = 0.08f,
     [PV_ES_CAT] = 0.05f, [PV_LV] = 0.05f, [PV_EE] = 0.05f, [PV_LT] = 0.05f, [PV_GR_C] = 0.04f, [PV_TR_IST] = 0.03f,
 };
+
+const char *GROUP_MODE_NAMES[GM_COUNT] = { "Libre", "Tenir le front", "Offensive" };
+const char *NAVAL_MISSION_NAMES[NM_COUNT] = { "Patrouille", "Frappe à terre", "Guerre au commerce", "Escorte" };
+const char *NAVAL_MISSION_DESC[NM_COUNT] = {
+    "Contrôle des eaux côtières : combat naval et blocus des côtes ennemies voisines.",
+    "Missiles de croisière et aviation embarquée sur une côte ennemie à 2 régions : désorganise ses défenseurs.",
+    "Chasse aux navires marchands ennemis : ses importations et son trésor fondent (sous-marins et drones navals).",
+    "Protège nos convois contre la guerre au commerce adverse.",
+};
+const char *RATING_NAMES[RATING_COUNT] = { "AAA", "AA", "A", "BBB", "BB", "B", "CCC" };
+/* taux d'interet annuels selon la notation */
+const float RATING_RATE[RATING_COUNT] = { 0.015f, 0.02f, 0.03f, 0.045f, 0.065f, 0.09f, 0.14f };

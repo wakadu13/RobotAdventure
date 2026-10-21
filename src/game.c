@@ -124,6 +124,9 @@ void Game_Init(Game *g, unsigned seed, int difficulty)
     g->culturePolicy = CP_ASSIMILATION;
 
     g->seaLevel = 0.2f;
+    static const float debt0[DIFF_COUNT] = { 220, 300, 420 };   /* dette heritee selon la difficulte */
+    g->debt = debt0[g->difficulty];
+    Intl_Init(g);
     Strat_Init(g);
     Mil_Init(g);
     War_InitUnits(g);
@@ -141,11 +144,18 @@ void Game_Init(Game *g, unsigned seed, int difficulty)
     g->histPop[0] = Soc_NationPop(g, N_FRANCE);
     g->histCohesion[0] = g->res[R_COHESION];
     g->histTemp[0] = g->temp;
+    for (int n = 0; n < N_COUNT; n++) {
+        g->histNatPop[n][0] = Soc_NationPop(g, n);
+        g->histNatArmy[n][0] = g->nat[n].army;
+        g->histNatRel[n][0] = g->nat[n].relation;
+    }
 
     Game_Log(g, EV_EVENT, "Janvier 2030. +1,5°C. Le Président vous confie le Conseil de défense et de sécurité.");
     Game_Log(g, EV_INFO, "Gérez la population, protégez les frontières dans tous les milieux et tenez jusqu'en 2060.");
 
     for (int i = 0; i < 2; i++) SpawnThreatFor(g, Rand(g) % F_COUNT);
+    War_UpdateSupply(g);
+    War_UpdateIntel(g);
 }
 
 /* ------------------------------------------------------------------ */
@@ -459,7 +469,12 @@ void Game_ResolveDilemma(Game *g, int c)
     } break;
     case DLM_PEACE_OFFER:
         if (A && g->treaty.active && War_AtWar(g, N_FRANCE, prm)) War_SignTreaty(g, &g->treaty);
-        else { g->treaty.active = false; Game_Log(g, EV_WAR, "La France rejette l'offre de paix de %s.", NATIONS[prm].name); }
+        else {
+            g->treaty.active = false;
+            g->nat[prm].peaceRefusals++;
+            g->nat[prm].peaceCooldown = 4;
+            Game_Log(g, EV_WAR, "La France rejette l'offre de paix de %s. Elle reviendra avec d'autres conditions.", NATIONS[prm].name);
+        }
         break;
     case DLM_COUP_LEGAL:
         if (A) {
@@ -476,6 +491,12 @@ void Game_ResolveDilemma(Game *g, int c)
         break;
     case DLM_NUKE_BLACKMAIL:
         Nuke_ResolveBlackmail(g, A);
+        break;
+    case DLM_BAILOUT:
+        Eco_ResolveBailout(g, A);
+        break;
+    case DLM_UN_VETO:
+        Intl_ResolveVeto(g, A);
         break;
     }
     if (d < DLM_ALLY_CALL)
@@ -728,9 +749,22 @@ void Game_EndTurn(Game *g)
     /* 1. budget de l'Etat */
     Eco_Budget(g, g->budget);
     g->res[R_BUDGET] += Eco_Net(g);
+    /* un deficit de tresorerie se finance par l'emprunt, tant que les marches suivent */
     if (g->res[R_BUDGET] < 0) {
-        g->res[R_BUDGET] *= 1.03f;
-        AddRes(g, R_COHESION, -0.5f);
+        if (Eco_Rating(g) < RATING_COUNT - 1) {
+            g->debt -= g->res[R_BUDGET];
+            g->res[R_BUDGET] = 0;
+        } else if (g->nat[N_FRANCE].eu && g->bailouts == 0 && g->pendingDilemma < 0) {
+            g->pendingDilemma = DLM_BAILOUT;
+        } else if (g->pendingDilemma != DLM_BAILOUT) {
+            Game_Log(g, EV_BAD, "Plus personne ne prête à la France : défaut de paiement.");
+            g->state = GAME_LOST_BUDGET;
+        }
+    }
+    if (Eco_Rating(g) >= 4) AddRes(g, R_COHESION, -0.3f);
+    if (g->austerityTurns > 0) {
+        g->austerityTurns--;
+        for (int s = 0; s < SP_COUNT; s++) if (g->spending[s] > 0.25f) g->spending[s] = 0.25f;
     }
     if (g->migrationDoctrine == 0) AddRes(g, R_INFLUENCE, 1.0f);
     if (g->migrationDoctrine == 2) AddRes(g, R_INFLUENCE, -1.5f);
@@ -766,6 +800,7 @@ void Game_EndTurn(Game *g)
     Nuke_Turn(g);
     Ops_Turn(g);
     Strat_Turn(g);
+    Intl_Turn(g);
 
     /* 6. factions et nouvelles menaces */
     FactionsTurn(g);
@@ -782,6 +817,11 @@ void Game_EndTurn(Game *g)
         g->histCohesion[g->turn] = g->res[R_COHESION];
         g->histTemp[g->turn] = g->temp;
         g->histScore[g->turn] = (float)Game_Score(g, NULL);
+        for (int n = 0; n < N_COUNT; n++) {
+            g->histNatPop[n][g->turn] = Soc_NationPop(g, n);
+            g->histNatArmy[n][g->turn] = g->nat[n].army;
+            g->histNatRel[n][g->turn] = g->nat[n].relation;
+        }
     }
     g->reportReady = true;
 
@@ -791,7 +831,6 @@ void Game_EndTurn(Game *g)
     if (g->prov[PV_FR_IDF].ctrl != N_FRANCE) g->state = GAME_LOST_CONQUEST;
     else if (g->res[R_COHESION] < 1)          g->state = GAME_LOST_COHESION;
     else if (g->res[R_SOUVERAINETE] < 1)      g->state = GAME_LOST_SOUVERAINETE;
-    else if (g->res[R_BUDGET] < -60)          g->state = GAME_LOST_BUDGET;
     else if (g->turn >= TOTAL_TURNS)          g->state = GAME_WON;
     if (g->state != GAME_RUNNING) return;
 
@@ -866,7 +905,8 @@ int Game_Score(const Game *g, int parts[SC_COUNT])
                        + (g->res[R_BUDGET] > 0 ? (g->res[R_BUDGET] < 200 ? g->res[R_BUDGET] : 200) * 0.5f : g->res[R_BUDGET]);
     sc[SC_PUISSANCE]   = g->nat[N_FRANCE].army * 8 + g->credibility + capa * 2;
     sc[SC_REPUTATION]  = g->res[R_INFLUENCE] * 2 - g->aggressionMemory * 2 + (g->nat[N_FRANCE].eu ? 50 : 0);
-    sc[SC_PENALITES]   = -g->nukesUsed * 500.0f - g->tacticalUsed * 120.0f - g->statLost * 30.0f;
+    sc[SC_PENALITES]   = -g->nukesUsed * 500.0f - g->tacticalUsed * 120.0f - g->statLost * 30.0f
+                       - (Eco_DebtRatio(g) > 2.6f ? (Eco_DebtRatio(g) - 2.6f) * 40 : 0) - g->bailouts * 150.0f;
 
     float total = 0;
     for (int i = 0; i < SC_COUNT; i++) {
@@ -907,6 +947,10 @@ bool Game_Load(Game *g, const char *path)
     bool ok = fread(&h, sizeof(h), 1, f) == 1 && memcmp(h.magic, SAVE_MAGIC, 8) == 0
            && h.version == SAVE_VERSION && h.size == sizeof(Game) && fread(&tmp, sizeof(Game), 1, f) == 1;
     fclose(f);
-    if (ok) *g = tmp;
+    if (ok) {
+        *g = tmp;
+        War_UpdateSupply(g);
+        War_UpdateIntel(g);
+    }
     return ok;
 }

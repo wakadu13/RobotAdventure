@@ -399,7 +399,9 @@ static void FrancePopulation(Game *g, int p, float support, bool war)
         if (pr->core != N_FRANCE) up += (1 - pr->integration / 100.0f) * 0.4f;
         up += MinorityUnrest(g, p, s);
         up += fmaxf(0, pr->unemployment - 0.07f) * JOBLESS[s];
-        if (g->res[R_BUDGET] < 0) up += fminf(1, -g->res[R_BUDGET] / 15.0f) * (s == S_ELITES ? 0.15f : 0.1f);
+        int rating = Eco_Rating(g);
+        if (rating >= 4) up += (rating - 3) * (s == S_ELITES ? 0.05f : 0.03f);   /* crainte d'une crise de la dette */
+        if (g->austerityTurns > 0 && s != S_ELITES) up += 0.08f;
         if (g->res[R_COHESION] < 30) up += 0.1f;
         if (rate > 0.3f) up += (rate - 0.3f) * 0.6f;
         float sup = Pol_StrataSupport(g, p, s);

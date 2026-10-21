@@ -63,8 +63,9 @@ static float Weight(const Game *g, int n)
 float Strat_Imports(const Game *g, int n, int r)
 {
     const Nation *na = &g->nat[n];
-    float flow = 1 - 0.7f * na->blockade;
+    float flow = (1 - 0.7f * na->blockade) * (1 - na->raid);
     float v = WORLD_SUPPLY[r] * WorldShare(g, r) * (n == N_FRANCE ? 1.0f : Weight(g, n) * 0.8f);
+    if (na->sanctions > 0) v *= 0.3f;   /* sanctions internationales */
     if (n == N_FRANCE) {
         /* nos partenaires nous cedent une part de leur production */
         for (int k = 1; k < N_COUNT; k++) {
@@ -72,6 +73,13 @@ float Strat_Imports(const Game *g, int n, int r)
             float share = g->nat[k].trade ? 0.35f : (g->nat[k].eu && na->eu) ? 0.2f : 0.05f;
             if (g->ally[N_FRANCE][k]) share += 0.1f;
             v += Strat_Production(g, k, r) * share;
+        }
+    } else {
+        /* les IA echangent avec leurs allies et leurs partenaires europeens */
+        for (int k = 1; k < N_COUNT; k++) {
+            if (k == n || !g->nat[k].alive || War_AtWar(g, n, k) || g->nat[k].sanctions > 0) continue;
+            float share = g->ally[n][k] ? 0.2f : (g->nat[k].eu && na->eu) ? 0.12f : Relation(g, n, k) > 40 ? 0.05f : 0;
+            if (share > 0) v += Strat_Production(g, k, r) * share;
         }
     }
     return v * flow;
@@ -245,6 +253,11 @@ void Strat_Turn(Game *g)
         for (int r = 0; r < SR_COUNT; r++) {
             float v = na->strat[r] + Strat_Production(g, n, r) + Strat_Imports(g, n, r) - Strat_Use(g, n, r);
             na->strat[r] = Clampf(v, 0, STRAT_CAP);
+            /* les IA achetent sur le marche quand leurs reserves baissent */
+            if (n != N_FRANCE && na->strat[r] < 3 && na->sanctions == 0 && na->treasury > Strat_Price(g, r) * 3) {
+                na->treasury -= Strat_Price(g, r) * 2;
+                na->strat[r] += 2;
+            }
         }
     }
     /* alertes francaises */
