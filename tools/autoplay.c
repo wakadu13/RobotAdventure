@@ -1,10 +1,12 @@
 /*
  * Banc d'essai d'equilibrage : joue des parties automatiques sans interface.
- *   make sim && ./build/autoplay
+ *   make sim && ./build/autoplay [nombre de parties] [difficulte 0-2]
  */
 #include "../src/game.h"
 
 #include <stdio.h>
+#include <stdlib.h>
+#include <string.h>
 
 /* strategie passive : on ne fait que passer les tours */
 static void PlayPassive(Game *g)
@@ -12,35 +14,88 @@ static void PlayPassive(Game *g)
     if (g->pendingDilemma >= 0) Game_ResolveDilemma(g, 1);
 }
 
-/* gestion courante : defense, projets, diplomatie, commerce */
+static void ResolveDilemmas(Game *g, bool hawk)
+{
+    if (g->pendingDilemma < 0) return;
+    int d = g->pendingDilemma, c = g->turn % 2;
+    if (d == DLM_PEACE_OFFER || d == DLM_NUKE_BLACKMAIL) c = hawk ? 1 : 0;
+    if (d == DLM_COUP_LEGAL) c = hawk ? 0 : 1;
+    if (d == 12 || d == 13) c = 1;
+    Game_ResolveDilemma(g, c);
+}
+
+/* les divisions inactives rejoignent les provinces frontalieres menacees */
+static void BotDefend(Game *g)
+{
+    for (int i = 0; i < MAX_UNITS; i++) {
+        const Unit *u = &g->units[i];
+        if (!u->active || u->owner != N_FRANCE || u->training || u->target >= 0) continue;
+        bool front = false;
+        for (int k = 0; k < MAX_ADJ && PROVINCE_ADJ[u->prov][k] >= 0; k++)
+            if (War_AtWar(g, N_FRANCE, g->prov[PROVINCE_ADJ[u->prov][k]].owner)) front = true;
+        if (front) continue;
+        for (int k = 0; k < MAX_ADJ && PROVINCE_ADJ[u->prov][k] >= 0; k++) {
+            int q = PROVINCE_ADJ[u->prov][k];
+            if (g->prov[q].owner != N_FRANCE) continue;
+            bool qFront = false;
+            for (int j = 0; j < MAX_ADJ && PROVINCE_ADJ[q][j] >= 0; j++)
+                if (War_AtWar(g, N_FRANCE, g->prov[PROVINCE_ADJ[q][j]].owner)) qFront = true;
+            if (qFront) { War_Order(g, i, q); break; }
+        }
+    }
+}
+
+/* attaque une province ennemie si toutes les divisions voisines donnent assez de chances */
+static void BotAttack(Game *g, float minOdds)
+{
+    for (int p = 0; p < PROV_COUNT; p++) {
+        if (!War_AtWar(g, N_FRANCE, g->prov[p].owner)) continue;
+        int idx[MAX_UNITS], c = 0;
+        for (int i = 0; i < MAX_UNITS; i++) {
+            const Unit *u = &g->units[i];
+            if (!u->active || u->owner != N_FRANCE || u->training || u->target >= 0 || u->org < 0.5f) continue;
+            if (War_OrderBlocked(g, i, p)) continue;
+            War_Order(g, i, p);
+            idx[c++] = i;
+        }
+        if (c && War_BattleOdds(g, p, N_FRANCE) < minOdds)
+            for (int k = 0; k < c; k++) War_Order(g, idx[k], g->units[idx[k]].prov);
+    }
+}
+
+/* gestion courante : defense M2MC, projets, usines, diplomatie, commerce */
 static void Manage(Game *g)
 {
-    if (g->pendingDilemma >= 0) Game_ResolveDilemma(g, g->pendingDilemma == DLM_PEACE_OFFER ? 0 : (g->turn % 2));
-
+    ResolveDilemmas(g, false);
     for (int t = 0; t < TH_COUNT; t++) {
         Domain d = THEATERS[t].domain;
         int want = 1 + 2 * Game_ThreatCount(g, t);
         while (g->posture[t] < want && Game_ChangePosture(g, t, 1)) {}
-        if (g->posture[t] < want) {
-            for (int o = 0; o < TH_COUNT; o++) {
-                if (o == t || THEATERS[o].domain != d) continue;
-                if (Game_ThreatCount(g, o) == 0 && g->posture[o] > 1) {
+        if (g->posture[t] < want)
+            for (int o = 0; o < TH_COUNT; o++)
+                if (o != t && THEATERS[o].domain == d && Game_ThreatCount(g, o) == 0 && g->posture[o] > 1) {
                     Game_ChangePosture(g, o, -1);
                     Game_ChangePosture(g, t, 1);
                 }
-            }
-        }
     }
-
     static const int order[] = { P_ENR, P_AGRO, P_DESSAL, P_ADAPT, P_SMR, P_CYBERCIV, P_MEDIAS, P_CONSTELL };
     for (int i = 0; i < P_COUNT; i++) {
         int p = order[i];
         if (g->proj[p].state == 0 && g->res[R_BUDGET] > Game_ProjectCost(g, p) + 15) Game_StartProject(g, p);
     }
     for (int d = 0; d < D_COUNT; d++)
-        if (Game_PostureUsed(g, d) >= g->capacity[d] && g->res[R_BUDGET] > Game_InvestCost(g, d) + 30
-            && Soc_Income(g) - Game_Upkeep(g) > 2)
+        if (Game_PostureUsed(g, d) >= g->capacity[d] && g->res[R_BUDGET] > Game_InvestCost(g, d) + 30 && Eco_Net(g) > 2)
             Game_InvestCapacity(g, d);
+    if (g->res[R_BUDGET] > 60 && Eco_Net(g) > 3) {
+        int best = -1;
+        for (int p = 0; p < PROV_COUNT; p++)
+            if (!Eco_FactoryBlocked(g, p) && (best < 0 || g->prov[p].pop > g->prov[best].pop)) best = p;
+        if (best >= 0) Eco_BuildFactory(g, best);
+    }
+    /* fiscalite : on ajuste les impots au solde */
+    float net = Eco_Net(g);
+    if (net < 0 && g->res[R_BUDGET] < 30) for (int s = 0; s < S_COUNT; s++) Eco_SetTax(g, s, g->taxRate[s] + 0.05f);
+    if (net > 8 && g->res[R_BUDGET] > 80) for (int s = 0; s < S_COUNT; s++) Eco_SetTax(g, s, g->taxRate[s] - 0.05f);
 
     for (int n = 1; n < N_COUNT; n++) War_Diplomacy(g, n, 1);
     for (int k = 0; k < BASE_CP; k++) {
@@ -54,89 +109,96 @@ static void Manage(Game *g)
             if (!Game_FactionAction(g, best, A_DIPLO))
                 Game_FactionAction(g, best, A_RENSEIGNEMENT);
     }
-    for (int n = 1; n < N_COUNT; n++) if (g->nat[n].atWar) War_ProposePeace(g, n);
-}
-
-/* strategie conquerante : regime militaire, armee, invasions des voisins faibles */
-static void PlayConqueror(Game *g)
-{
-    if (g->pendingDilemma >= 0) Game_ResolveDilemma(g, g->pendingDilemma == 13 || g->pendingDilemma == 9 ? 1 : 0);
-    if (g->turn == 2) Soc_ChangeRegime(g, RG_AUTORITAIRE);
-    if (g->turn == 16) Soc_ChangeRegime(g, RG_JUNTE);
-
-    static const int order[] = { P_ENR, P_AGRO, P_DESSAL, P_ADAPT };
-    for (int i = 0; i < 4; i++)
-        if (g->proj[order[i]].state == 0 && g->res[R_BUDGET] > Game_ProjectCost(g, order[i]) + 15)
-            Game_StartProject(g, order[i]);
-    while (g->res[R_BUDGET] > 20 && Soc_Income(g) - Game_Upkeep(g) > 3 && War_Recruit(g)) {}
-
-    bool atWar = false;
-    for (int n = 1; n < N_COUNT; n++) if (g->nat[n].atWar) atWar = true;
-    if (!atWar && g->turn > 10 && g->nat[N_FRANCE].army >= 10) {
-        int best = -1; float bestArmy = 1e9f;
-        for (int n = 1; n < N_COUNT; n++)
-            if (!War_DeclareBlocked(g, n) && g->nat[n].army < bestArmy) { bestArmy = g->nat[n].army; best = n; }
-        if (best >= 0 && bestArmy < g->nat[N_FRANCE].army * 0.6f) War_Declare(g, best);
+    for (int n = 1; n < N_COUNT; n++) {
+        if (!g->nat[n].atWar) continue;
+        Nuke_Warning(g, n);
+        War_ProposePeace(g, n);
     }
-    for (int p = 0; p < PROV_COUNT; p++)
-        if (War_ProvinceAttackable(g, p) && War_AttackOdds(g, p, War_AvailableDivisions(g)) > 0.6f)
-            War_Attack(g, p, War_AvailableDivisions(g));
-    for (int n = 1; n < N_COUNT; n++)
-        if (g->nat[n].atWar && g->nat[n].warTurns > 12) War_ProposePeace(g, n);
+    BotDefend(g);
+    BotAttack(g, 0.85f);
 }
 
-/* conquete moderee : gestion courante + quelques guerres pour des provinces riches */
+static void Recruit(Game *g, float reserve)
+{
+    static const int types[] = { U_INF, U_MECA, U_BLINDE, U_INF };
+    for (int k = 0; k < 4; k++)
+        if (g->res[R_BUDGET] > reserve && Eco_Net(g) > 3) War_Recruit(g, types[(g->turn + k) % 4], PV_FR_EST);
+}
+
+static void WarOnWeakest(Game *g, float ratio)
+{
+    int best = -1; float bestArmy = 1e9f;
+    for (int n = 1; n < N_COUNT; n++)
+        if (!War_DeclareBlocked(g, n) && g->nat[n].army < bestArmy) { bestArmy = g->nat[n].army; best = n; }
+    if (best >= 0 && bestArmy < g->nat[N_FRANCE].army * ratio) War_Declare(g, best);
+}
+
+/* conquete moderee : gestion courante + quelques guerres contre des voisins faibles */
 static void PlayStrategist(Game *g)
 {
     Manage(g);
     if (g->turn == 4) Soc_ChangeRegime(g, RG_AUTORITAIRE);
-    while (g->res[R_BUDGET] > 40 && Soc_Income(g) - Game_Upkeep(g) > 4 && War_Recruit(g)) {}
+    Recruit(g, 40);
     bool atWar = false;
     for (int n = 1; n < N_COUNT; n++) if (g->nat[n].atWar) atWar = true;
-    if (!atWar && Soc_NationProvinces(g, N_FRANCE) < 12 && g->turn > 12 && g->res[R_COHESION] > 50) {
-        int best = -1; float bestArmy = 1e9f;
-        for (int n = 1; n < N_COUNT; n++)
-            if (!War_DeclareBlocked(g, n) && g->nat[n].army < bestArmy) { bestArmy = g->nat[n].army; best = n; }
-        if (best >= 0 && bestArmy < g->nat[N_FRANCE].army * 0.5f) War_Declare(g, best);
-    }
-    for (int p = 0; p < PROV_COUNT; p++)
-        if (War_ProvinceAttackable(g, p) && War_AttackOdds(g, p, War_AvailableDivisions(g)) > 0.7f)
-            War_Attack(g, p, War_AvailableDivisions(g));
+    if (!atWar && Soc_NationProvinces(g, N_FRANCE) < 12 && g->turn > 12 && g->res[R_COHESION] > 50) WarOnWeakest(g, 0.5f);
+    BotAttack(g, 0.6f);
 }
 
-static void Run(const char *label, void (*strat)(Game *), int games)
+/* conquerant : junte, armee maximale, guerres en chaine */
+static void PlayConqueror(Game *g)
 {
-    int wins = 0, causes[6] = { 0 }, turnsSum = 0, provSum = 0;
-    float resSum[R_COUNT] = { 0 }, popSum = 0, tempSum = 0;
+    ResolveDilemmas(g, true);
+    if (g->turn == 2) Soc_ChangeRegime(g, RG_AUTORITAIRE);
+    if (g->turn == 16) Soc_ChangeRegime(g, RG_JUNTE);
+    Recruit(g, 15);
+    bool atWar = false;
+    for (int n = 1; n < N_COUNT; n++) if (g->nat[n].atWar) atWar = true;
+    if (!atWar && g->turn > 10) WarOnWeakest(g, 0.7f);
+    BotDefend(g);
+    BotAttack(g, 0.5f);
+    for (int n = 1; n < N_COUNT; n++) if (g->nat[n].atWar && g->nat[n].warTurns > 12) War_ProposePeace(g, n);
+}
+
+static void Run(const char *label, void (*strat)(Game *), int games, int diff)
+{
+    int wins = 0, causes[7] = { 0 }, turnsSum = 0, provSum = 0, scoreSum = 0, vic[VIC_COUNT] = { 0 };
+    float resSum[R_COUNT] = { 0 }, popSum = 0;
     for (int i = 0; i < games; i++) {
         Game g;
-        Game_Init(&g, 1000u + (unsigned)i * 7919u);
+        Game_Init(&g, 1000u + (unsigned)i * 7919u, diff);
         while (g.state == GAME_RUNNING) {
             strat(&g);
             if (g.pendingDilemma >= 0) Game_ResolveDilemma(&g, 0);
             Game_EndTurn(&g);
         }
         causes[g.state]++;
-        if (g.state == GAME_WON) wins++;
+        if (g.state == GAME_WON) { wins++; vic[Game_Victory(&g)]++; }
         turnsSum += g.turn;
         provSum += Soc_NationProvinces(&g, N_FRANCE);
         popSum += Soc_NationPop(&g, N_FRANCE);
-        tempSum += g.temp;
+        scoreSum += Game_Score(&g, NULL);
         for (int r = 0; r < R_COUNT; r++) resSum[r] += g.res[r];
     }
-    printf("%-12s victoires %3d%%  tours %.0f  provinces %.1f  pop %.0f M  +%.2f°C | coh %d souv %d budget %d conquete %d\n",
-           label, wins * 100 / games, turnsSum / (float)games, provSum / (float)games, popSum / games, tempSum / games,
-           causes[GAME_LOST_COHESION], causes[GAME_LOST_SOUVERAINETE], causes[GAME_LOST_BUDGET], causes[GAME_LOST_CONQUEST]);
+    printf("%-12s victoires %3d%%  tours %3.0f  prov %4.1f  pop %3.0f M  score %5d | coh %d souv %d budget %d conq %d nuc %d\n",
+           label, wins * 100 / games, turnsSum / (float)games, provSum / (float)games, popSum / games, scoreSum / games,
+           causes[GAME_LOST_COHESION], causes[GAME_LOST_SOUVERAINETE], causes[GAME_LOST_BUDGET],
+           causes[GAME_LOST_CONQUEST], causes[GAME_LOST_NUCLEAR]);
     printf("             fin moy :");
     for (int r = 0; r < R_COUNT; r++) printf(" %s=%.0f", RESOURCE_NAMES[r], resSum[r] / games);
+    printf("\n             victoires :");
+    for (int v = 1; v < VIC_COUNT; v++) if (vic[v]) printf(" %s=%d", VICTORY_NAMES[v], vic[v]);
     printf("\n");
 }
 
-int main(void)
+int main(int argc, char **argv)
 {
-    Run("passive", PlayPassive, 200);
-    Run("gestionnaire", Manage, 200);
-    Run("conquerant", PlayConqueror, 200);
-    Run("stratege", PlayStrategist, 200);
+    int games = argc > 1 ? atoi(argv[1]) : 100;
+    int diff = argc > 2 ? atoi(argv[2]) : DIFF_NORMAL;
+    printf("Difficulté : %s, %d parties par stratégie\n", DIFFICULTY_NAMES[diff], games);
+    Run("passive", PlayPassive, games, diff);
+    Run("gestionnaire", Manage, games, diff);
+    Run("stratege", PlayStrategist, games, diff);
+    Run("conquerant", PlayConqueror, games, diff);
     return 0;
 }

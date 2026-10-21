@@ -91,52 +91,52 @@ const ActionDef ACTIONS[A_COUNT] = {
 const RegimeDef REGIMES[RG_COUNT] = {
     { "Commune écologique",
       "Démocratie radicale et sobriété partagée. Population apaisée, intégration rapide, mais faible mobilisation et horreur de la guerre.",
-      0.85f, 0.06f, 0.00f, 1.2f, 25, 1.0f, 1.6f, 0.03f, 0.80f, 0.90f, { 0.15f, 0.10f, -0.15f } },
+      0.85f, 0.06f, 0.00f, 1.2f, 25, 1.0f, 1.6f, 0.03f, 0.80f, 0.90f, { 0.15f, 0.10f, -0.15f }, "Assemblées citoyennes : pas d'élections partisanes, les Écologistes gouvernent. Impôts plafonnés à 35%." },
     { "Démocratie libérale",
       "Le régime de 2030. Équilibré, apprécié des partenaires européens, prudent face à la guerre.",
-      1.00f, 0.10f, 0.05f, 0.6f, 12, 0.6f, 1.0f, 0.00f, 1.00f, 1.00f, { 0.00f, 0.05f, 0.05f } },
+      1.00f, 0.10f, 0.05f, 0.6f, 12, 0.6f, 1.0f, 0.00f, 1.00f, 1.00f, { 0.00f, 0.05f, 0.05f }, "Élections tous les 4 ans : le courant majoritaire forme le gouvernement et applique son programme." },
     { "Technocratie verte",
       "Gouvernement d'experts et planification climatique. Projets moins chers, recettes accrues, débat public réduit.",
-      1.10f, 0.10f, 0.15f, 0.5f, 10, 0.3f, 0.8f, 0.00f, 0.75f, 1.05f, { -0.05f, 0.05f, 0.00f } },
+      1.10f, 0.10f, 0.15f, 0.5f, 10, 0.3f, 0.8f, 0.00f, 0.75f, 1.05f, { -0.05f, 0.05f, 0.00f }, "Conseil des experts : pas d'élections, recettes et projets optimisés, la conscience politique monte plus vite." },
     { "Régime autoritaire",
       "Exécutif fort, libertés restreintes. Mobilisation et ordre accrus, isolement diplomatique.",
-      1.05f, 0.18f, 0.35f, 0.3f, 4, -0.4f, 0.7f, 0.00f, 1.00f, 1.10f, { -0.05f, -0.10f, 0.10f } },
+      1.05f, 0.18f, 0.35f, 0.3f, 4, -0.4f, 0.7f, 0.00f, 1.00f, 1.10f, { -0.05f, -0.10f, 0.10f }, "Élections suspendues. Les libertés sont restreintes : la répression masque le mécontentement sans l'effacer." },
     { "Junte militaire",
       "L'armée gouverne. Puissance militaire maximale, économie et diplomatie sacrifiées.",
-      0.90f, 0.28f, 0.50f, 0.2f, 1, -1.0f, 0.5f, -0.02f, 1.10f, 1.25f, { -0.10f, -0.15f, 0.05f } },
+      0.90f, 0.28f, 0.50f, 0.2f, 1, -1.0f, 0.5f, -0.02f, 1.10f, 1.25f, { -0.10f, -0.15f, 0.05f }, "L'armée gouverne : recrutement 25% moins cher, organisation des troupes restaurée plus vite." },
     { "État totalitaire",
       "Contrôle total de la société, terreur et propagande. Mobilisation de masse, répression écrasante, paria international.",
-      1.15f, 0.40f, 0.80f, 0.1f, 0, -1.6f, 1.3f, -0.05f, 0.90f, 1.30f, { -0.20f, -0.25f, -0.05f } },
+      1.15f, 0.40f, 0.80f, 0.1f, 0, -1.6f, 1.3f, -0.05f, 0.90f, 1.30f, { -0.20f, -0.25f, -0.05f }, "Propagande et police politique : cohésion forcée, mais la conscience des populations accumule une pression explosive." },
 };
 
 const NationDef NATIONS[N_COUNT] = {
-    { "France",              {  70, 120, 220 }, RG_DEMOCRATIE,   true,  100, 0.00f },
-    { "Royaume-Uni",         { 190,  60,  75 }, RG_DEMOCRATIE,   false,  40, 0.10f },
-    { "Irlande",             {  70, 170,  90 }, RG_DEMOCRATIE,   true,   45, 0.00f },
-    { "Benelux",             { 230, 150,  60 }, RG_DEMOCRATIE,   true,   55, 0.00f },
-    { "Allemagne",           { 125, 125, 125 }, RG_DEMOCRATIE,   true,   50, 0.10f },
-    { "Suisse",              { 215,  90,  90 }, RG_DEMOCRATIE,   false,  40, 0.00f },
-    { "Autriche",            { 225, 195, 195 }, RG_DEMOCRATIE,   true,   40, 0.05f },
-    { "Italie",              {  80, 165,  80 }, RG_DEMOCRATIE,   true,   40, 0.10f },
-    { "Espagne",             { 225, 195,  60 }, RG_DEMOCRATIE,   true,   45, 0.10f },
-    { "Portugal",            {  50, 125,  60 }, RG_DEMOCRATIE,   true,   45, 0.00f },
-    { "Danemark",            { 185,  95, 110 }, RG_DEMOCRATIE,   true,   45, 0.00f },
-    { "Scandinavie",         { 100, 150, 205 }, RG_TECHNOCRATIE, true,   40, 0.05f },
-    { "Pays baltes",         { 150, 120, 200 }, RG_DEMOCRATIE,   true,   40, 0.05f },
-    { "Pologne",             { 220, 120, 145 }, RG_DEMOCRATIE,   true,   30, 0.15f },
-    { "Europe centrale",     { 165,  95, 135 }, RG_AUTORITAIRE,  true,   15, 0.15f },
-    { "Balkans",             { 150, 150,  90 }, RG_AUTORITAIRE,  false,  10, 0.20f },
-    { "Roumanie",            { 200, 175,  95 }, RG_DEMOCRATIE,   true,   30, 0.10f },
-    { "Bulgarie",            {  90, 160, 140 }, RG_DEMOCRATIE,   true,   25, 0.10f },
-    { "Grèce",               { 110, 180, 230 }, RG_DEMOCRATIE,   true,   40, 0.10f },
-    { "Turquie",             { 195,  95,  60 }, RG_AUTORITAIRE,  false,   0, 0.35f },
-    { "Ukraine",             { 235, 210,  90 }, RG_DEMOCRATIE,   false,  35, 0.20f },
-    { "Fédération Boréale",  { 115,  55,  60 }, RG_TOTALITAIRE,  false, -60, 0.60f },
-    { "Maroc",               { 175,  75,  60 }, RG_AUTORITAIRE,  false,  10, 0.15f },
-    { "Algérie",             {  60, 135,  95 }, RG_AUTORITAIRE,  false, -15, 0.20f },
-    { "Tunisie",             { 200, 115, 115 }, RG_AUTORITAIRE,  false,  10, 0.10f },
-    { "Libye",               { 120, 105,  75 }, RG_JUNTE,        false, -10, 0.30f },
-    { "Égypte",              { 210, 180, 125 }, RG_JUNTE,        false,   0, 0.30f },
+    { "France",              {  70, 120, 220 }, RG_DEMOCRATIE,   true,  100, 0.00f, true },
+    { "Royaume-Uni",         { 190,  60,  75 }, RG_DEMOCRATIE,   false,  40, 0.10f, true },
+    { "Irlande",             {  70, 170,  90 }, RG_DEMOCRATIE,   true,   45, 0.00f, false },
+    { "Benelux",             { 230, 150,  60 }, RG_DEMOCRATIE,   true,   55, 0.00f, false },
+    { "Allemagne",           { 125, 125, 125 }, RG_DEMOCRATIE,   true,   50, 0.10f, false },
+    { "Suisse",              { 215,  90,  90 }, RG_DEMOCRATIE,   false,  40, 0.00f, false },
+    { "Autriche",            { 225, 195, 195 }, RG_DEMOCRATIE,   true,   40, 0.05f, false },
+    { "Italie",              {  80, 165,  80 }, RG_DEMOCRATIE,   true,   40, 0.10f, false },
+    { "Espagne",             { 225, 195,  60 }, RG_DEMOCRATIE,   true,   45, 0.10f, false },
+    { "Portugal",            {  50, 125,  60 }, RG_DEMOCRATIE,   true,   45, 0.00f, false },
+    { "Danemark",            { 185,  95, 110 }, RG_DEMOCRATIE,   true,   45, 0.00f, false },
+    { "Scandinavie",         { 100, 150, 205 }, RG_TECHNOCRATIE, true,   40, 0.05f, false },
+    { "Pays baltes",         { 150, 120, 200 }, RG_DEMOCRATIE,   true,   40, 0.05f, false },
+    { "Pologne",             { 220, 120, 145 }, RG_DEMOCRATIE,   true,   30, 0.15f, false },
+    { "Europe centrale",     { 165,  95, 135 }, RG_AUTORITAIRE,  true,   15, 0.15f, false },
+    { "Balkans",             { 150, 150,  90 }, RG_AUTORITAIRE,  false,  10, 0.20f, false },
+    { "Roumanie",            { 200, 175,  95 }, RG_DEMOCRATIE,   true,   30, 0.10f, false },
+    { "Bulgarie",            {  90, 160, 140 }, RG_DEMOCRATIE,   true,   25, 0.10f, false },
+    { "Grèce",               { 110, 180, 230 }, RG_DEMOCRATIE,   true,   40, 0.10f, false },
+    { "Turquie",             { 195,  95,  60 }, RG_AUTORITAIRE,  false,   0, 0.35f, false },
+    { "Ukraine",             { 235, 210,  90 }, RG_DEMOCRATIE,   false,  35, 0.20f, false },
+    { "Fédération Boréale",  { 115,  55,  60 }, RG_TOTALITAIRE,  false, -60, 0.60f, true },
+    { "Maroc",               { 175,  75,  60 }, RG_AUTORITAIRE,  false,  10, 0.15f, false },
+    { "Algérie",             {  60, 135,  95 }, RG_AUTORITAIRE,  false, -15, 0.20f, false },
+    { "Tunisie",             { 200, 115, 115 }, RG_AUTORITAIRE,  false,  10, 0.10f, false },
+    { "Libye",               { 120, 105,  75 }, RG_JUNTE,        false, -10, 0.30f, false },
+    { "Égypte",              { 210, 180, 125 }, RG_JUNTE,        false,   0, 0.30f, false },
 };
 
 /* nation, pop (M), croissance %/tour, aridite, aliment, eau, energie, richesse */
@@ -277,7 +277,7 @@ const DilemmaDef DILEMMAS[] = {
 };
 const int DILEMMA_COUNT = (int)(sizeof(DILEMMAS) / sizeof(DILEMMAS[0]));
 
-const DilemmaDef DYN_DILEMMAS[2] = {
+const DilemmaDef DYN_DILEMMAS[4] = {
     { "Article 42.7 : un allié est attaqué",
       "Un État membre de l'Union européenne est envahi et invoque la clause d'assistance mutuelle. Les capitales regardent Paris.",
       "Entrer en guerre à ses côtés", "Guerre contre l'agresseur, +5 Influence, relation de l'allié +30",
@@ -286,6 +286,14 @@ const DilemmaDef DYN_DILEMMAS[2] = {
       "Épuisé, l'ennemi propose de cesser les hostilités. Les territoires conquis resteraient sous contrôle français.",
       "Signer la paix", "Fin de la guerre, trêve de 4 ans",
       "Poursuivre la guerre", "La guerre continue" },
+    { "Les autoritaires gagnent les élections",
+      "Portés par la peur et les pénuries, les partisans d'un pouvoir fort remportent le scrutin et exigent les pleins pouvoirs.",
+      "Leur confier le pouvoir", "Régime : autoritaire, sans coût de transition",
+      "Annuler le scrutin", "-10 Cohésion, conscience politique en hausse" },
+    { "Chantage nucléaire",
+      "La Fédération Boréale menace d'employer l'arme nucléaire si nous ne cessons pas les hostilités. Bluffe-t-elle ?",
+      "Céder et signer la paix", "Paix immédiate, -8 Cohésion, -10 crédibilité",
+      "Tenir bon", "Risque de frappe si notre dissuasion est peu crédible" },
 };
 
 const char *MIGRATION_DOCTRINES[3] = { "Accueil organisé", "Contrôle équilibré", "Fermeture stricte" };
@@ -301,4 +309,110 @@ const char *ALERT_DESC[3] = {
     "Posture normale. Aucun surcoût.",
     "Défense +15% partout. -3 Budget/tour, -0,4 Cohésion/tour (lassitude).",
     "Défense +30% partout. -7 Budget/tour, -1,2 Cohésion/tour.",
+};
+
+/* ------------------------------------------------------------------ */
+/* Population, politique, economie, armees                             */
+/* ------------------------------------------------------------------ */
+
+const char *IDEOLOGY_NAMES[I_COUNT] = {
+    "Écologistes", "Socialistes", "Libéraux", "Conservateurs", "Souverainistes", "Autoritaires"
+};
+
+const char *IDEOLOGY_DESC[I_COUNT] = {
+    "Sobriété et adaptation. Au pouvoir : projets -15%, réchauffement ralenti, élites mécontentes.",
+    "Justice sociale. Au pouvoir : travailleurs apaisés, recettes -5%.",
+    "Marché et libertés. Au pouvoir : prospérité accrue, élites satisfaites, travailleurs moins.",
+    "Ordre et traditions. Au pouvoir : militance en baisse, intégration ralentie.",
+    "Frontières et indépendance. Au pouvoir : souveraineté en hausse, influence en baisse.",
+    "Pouvoir fort. Vainqueurs d'une élection, ils exigent un changement de régime.",
+};
+
+/* adhesion de chaque courant a chaque regime */
+const float IDEOLOGY_AFFINITY[RG_COUNT][I_COUNT] = {
+    /*            Eco   Soc   Lib   Cons  Souv  Aut */
+    /* Utopie */ { 1.0f, 0.7f, 0.2f, 0.0f, 0.0f, 0.0f },
+    /* Democ. */ { 0.6f, 0.8f, 1.0f, 0.8f, 0.4f, 0.0f },
+    /* Techno */ { 0.9f, 0.4f, 0.7f, 0.4f, 0.2f, 0.1f },
+    /* Autor. */ { 0.1f, 0.2f, 0.2f, 0.7f, 1.0f, 0.8f },
+    /* Junte  */ { 0.0f, 0.1f, 0.1f, 0.5f, 0.7f, 1.0f },
+    /* Totali */ { 0.0f, 0.1f, 0.0f, 0.3f, 0.6f, 1.0f },
+};
+
+const char *GOOD_NAMES[G_COUNT] = { "Alimentation", "Eau", "Énergie", "Minerais", "Biens industriels" };
+const float GOOD_BASE_PRICE[G_COUNT] = { 0.08f, 0.0f, 0.10f, 0.06f, 0.15f };
+
+const char *SPENDING_NAMES[SP_COUNT] = { "Éducation", "Administration", "Protection sociale" };
+const char *SPENDING_DESC[SP_COUNT] = {
+    "Fait monter l'alphabétisation : prospérité et ascension sociale, mais aussi conscience politique.",
+    "Efficacité fiscale et maintien de l'ordre : recettes accrues, révoltes plus vite réprimées.",
+    "Pensions, chômage, logement : baisse la militance des travailleurs et des classes moyennes.",
+};
+
+const char *DIFFICULTY_NAMES[DIFF_COUNT] = { "Facile", "Normale", "Difficile" };
+
+const char *BUDGET_LINE_NAMES[BL_COUNT] = {
+    "Impôts", "Commerce extérieur", "Droits de douane", "Fonds européens",
+    "Défense M2MC", "Armée", "Dépenses publiques", "Dissuasion", "Importations",
+};
+
+const char *SCORE_PART_NAMES[SC_COUNT] = {
+    "Survie", "Population", "Prospérité", "Territoire", "Stabilité",
+    "Résilience", "Puissance", "Réputation", "Pénalités",
+};
+
+const char *VICTORY_NAMES[VIC_COUNT] = {
+    "Aucune", "Survie", "Transition réussie", "Hégémonie", "Utopie réalisée", "Ordre nouveau"
+};
+const char *VICTORY_DESC[VIC_COUNT] = {
+    "",
+    "La France a traversé la tempête.",
+    "Tous les projets de résilience sont achevés et les ressources sont assurées. Bonus +25%.",
+    "La France contrôle plus du quart de la population de la carte. Bonus +25%.",
+    "Une commune écologique stable et prospère en 2060. Bonus +30%.",
+    "Un régime de fer règne sur un vaste territoire pacifié. Bonus +15%.",
+};
+
+const char *NUKE_POSTURES[3] = { "Minimale", "Crédible", "Renforcée" };
+
+const UnitDef UNIT_TYPES[U_TYPE_COUNT] = {
+    { "Infanterie",           "INF", "Peu coûteuse, solide en défense.",                    2.0f, 4.0f, 3.0f, 0.25f, 0.4f, 2 },
+    { "Mécanisée",            "MEC", "Polyvalente et mobile.",                               4.0f, 4.5f, 5.0f, 0.40f, 0.8f, 3 },
+    { "Blindée",              "BLI", "Percée offensive, gênée par la montagne.",             7.0f, 3.5f, 8.0f, 0.60f, 1.2f, 4 },
+    { "Infanterie de marine", "MAR", "Débarque sans pénalité par les liaisons maritimes.",   3.5f, 3.5f, 5.0f, 0.40f, 0.6f, 3 },
+};
+
+const DecreeDef DECREES[RG_COUNT][2] = {
+    { { "Budget participatif", "Les assemblées décident des dépenses : militance -1,5 partout.", 8, 4 },
+      { "Sobriété partagée", "Besoins en énergie et en biens -25% pendant 8 tours, prospérité en légère baisse.", 16, 0 } },
+    { { "Référendum", "Consulter le peuple : +6 Cohésion si le régime est soutenu, -6 sinon.", 16, 1 },
+      { "Plan de relance", "Investissement public : prospérité +5% dans les provinces françaises.", 12, 10 } },
+    { { "Plan quinquennal", "Planification industrielle : +1 usine dans les 3 provinces les plus peuplées.", 20, 12 },
+      { "Gouvernance algorithmique", "Recettes +10% pendant 8 tours, conscience politique en hausse.", 16, 3 } },
+    { { "Censure", "Supprime les campagnes informationnelles en cours, Nébula -10 capacité, conscience -1, Influence -5.", 8, 0 },
+      { "État d'urgence", "Met fin aux révoltes, militance -2, Cohésion -3.", 12, 0 } },
+    { { "Mobilisation générale", "Plafond de divisions x1,5 pendant 12 tours, 3 divisions d'infanterie levées, prospérité -10%.", 20, 0 },
+      { "Loi martiale", "Écrase les révoltes, militance -3, conscience +1.", 10, 0 } },
+    { { "Police politique", "Conscience -2 et militance -2 partout, population -0,2%.", 8, 0 },
+      { "Propagande totale", "Pendant 12 tours : cohésion soutenue, courants autoritaires renforcés. Influence -6.", 16, 2 } },
+};
+
+/* minerais et usines en 2030 (meme ordre que les provinces) */
+const float PROVINCE_MINERALS[PROV_COUNT] = {
+    2, 1, 3, 1, 2, 1, 0,      4, 3, 0,   1, 1,   3, 1, 1, 4,   0, 2,
+    1, 1, 1, 1, 1,            2, 2, 3, 2,   2,   0,   3, 10, 4,   0,   4, 3,   3, 2,
+    1, 3, 2,   3, 2, 2,       3, 3, 4, 4,   2, 3, 8, 2,   1, 3, 15, 6, 8,
+    2, 8,   2, 1, 4,   2,   1, 1,   2, 2,
+};
+const float PROVINCE_INDUSTRY[PROV_COUNT] = {
+    6, 2, 4, 2, 5, 2, 0,      16, 2, 2,  6, 4,   8, 6, 8, 5,   3, 3,
+    9, 3, 2, 1, 0,            5, 4, 2, 2,   2,   2,   2, 4, 2,    1,   4, 4,   4, 3,
+    1, 2, 0,   3, 1, 1,       6, 3, 4, 2,   2, 2, 3, 1,   2, 8, 2, 4, 3,
+    2, 0,   2, 1, 0,   1,   0, 0,   5, 1,
+};
+const unsigned char PROVINCE_TERRAIN[PROV_COUNT] = {
+    0, 0, 1, 0, 2, 1, 1,      0, 1, 0,   0, 0,   1, 0, 1, 0,   2, 2,
+    1, 1, 1, 1, 1,            1, 1, 1, 2,   1,   0,   2, 1, 1,    0,   0, 0,   1, 0,
+    2, 2, 2,   1, 1, 2,       0, 1, 1, 2,   1, 0, 0, 0,   0, 0, 1, 0, 0,
+    1, 2,   1, 1, 0,   0,   0, 0,   0, 0,
 };

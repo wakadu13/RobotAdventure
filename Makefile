@@ -3,6 +3,7 @@
 #   make                      compile le jeu (raylib trouve via pkg-config)
 #   make RAYLIB_PATH=/chemin  utilise un raylib compile a la main (dossier src/ de raylib)
 #   make sim                  banc d'essai d'equilibrage sans interface
+#   make test                 tests des mecaniques (nucleaire, decrets, elections...)
 #   make run                  compile et lance
 #
 # Windows (MinGW/w64devkit) : make RAYLIB_PATH=C:/raylib/raylib/src
@@ -11,7 +12,7 @@ CC      ?= gcc
 CFLAGS  ?= -std=c99 -O2 -Wall -Wextra
 BUILD   := build
 TARGET  := $(BUILD)/bouclier2050
-SIM     := src/game.c src/world.c src/society.c src/war.c src/map_data.c
+SIM     := src/game.c src/world.c src/society.c src/war.c src/economy.c src/politics.c src/nuclear.c src/map_data.c
 SRC     := src/main.c $(SIM)
 
 ifeq ($(OS),Windows_NT)
@@ -37,14 +38,14 @@ else
     endif
 endif
 
-.PHONY: all run sim clean
+.PHONY: all run sim test clean
 
 all: $(TARGET)
 
 $(TARGET): $(SRC) src/game.h src/game_internal.h src/map_data.h | $(BUILD)
 	$(CC) $(CFLAGS) $(RAYLIB_CFLAGS) $(SRC) -o $@ $(RAYLIB_LIBS) -lm
 
-$(BUILD)/autoplay: $(SIM) src/game.h tools/autoplay.c | $(BUILD)
+$(BUILD)/autoplay: $(SIM) src/game.h src/game_internal.h src/map_data.h tools/autoplay.c | $(BUILD)
 	$(CC) $(CFLAGS) $(SIM) tools/autoplay.c -o $@ -lm
 
 $(BUILD):
@@ -52,6 +53,12 @@ $(BUILD):
 
 run: $(TARGET)
 	./$(TARGET)
+
+$(BUILD)/tests: $(SIM) src/game.h src/game_internal.h src/map_data.h tools/tests.c | $(BUILD)
+	$(CC) $(CFLAGS) $(SIM) tools/tests.c -o $@ -lm
+
+test: $(BUILD)/tests
+	./$(BUILD)/tests
 
 sim: $(BUILD)/autoplay
 	./$(BUILD)/autoplay

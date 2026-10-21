@@ -8,6 +8,8 @@
 #include <stdio.h>
 #include <string.h>
 
+#define SAVE_MAGIC "B2050SV"
+
 /* faction -> types de menaces privilegies */
 static const int FACTION_THREATS[F_COUNT][8] = {
     {  3,  5,  7,  8,  9, 10, 12, 16 },   /* Boreale */
@@ -51,10 +53,11 @@ void Game_DateString(int turn, char *buf, int len)
 /* Initialisation                                                      */
 /* ------------------------------------------------------------------ */
 
-void Game_Init(Game *g, unsigned seed)
+void Game_Init(Game *g, unsigned seed, int difficulty)
 {
     memset(g, 0, sizeof(*g));
     g->rng = seed ? seed : 12345u;
+    g->difficulty = difficulty < 0 || difficulty >= DIFF_COUNT ? DIFF_NORMAL : difficulty;
     g->temp = 1.5f;
 
     g->res[R_BUDGET]       = 35;
@@ -89,12 +92,28 @@ void Game_Init(Game *g, unsigned seed)
         pr->pop = PROVINCES[p].pop;
         pr->integration = 100;
         pr->prosperity = 1;
+        pr->industry = PROVINCE_INDUSTRY[p];
         for (int s = 0; s < S_COUNT; s++) pr->mil[s] = 2.0f;
         pr->hab = Soc_Habitability(g, p);
+        Pol_InitProvince(g, p);
         g->nat[pr->owner].startProvinces++;
     }
-    for (int n = 0; n < N_COUNT; n++) g->nat[n].army = War_ArmyMax(g, n) * 0.8f;
-    g->nat[N_FRANCE].army = 5;
+
+    /* economie */
+    for (int s = 0; s < S_COUNT; s++) g->taxRate[s] = 0.3f;
+    for (int s = 0; s < SP_COUNT; s++) g->spending[s] = 0.4f;
+    g->tariff = 0.05f;
+    for (int k = 0; k < G_COUNT; k++) g->price[k] = GOOD_BASE_PRICE[k];
+    for (int n = 0; n < N_COUNT; n++)
+        for (int k = 0; k < G_COUNT; k++) g->eco[n].sat[k] = 1;
+
+    /* politique et dissuasion */
+    g->government = I_LIBERAL;
+    g->nextElection = 16;
+    g->nukePosture = 1;
+    g->credibility = 60;
+
+    War_InitUnits(g);
 
     g->migrationDoctrine = 1;
     g->alertLevel = 0;
@@ -102,7 +121,9 @@ void Game_Init(Game *g, unsigned seed)
     g->pendingDilemma = -1;
     g->state = GAME_RUNNING;
 
-    Soc_UpdateResources(g);
+    Eco_Turn(g);
+    g->res[R_ALIM] = 62; g->res[R_EAU] = 60; g->res[R_ENERGIE] = 60;
+    g->histScore[0] = (float)Game_Score(g, NULL);
     g->histPop[0] = Soc_NationPop(g, N_FRANCE);
     g->histCohesion[0] = g->res[R_COHESION];
     g->histTemp[0] = g->temp;
@@ -282,7 +303,7 @@ bool Game_FactionAction(Game *g, int f, int a)
 
 float Game_ProjectCost(const Game *g, int p)
 {
-    return PROJECTS[p].cost * REGIMES[g->nat[N_FRANCE].regime].projectCost;
+    return PROJECTS[p].cost * REGIMES[g->nat[N_FRANCE].regime].projectCost * (g->government == I_ECOLO ? 0.85f : 1.0f);
 }
 
 bool Game_StartProject(Game *g, int p)
@@ -380,7 +401,11 @@ void Game_ResolveDilemma(Game *g, int c)
     case 11: if (A) { AddRes(g, R_BUDGET, -10); AddRes(g, R_INFLUENCE, 10); g->climateMitigation += 0.06f; }
              else   { AddRes(g, R_BUDGET, 1); AddRes(g, R_INFLUENCE, -4); } break;
     case 12: if (A) { Soc_SetRegime(g, RG_JUNTE); AddRes(g, R_COHESION, -8); g->regimeCooldown = 12; }
-             else   { AddRes(g, R_COHESION, 3); g->nat[N_FRANCE].army = g->nat[N_FRANCE].army > 1 ? g->nat[N_FRANCE].army - 1 : 0; } break;
+             else   {
+                 AddRes(g, R_COHESION, 3);
+                 for (int i = 0; i < MAX_UNITS; i++)
+                     if (g->units[i].active && g->units[i].owner == N_FRANCE) { War_Disband(g, i); break; }
+             } break;
     case 13: if (A) { Soc_SetRegime(g, RG_UTOPIE); AddMilitancy(g, S_ELITES, 3); g->regimeCooldown = 12; }
              else   { AddMilitancy(g, S_MOYENNES, 2); AddRes(g, R_COHESION, -4); } break;
     case 14: if (A) { AddRes(g, R_BUDGET, -10); AddRes(g, R_SOUVERAINETE, 6); AddRes(g, R_EAU, 4); AddFac(g, F_HYDRA, 15, 0); }
@@ -395,6 +420,7 @@ void Game_ResolveDilemma(Game *g, int c)
             AddRes(g, R_INFLUENCE, 5);
             g->nat[prm].atWar = true;
             g->nat[prm].warTurns = 0;
+            g->nat[prm].deterred = Nuke_Deters(g, prm);
             AddRelation(g, prm, -40);
             Game_Log(g, EV_WAR, "La France entre en guerre contre %s pour défendre %s.",
                      NATIONS[prm].name, NATIONS[g->nat[prm].warTarget].name);
@@ -406,6 +432,22 @@ void Game_ResolveDilemma(Game *g, int c)
     case DLM_PEACE_OFFER:
         if (A) War_MakePeace(g, prm, true);
         else Game_Log(g, EV_WAR, "La France rejette l'offre de paix de %s.", NATIONS[prm].name);
+        break;
+    case DLM_COUP_LEGAL:
+        if (A) {
+            Soc_SetRegime(g, RG_AUTORITAIRE);
+            g->regimeCooldown = 12;
+            Game_Log(g, EV_EVENT, "Les Autoritaires prennent le pouvoir par les urnes.");
+        } else {
+            AddRes(g, R_COHESION, -10);
+            for (int p = 0; p < PROV_COUNT; p++)
+                if (g->prov[p].owner == N_FRANCE)
+                    for (int s = 0; s < S_COUNT; s++) g->prov[p].con[s] = Clampf(g->prov[p].con[s] + 1, 0, 10);
+            Game_Log(g, EV_EVENT, "Le scrutin est annulé. La rue gronde.");
+        }
+        break;
+    case DLM_NUKE_BLACKMAIL:
+        Nuke_ResolveBlackmail(g, A);
         break;
     }
     if (d < DLM_ALLY_CALL)
@@ -542,7 +584,7 @@ static void FactionsTurn(Game *g)
     float escalation = 1.0f + 1.4f * g->turn / (float)TOTAL_TURNS;
     for (int f = 0; f < F_COUNT; f++) {
         float h = g->fac[f].hostility / 100.0f, c = g->fac[f].capability / 100.0f;
-        float expected = (0.08f + 1.1f * h * c) * escalation;
+        float expected = (0.08f + 1.1f * h * c) * escalation * DiffThreat(g);
         int n = (int)expected;
         if (Randf(g) < expected - n) n++;
         for (int k = 0; k < n; k++) SpawnThreatFor(g, f);
@@ -555,9 +597,10 @@ static void FactionsTurn(Game *g)
 
 static void ClimateTurn(Game *g)
 {
-    g->temp += 0.011f + 0.00008f * g->turn - g->climateMitigation * 0.03f;
+    float warming = (0.011f + 0.00008f * g->turn) * DiffClimate(g) * (g->government == I_ECOLO ? 0.9f : 1.0f);
+    g->temp += warming - g->climateMitigation * 0.03f;
 
-    float chance = 0.12f + (g->temp - 1.2f) * 0.14f - g->climateMitigation;
+    float chance = (0.12f + (g->temp - 1.2f) * 0.14f) * DiffClimate(g) - g->climateMitigation;
     if (Randf(g) >= chance) return;
     float k = g->proj[P_ADAPT].state == 2 ? 0.55f : 1.0f;
     g->statDisasters++;
@@ -590,7 +633,7 @@ static void ClimateTurn(Game *g)
 /* Budget                                                              */
 /* ------------------------------------------------------------------ */
 
-float Game_Upkeep(const Game *g)
+float Game_DefenseUpkeep(const Game *g)
 {
     float u = 0;
     for (int t = 0; t < TH_COUNT; t++) u += g->posture[t] * 0.6f;
@@ -598,7 +641,6 @@ float Game_Upkeep(const Game *g)
     static const float alert[3] = { 0, 3, 7 };
     u += alert[g->alertLevel];
     if (g->migrationDoctrine == 2) u += 1.5f;
-    u += War_ArmyUpkeep(g);
     return u;
 }
 
@@ -612,9 +654,16 @@ void Game_EndTurn(Game *g)
 
     float before[R_COUNT];
     memcpy(before, g->res, sizeof(before));
+    memcpy(g->reportRes, g->res, sizeof(g->reportRes));
+    g->reportPop = Soc_NationPop(g, N_FRANCE);
+    g->reportProv = Soc_NationProvinces(g, N_FRANCE);
+    g->reportUnits = War_UnitCount(g, N_FRANCE);
+    g->reportScore = Game_Score(g, NULL);
+    g->reportLogStart = g->logCount;
 
-    /* 1. economie */
-    g->res[R_BUDGET] += Soc_Income(g) - Game_Upkeep(g);
+    /* 1. budget de l'Etat */
+    Eco_Budget(g, g->budget);
+    g->res[R_BUDGET] += Eco_Net(g);
     if (g->res[R_BUDGET] < 0) {
         g->res[R_BUDGET] *= 1.03f;
         AddRes(g, R_COHESION, -0.5f);
@@ -646,15 +695,16 @@ void Game_EndTurn(Game *g)
     ClimateTurn(g);
     Soc_Turn(g);
 
-    /* 5. guerres et diplomatie */
+    /* 5. vie politique, guerres, diplomatie, dissuasion */
+    Pol_Turn(g);
     War_Turn(g);
+    Nuke_Turn(g);
 
     /* 6. factions et nouvelles menaces */
     FactionsTurn(g);
 
     if (g->regimeCooldown > 0) g->regimeCooldown--;
     g->commandPoints = BASE_CP;
-    g->divisionsUsed = 0;
     for (int n = 0; n < N_COUNT; n++) g->nat[n].actedThisTurn = false;
     g->turn++;
 
@@ -663,9 +713,12 @@ void Game_EndTurn(Game *g)
         g->histPop[g->turn] = Soc_NationPop(g, N_FRANCE);
         g->histCohesion[g->turn] = g->res[R_COHESION];
         g->histTemp[g->turn] = g->temp;
+        g->histScore[g->turn] = (float)Game_Score(g, NULL);
     }
+    g->reportReady = true;
 
     /* 7. fin de partie */
+    if (g->reportLogStart > g->logCount) g->reportLogStart = 0;
     if (g->state != GAME_RUNNING) return;
     if (g->prov[PV_FR_NORD].owner != N_FRANCE) g->state = GAME_LOST_CONQUEST;
     else if (g->res[R_COHESION] < 1)          g->state = GAME_LOST_COHESION;
@@ -697,11 +750,95 @@ void Game_EndTurn(Game *g)
     }
 }
 
-int Game_Score(const Game *g)
+/* ------------------------------------------------------------------ */
+/* Score et victoire                                                   */
+/* ------------------------------------------------------------------ */
+
+VictoryType Game_Victory(const Game *g)
 {
-    float s = g->res[R_COHESION] * 2 + g->res[R_SOUVERAINETE] * 2 + g->res[R_INFLUENCE]
-            + g->res[R_ENERGIE] + g->res[R_EAU] + g->res[R_ALIM]
-            + g->res[R_BUDGET] * 0.5f + g->statNeutralized * 2 + g->turn * 4
-            + Soc_NationPop(g, N_FRANCE) * 2 + Soc_NationProvinces(g, N_FRANCE) * 15;
-    return s < 0 ? 0 : (int)s;
+    if (g->state != GAME_WON && g->state != GAME_RUNNING) return VIC_NONE;
+    float total = 0;
+    for (int p = 0; p < PROV_COUNT; p++) total += g->prov[p].pop;
+    int provs = Soc_NationProvinces(g, N_FRANCE);
+    bool projects = true;
+    for (int p = 0; p < P_COUNT; p++) if (g->proj[p].state != 2) projects = false;
+    Regime r = g->nat[N_FRANCE].regime;
+    if (r == RG_UTOPIE && g->res[R_COHESION] >= 60) return VIC_UTOPIE;
+    if (Soc_NationPop(g, N_FRANCE) >= total * 0.25f) return VIC_HEGEMONIE;
+    if (projects && g->res[R_ENERGIE] >= 55 && g->res[R_EAU] >= 55 && g->res[R_ALIM] >= 55) return VIC_TRANSITION;
+    if (r >= RG_JUNTE && provs >= 15) return VIC_ORDRE;
+    return VIC_SURVIE;
+}
+
+int Game_Score(const Game *g, int parts[SC_COUNT])
+{
+    float sc[SC_COUNT] = { 0 };
+    float popCore = 0, popOther = 0, prosp = 0, lit = 0, wsum = 0;
+    int provs = 0, integrated = 0, revolts = 0, done = 0;
+    for (int p = 0; p < PROV_COUNT; p++) {
+        const Province *pr = &g->prov[p];
+        if (pr->owner != N_FRANCE) continue;
+        if (pr->core == N_FRANCE) popCore += pr->pop; else popOther += pr->pop;
+        prosp += pr->prosperity * pr->pop;
+        lit += pr->literacy * pr->pop;
+        wsum += pr->pop;
+        if (PROVINCES[p].nation != N_FRANCE) { provs++; if (pr->core == N_FRANCE) integrated++; }
+        if (pr->revolt) revolts++;
+    }
+    for (int p = 0; p < P_COUNT; p++) if (g->proj[p].state == 2) done++;
+    int capa = 0;
+    for (int d = 0; d < D_COUNT; d++) capa += g->capacity[d];
+
+    sc[SC_SURVIE]      = g->turn * 4.0f;
+    sc[SC_POPULATION]  = popCore * 2 + popOther;
+    sc[SC_PROSPERITE]  = wsum > 0 ? prosp / wsum * 150 + lit / wsum * 100 : 0;
+    sc[SC_TERRITOIRE]  = provs * 25.0f + integrated * 15.0f;
+    sc[SC_STABILITE]   = g->res[R_COHESION] * 3 + g->res[R_SOUVERAINETE] * 2 - revolts * 20;
+    sc[SC_RESILIENCE]  = g->res[R_ENERGIE] + g->res[R_EAU] + g->res[R_ALIM] + done * 20
+                       + (g->res[R_BUDGET] > 0 ? (g->res[R_BUDGET] < 200 ? g->res[R_BUDGET] : 200) * 0.5f : g->res[R_BUDGET]);
+    sc[SC_PUISSANCE]   = g->nat[N_FRANCE].army * 8 + g->credibility + capa * 2;
+    sc[SC_REPUTATION]  = g->res[R_INFLUENCE] * 2 - g->aggressionMemory * 2 + (g->nat[N_FRANCE].eu ? 50 : 0);
+    sc[SC_PENALITES]   = -g->nukesUsed * 500.0f - g->statLost * 30.0f;
+
+    float total = 0;
+    for (int i = 0; i < SC_COUNT; i++) {
+        if (parts) parts[i] = (int)sc[i];
+        total += sc[i];
+    }
+    static const float diff[DIFF_COUNT] = { 0.8f, 1.0f, 1.3f };
+    total *= diff[g->difficulty];
+    if (g->state == GAME_WON) {
+        static const float bonus[VIC_COUNT] = { 1, 1, 1.25f, 1.25f, 1.3f, 1.15f };
+        total *= bonus[Game_Victory(g)];
+    }
+    return total < 0 ? 0 : (int)total;
+}
+
+/* ------------------------------------------------------------------ */
+/* Sauvegarde                                                          */
+/* ------------------------------------------------------------------ */
+
+typedef struct { char magic[8]; int version; unsigned size; } SaveHeader;
+
+bool Game_Save(const Game *g, const char *path)
+{
+    FILE *f = fopen(path, "wb");
+    if (!f) return false;
+    SaveHeader h = { SAVE_MAGIC, SAVE_VERSION, (unsigned)sizeof(Game) };
+    bool ok = fwrite(&h, sizeof(h), 1, f) == 1 && fwrite(g, sizeof(Game), 1, f) == 1;
+    fclose(f);
+    return ok;
+}
+
+bool Game_Load(Game *g, const char *path)
+{
+    FILE *f = fopen(path, "rb");
+    if (!f) return false;
+    SaveHeader h;
+    static Game tmp;
+    bool ok = fread(&h, sizeof(h), 1, f) == 1 && memcmp(h.magic, SAVE_MAGIC, 8) == 0
+           && h.version == SAVE_VERSION && h.size == sizeof(Game) && fread(&tmp, sizeof(Game), 1, f) == 1;
+    fclose(f);
+    if (ok) *g = tmp;
+    return ok;
 }

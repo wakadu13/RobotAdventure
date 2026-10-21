@@ -10,15 +10,19 @@
 
 #include <math.h>
 #include <stdio.h>
+#include <stdlib.h>
 #include <string.h>
 #include <time.h>
 
 #define VW 1280
 #define VH 720
+#define SAVE_FILE "bouclier2050.sav"
+#define AUTOSAVE_FILE "bouclier2050_auto.sav"
 
 typedef enum { SCR_TITLE, SCR_HELP, SCR_GAME, SCR_END } Screen;
 typedef enum {
-    TAB_PROVINCE, TAB_NATIONS, TAB_DEFENSE, TAB_HYBRIDE, TAB_SOCIETE, TAB_POLITIQUE, TAB_PROJETS, TAB_COUNT
+    TAB_PROVINCE, TAB_ARMEE, TAB_NATIONS, TAB_DEFENSE, TAB_HYBRIDE,
+    TAB_SOCIETE, TAB_ECONOMIE, TAB_POLITIQUE, TAB_PROJETS, TAB_COUNT
 } Tab;
 typedef enum { MAP_POLITIQUE, MAP_CLIMAT, MAP_MILITANCE, MAP_POPULATION, MAP_MODE_COUNT } MapMode;
 
@@ -40,6 +44,7 @@ typedef enum { MAP_POLITIQUE, MAP_CLIMAT, MAP_MILITANCE, MAP_POPULATION, MAP_MOD
 #define C_WAR       (Color){ 255, 110, 110, 255 }
 #define C_SEA       (Color){  18,  34,  52, 255 }
 #define C_OUT       (Color){  38,  40,  46, 255 }
+#define C_SEL       (Color){ 255, 220,  80, 255 }
 
 static const Color DOMAIN_COLORS[D_COUNT] = {
     { 150, 170,  90, 255 }, {  70, 150, 230, 255 }, { 120, 210, 240, 255 }, { 200, 160, 255, 255 },
@@ -48,6 +53,11 @@ static const Color DOMAIN_COLORS[D_COUNT] = {
 
 static const Color FACTION_COLORS[F_COUNT] = {
     { 200, 100, 100, 255 }, { 230, 180,  90, 255 }, {  80, 200, 200, 255 }, { 220, 100, 230, 255 },
+};
+
+static const Color IDEOLOGY_COLORS[I_COUNT] = {
+    {  90, 190, 100, 255 }, { 220,  80,  90, 255 }, { 240, 200,  70, 255 },
+    {  80, 130, 220, 255 }, { 120,  80, 180, 255 }, { 120, 120, 120, 255 },
 };
 
 /* ------------------------------------------------------------------ */
@@ -61,12 +71,18 @@ static int      selProvince = PV_FR_NORD;
 static int      selNation = N_ALLEMAGNE;
 static int      selTheater = TH_NORD;
 static int      hoverProvince = -1;
-static float    attackDivs = 3;
+static bool     uiSel[MAX_UNITS];
+static int      newDifficulty = DIFF_NORMAL;
+static bool     showReports = true;
+static bool     strikeArmed;
+static int      strikeProvince = -1;
+static char     toast[160];
+static float    toastTime;
 static RenderTexture2D target;
 static float    viewScale = 1;
 static Vector2  viewOffset;
 static Vector2  mouse;
-static bool     clicked;
+static bool     clicked, rclicked;
 static int      inputLayer, activeLayer;
 static char     tooltip[600];
 static float    timeAcc;
@@ -147,10 +163,21 @@ static void Tooltip(Rectangle r, const char *text)
 static bool ActionButton(Rectangle r, const char *label, const char *blocked, const char *desc)
 {
     bool res = Button(r, label, blocked == NULL, 10);
-    char tip[400];
+    char tip[500];
     snprintf(tip, sizeof(tip), "%s\n%s%s%s", label, desc, blocked ? "\nIndisponible : " : "", blocked ? blocked : "");
     Tooltip(r, tip);
     return res;
+}
+
+/* selecteur radio : renvoie true si clique */
+static bool Choice(Rectangle r, const char *label, bool sel)
+{
+    bool h = Hover(r);
+    DrawRectangleRec(r, sel ? (Color){ 40, 62, 92, 255 } : h ? C_PANEL2 : C_PANEL);
+    DrawRectangleLinesEx(r, 1, sel ? C_ACCENT : C_BORDER);
+    Text(label, r.x + (r.width - TextW(label, 10)) / 2, r.y + (r.height - 10) / 2, 10, sel ? C_TEXT : C_DIM);
+    if (h && clicked) { clicked = false; return true; }
+    return false;
 }
 
 static void Bar(Rectangle r, float v, float max, Color c)
@@ -167,6 +194,8 @@ static Color LevelColor(float v)
     if (v < 40) return C_WARN;
     return C_GOOD;
 }
+
+static Color MilColor(float m) { return m > 6 ? C_BAD : m > 4 ? C_WARN : C_GOOD; }
 
 static Color NationColor(int n)
 {
@@ -189,6 +218,54 @@ static Color Lerp3(Color a, Color b, Color c, float t)
                     (unsigned char)(x.b + (y.b - x.b) * u), 255 };
 }
 
+static void Toast(const char *msg)
+{
+    snprintf(toast, sizeof(toast), "%s", msg);
+    toastTime = 3.0f;
+}
+
+/* ------------------------------------------------------------------ */
+/* Selection des divisions                                             */
+/* ------------------------------------------------------------------ */
+static void SelectUnitsIn(int p, bool add)
+{
+    if (!add) memset(uiSel, 0, sizeof(uiSel));
+    for (int i = 0; i < MAX_UNITS; i++) {
+        const Unit *u = &game.units[i];
+        if (u->active && u->owner == N_FRANCE && u->prov == p && !u->training) uiSel[i] = true;
+    }
+}
+
+static int SelectedCount(void)
+{
+    int c = 0;
+    for (int i = 0; i < MAX_UNITS; i++)
+        if (uiSel[i] && game.units[i].active && game.units[i].owner == N_FRANCE) c++;
+    return c;
+}
+
+static void OrderSelected(int p)
+{
+    int ok = 0, tried = 0;
+    const char *why = NULL;
+    for (int i = 0; i < MAX_UNITS; i++) {
+        if (!uiSel[i] || !game.units[i].active || game.units[i].owner != N_FRANCE) continue;
+        tried++;
+        const char *b = War_OrderBlocked(&game, i, p);
+        if (b) { why = b; continue; }
+        War_Order(&game, i, p);
+        ok++;
+    }
+    char buf[160];
+    if (!tried) Toast("Aucune division sélectionnée (clic gauche sur une province française).");
+    else if (!ok) { snprintf(buf, sizeof(buf), "Ordre impossible : %s.", why); Toast(buf); }
+    else {
+        bool enemy = game.prov[p].owner != N_FRANCE;
+        snprintf(buf, sizeof(buf), "%d division(s) %s %s.", ok, enemy ? "lancée(s) à l'assaut de" : "en route vers", PROVINCE_NAMES[p]);
+        Toast(buf);
+    }
+}
+
 /* ------------------------------------------------------------------ */
 /* Carte                                                               */
 /* ------------------------------------------------------------------ */
@@ -202,7 +279,7 @@ static Color Lerp3(Color a, Color b, Color c, float t)
 static Texture2D mapTex;
 static Color     mapPixels[MAP_PW * MAP_PH];
 static unsigned  mapSignature = 1;
-static float     nationLabel[N_COUNT][3];   /* x, y, nb de cellules */
+static float     nationLabel[N_COUNT][3];
 
 static int ProvinceAt(Vector2 m)
 {
@@ -218,6 +295,7 @@ static Color ProvinceColor(int p, int col, int row)
     const Province *pr = &game.prov[p];
     switch (mapMode) {
     case MAP_CLIMAT:
+        if (pr->fallout > 0.2f && (col + row) % 2) return (Color){ 120, 220, 60, 255 };
         return Lerp3((Color){ 170, 50, 40, 255 }, (Color){ 220, 190, 70, 255 }, (Color){ 70, 160, 90, 255 }, pr->hab / 100.0f);
     case MAP_MILITANCE:
         if (pr->revolt) return (col + row) % 3 ? (Color){ 150, 40, 160, 255 } : (Color){ 60, 10, 70, 255 };
@@ -231,7 +309,6 @@ static Color ProvinceColor(int p, int col, int row)
     default: {
         Color c = NationColor(pr->owner);
         if (pr->owner != N_FRANCE) c = Shade(c, 0.8f);
-        /* zebrures d'occupation : la couleur de la nation d'origine apparait */
         if (pr->core != pr->owner && (col + row) % 4 < 1) c = Shade(NationColor(pr->core), 0.7f);
         return c;
     }
@@ -254,7 +331,6 @@ static unsigned ComputeSignature(void)
 static void RebuildMap(void)
 {
     for (int i = 0; i < N_COUNT; i++) nationLabel[i][0] = nationLabel[i][1] = nationLabel[i][2] = 0;
-
     for (int row = 0; row < MAP_H; row++) {
         for (int col = 0; col < MAP_W; col++) {
             int v = MAP_CELLS[row][col];
@@ -289,7 +365,6 @@ static void RebuildMap(void)
             }
         }
     }
-    /* contour blanc de la province selectionnee */
     for (int row = 0; row < MAP_H; row++) {
         for (int col = 0; col < MAP_W; col++) {
             if (MAP_CELLS[row][col] != selProvince) continue;
@@ -300,7 +375,7 @@ static void RebuildMap(void)
             for (int y = 0; y < CELL_H; y++)
                 for (int x = 0; x < CELL_W; x++)
                     if ((l && x == 0) || (r && x == CELL_W - 1) || (t && y == 0) || (b && y == CELL_H - 1))
-                        mapPixels[(row * CELL_H + y) * MAP_PW + col * CELL_W + x] = (Color){ 255, 255, 255, 255 };
+                        mapPixels[(row * CELL_H + y) * MAP_PW + col * CELL_W + x] = WHITE;
         }
     }
     UpdateTexture(mapTex, mapPixels);
@@ -311,6 +386,68 @@ static Vector2 ProvinceCenter(int p)
     return (Vector2){ MAP_X + PROVINCE_LABEL[p][0] * CELL_W + 1.5f, MAP_Y + PROVINCE_LABEL[p][1] * CELL_H + 2 };
 }
 
+static void DrawArrow(Vector2 a, Vector2 b, Color c)
+{
+    Vector2 d = { b.x - a.x, b.y - a.y };
+    float len = sqrtf(d.x * d.x + d.y * d.y);
+    if (len < 1) return;
+    d.x /= len; d.y /= len;
+    Vector2 s = { a.x + d.x * 8, a.y + d.y * 8 }, e = { b.x - d.x * 8, b.y - d.y * 8 };
+    DrawLineEx(s, e, 3, Fade(BLACK, 0.5f));
+    DrawLineEx(s, e, 2, c);
+    Vector2 l = { e.x - d.x * 7 - d.y * 5, e.y - d.y * 7 + d.x * 5 };
+    Vector2 r = { e.x - d.x * 7 + d.y * 5, e.y - d.y * 7 - d.x * 5 };
+    DrawTriangle(e, l, r, c);
+    DrawTriangle(e, r, l, c);
+}
+
+/* pions des divisions : un pion par nation presente dans la province */
+static void DrawUnitCounters(void)
+{
+    for (int p = 0; p < PROV_COUNT; p++) {
+        int count[N_COUNT] = { 0 }, ready[N_COUNT] = { 0 };
+        bool sel = false;
+        for (int i = 0; i < MAX_UNITS; i++) {
+            const Unit *u = &game.units[i];
+            if (!u->active || u->prov != p) continue;
+            count[u->owner]++;
+            if (!u->training) ready[u->owner]++;
+            if (uiSel[i] && u->owner == N_FRANCE) sel = true;
+        }
+        Vector2 c = ProvinceCenter(p);
+        int slot = 0;
+        for (int n = 0; n < N_COUNT; n++) {
+            if (!count[n]) continue;
+            Rectangle r = { c.x - 8 + slot * 18, c.y + 6, 17, 11 };
+            Color border = n == N_FRANCE ? (sel ? C_SEL : WHITE) : War_AtWar(&game, N_FRANCE, n) ? C_WAR : (Color){ 20, 20, 20, 255 };
+            DrawRectangleRec(r, n == N_FRANCE ? (Color){ 40, 90, 200, 255 } : Shade(NationColor(n), 0.85f));
+            DrawRectangleLinesEx(r, 1, border);
+            char buf[8];
+            snprintf(buf, sizeof(buf), "%d", count[n]);
+            Text(buf, r.x + (r.width - TextW(buf, 10)) / 2, r.y + 1, 10, ready[n] < count[n] && n == N_FRANCE ? C_DIM : WHITE);
+            if (inputLayer == activeLayer && CheckCollisionPointRec(mouse, r)) {
+                char tip[500];
+                int len = snprintf(tip, sizeof(tip), "Divisions de %s en %s", NATIONS[n].name, PROVINCE_NAMES[p]);
+                for (int i = 0; i < MAX_UNITS && len < (int)sizeof(tip) - 60; i++) {
+                    const Unit *u = &game.units[i];
+                    if (!u->active || u->prov != p || u->owner != n) continue;
+                    len += snprintf(tip + len, sizeof(tip) - len, "\n%s  effectifs %.0f%%  organisation %.0f%%%s",
+                                    UNIT_TYPES[u->type].name, u->str * 100, u->org * 100, u->training ? "  (formation)" : "");
+                }
+                snprintf(tooltip, sizeof(tooltip), "%s", tip);
+            }
+            slot++;
+        }
+    }
+    /* ordres francais */
+    for (int i = 0; i < MAX_UNITS; i++) {
+        const Unit *u = &game.units[i];
+        if (!u->active || u->owner != N_FRANCE || u->target < 0) continue;
+        bool attack = game.prov[u->target].owner != N_FRANCE;
+        DrawArrow(ProvinceCenter(u->prov), ProvinceCenter(u->target), attack ? C_WAR : C_GOOD);
+    }
+}
+
 static void DrawMap(void)
 {
     unsigned sig = ComputeSignature();
@@ -318,12 +455,11 @@ static void DrawMap(void)
     DrawTexture(mapTex, MAP_X, MAP_Y, WHITE);
     DrawRectangleLines(MAP_X - 1, MAP_Y - 1, MAP_PW + 2, MAP_PH + 2, C_BORDER);
 
-    /* noms des nations */
     if (mapMode == MAP_POLITIQUE) {
         for (int n = 0; n < N_COUNT; n++) {
             if (nationLabel[n][2] < 60) continue;
             float x = MAP_X + nationLabel[n][0] / nationLabel[n][2] * CELL_W;
-            float y = MAP_Y + nationLabel[n][1] / nationLabel[n][2] * CELL_H;
+            float y = MAP_Y + nationLabel[n][1] / nationLabel[n][2] * CELL_H - 10;
             const char *nm = NATIONS[n].name;
             int w = TextW(nm, 10);
             Text(nm, x - w / 2 + 1, y - 4, 10, (Color){ 0, 0, 0, 170 });
@@ -331,39 +467,41 @@ static void DrawMap(void)
         }
     }
 
-    /* fronts et revoltes */
     float pulse = 0.5f + 0.5f * sinf(timeAcc * 5);
     for (int p = 0; p < PROV_COUNT; p++) {
         Vector2 c = ProvinceCenter(p);
-        if (War_ProvinceAttackable(&game, p)) {
-            DrawCircleV(c, 6 + pulse * 2, Fade(C_WAR, 0.35f));
-            DrawLineEx((Vector2){ c.x - 4, c.y - 4 }, (Vector2){ c.x + 4, c.y + 4 }, 2, C_WAR);
-            DrawLineEx((Vector2){ c.x - 4, c.y + 4 }, (Vector2){ c.x + 4, c.y - 4 }, 2, C_WAR);
-        }
+        if (War_AtWar(&game, N_FRANCE, game.prov[p].owner) && War_ProvinceAttackable(&game, p))
+            DrawCircleLines((int)c.x, (int)c.y, 7 + pulse * 2, C_WAR);
         if (game.prov[p].revolt) {
-            DrawCircleV(c, 6, Fade((Color){ 190, 60, 220, 255 }, 0.5f + 0.4f * pulse));
-            Text("!", c.x - 2, c.y - 5, 10, WHITE);
+            DrawCircleV((Vector2){ c.x, c.y - 8 }, 6, Fade((Color){ 190, 60, 220, 255 }, 0.5f + 0.4f * pulse));
+            Text("!", c.x - 2, c.y - 13, 10, WHITE);
         }
     }
 
-    /* survol et selection */
     hoverProvince = inputLayer == activeLayer ? ProvinceAt(mouse) : -1;
+    DrawUnitCounters();
+
     if (hoverProvince >= 0) {
         const Province *pr = &game.prov[hoverProvince];
-        char core[80] = "";
-        if (pr->core != pr->owner) snprintf(core, sizeof(core), "\nOccupée - population %s", NATIONS[pr->core].name);
-        snprintf(tooltip, sizeof(tooltip), "%s (%s)%s\n%.1f M hab. - habitabilité %.0f - militance %.1f%s",
-                 PROVINCE_NAMES[hoverProvince], NATIONS[pr->owner].name, core, pr->pop, pr->hab,
-                 Soc_ProvinceMilitancy(pr), pr->revolt ? "\nEN RÉVOLTE" : "");
+        if (!tooltip[0]) {
+            char core[80] = "";
+            if (pr->core != pr->owner) snprintf(core, sizeof(core), "\nOccupée - population %s", NATIONS[pr->core].name);
+            snprintf(tooltip, sizeof(tooltip), "%s (%s)%s\n%.1f M hab. - habitabilité %.0f - militance %.1f%s%s",
+                     PROVINCE_NAMES[hoverProvince], NATIONS[pr->owner].name, core, pr->pop, pr->hab,
+                     Soc_ProvinceMilitancy(pr), pr->revolt ? "\nEN RÉVOLTE" : "",
+                     SelectedCount() ? "\nClic droit : envoyer les divisions sélectionnées" : "");
+        }
         if (clicked) {
             selProvince = hoverProvince;
             if (pr->owner != N_FRANCE) selNation = pr->owner;
-            if (tab != TAB_NATIONS) tab = TAB_PROVINCE;
+            SelectUnitsIn(hoverProvince, IsKeyDown(KEY_LEFT_SHIFT) || IsKeyDown(KEY_RIGHT_SHIFT));
+            if (tab != TAB_NATIONS && tab != TAB_ARMEE) tab = TAB_PROVINCE;
+            strikeArmed = false;
             clicked = false;
         }
+        if (rclicked) { OrderSelected(hoverProvince); rclicked = false; }
     }
 
-    /* modes de carte */
     static const char *modes[MAP_MODE_COUNT] = { "POLITIQUE", "CLIMAT", "MILITANCE", "POPULATION" };
     for (int i = 0; i < MAP_MODE_COUNT; i++) {
         Rectangle r = { MAP_X + 6 + i * 84, MAP_Y + MAP_PH - 24, 80, 18 };
@@ -377,12 +515,20 @@ static void DrawMap(void)
         }
     }
     static const char *legend[MAP_MODE_COUNT] = {
-        "Zébrures : territoire occupé.  X rouge : province ennemie attaquable.",
-        "Habitabilité : vert = tempéré, rouge = invivable.",
+        "Clic gauche : sélectionner.  Clic droit : envoyer les divisions.  Zébrures : territoire occupé.",
+        "Habitabilité : vert = tempéré, rouge = invivable, vert vif = contamination.",
         "Militance : vert = calme, rouge = agitée, violet = révolte.",
         "Densité de population.",
     };
     Text(legend[mapMode], MAP_X + 6, MAP_Y + 6, 10, (Color){ 230, 230, 230, 200 });
+
+    if (toastTime > 0) {
+        int w = TextW(toast, 10);
+        Rectangle r = { MAP_X + MAP_PW / 2 - w / 2 - 10, MAP_Y + MAP_PH - 50, (float)w + 20, 20 };
+        DrawRectangleRec(r, Fade((Color){ 10, 14, 20, 255 }, 0.9f));
+        DrawRectangleLinesEx(r, 1, C_ACCENT);
+        Text(toast, r.x + 10, r.y + 5, 10, C_TEXT);
+    }
 }
 
 /* ------------------------------------------------------------------ */
@@ -395,9 +541,13 @@ static void DrawTopBar(void)
 
     char date[32], buf[160];
     Game_DateString(game.turn, date, sizeof(date));
-    Text("BOUCLIER 2050", 10, 6, 20, C_ACCENT);
-    snprintf(buf, sizeof(buf), "%s - tour %d/%d - +%.2f°C", date, game.turn + 1, TOTAL_TURNS, game.temp);
-    Text(buf, 10, 28, 10, C_TEXT);
+    Text("BOUCLIER 2050", 10, 4, 20, C_ACCENT);
+    snprintf(buf, sizeof(buf), "%s - %d/%d - +%.2f°C", date, game.turn + 1, TOTAL_TURNS, game.temp);
+    Text(buf, 10, 26, 10, C_TEXT);
+    snprintf(buf, sizeof(buf), "Score %d", Game_Score(&game, NULL));
+    Rectangle sr = { 176, 26, 70, 12 };
+    Text(buf, sr.x, sr.y, 10, C_SEL);
+    Tooltip(sr, "Score de victoire : détail dans l'onglet POLITIQUE.");
 
     float x = 250;
     float w = (VW - x - 10) / R_COUNT;
@@ -415,14 +565,15 @@ static void DrawTopBar(void)
         }
         if (r != R_BUDGET) Bar((Rectangle){ area.x, area.y + 36, area.width - 6, 3 }, v, 100, c);
         else {
-            snprintf(buf, sizeof(buf), "%+.1f/tour", Soc_Income(&game) - Game_Upkeep(&game));
+            snprintf(buf, sizeof(buf), "%+.1f/tour", Eco_Net(&game));
             Text(buf, area.x + TextW("000", 20) + 22, area.y + 20, 10, C_DIM);
         }
         char tip[300];
         if (r >= R_ENERGIE && r <= R_ALIM) {
-            int k = r == R_ALIM ? 0 : r == R_EAU ? 1 : 2;
-            snprintf(tip, sizeof(tip), "%s : %.1f\n%s\nProduction %.0f / besoins %.0f", RESOURCE_NAMES[r], v,
-                     RESOURCE_DESC[r], game.prod[k], game.cons[k]);
+            int k = r == R_ALIM ? G_FOOD : r == R_EAU ? G_WATER : G_ENERGY;
+            const NationEconomy *e = &game.eco[N_FRANCE];
+            snprintf(tip, sizeof(tip), "%s : %.1f\n%s\nProduction %.0f + importations %.0f / besoins %.0f", RESOURCE_NAMES[r], v,
+                     RESOURCE_DESC[r], e->supply[k], e->imports[k], e->demand[k]);
         } else {
             snprintf(tip, sizeof(tip), "%s : %.1f\n%s", RESOURCE_NAMES[r], v, RESOURCE_DESC[r]);
         }
@@ -440,7 +591,7 @@ static void DrawTopBar(void)
 static void StatLine(float x, float y, const char *label, const char *value, Color c)
 {
     Text(label, x, y, 10, C_DIM);
-    Text(value, x + 130, y, 10, c);
+    Text(value, x + 120, y, 10, c);
 }
 
 static const char *DECLARE_DESC =
@@ -452,19 +603,18 @@ static void DrawProvinceTab(void)
     int p = selProvince;
     const Province *pr = &game.prov[p];
     const Nation *own = &game.nat[pr->owner];
-    char buf[200];
-    float x = RP_X + 10, y = RP_Y + 6;
+    char buf[220];
+    float x = RP_X + 10, y = RP_Y + 4;
 
     Text(PROVINCE_NAMES[p], x, y, 20, C_TEXT);
     y += 24;
     DrawRectangle((int)x, (int)y + 1, 10, 10, NationColor(pr->owner));
-    snprintf(buf, sizeof(buf), "%s  -  %s%s", NATIONS[pr->owner].name, REGIMES[own->regime].name,
-             own->failed ? "  -  ÉTAT FAILLI" : "");
+    snprintf(buf, sizeof(buf), "%s  -  %s%s%s", NATIONS[pr->owner].name, REGIMES[own->regime].name,
+             own->failed ? "  -  ÉTAT FAILLI" : "", NATIONS[pr->owner].nuclear ? "  -  puissance nucléaire" : "");
     Text(buf, x + 16, y, 10, C_TEXT);
     y += 14;
     if (pr->core != pr->owner) {
-        snprintf(buf, sizeof(buf), "Territoire occupé : population de culture %s. Intégration %.0f%%.",
-                 NATIONS[pr->core].name, pr->integration);
+        snprintf(buf, sizeof(buf), "Territoire occupé : population de culture %s. Intégration %.0f%%.", NATIONS[pr->core].name, pr->integration);
         Text(buf, x, y, 10, C_WARN);
         y += 14;
     }
@@ -473,129 +623,251 @@ static void DrawProvinceTab(void)
         Text(buf, x, y, 10, (Color){ 220, 120, 240, 255 });
         y += 14;
     }
-    y += 6;
+    y += 4;
 
-    float c2 = x + 280;
-    snprintf(buf, sizeof(buf), "%.2f M", pr->pop);
-    StatLine(x, y, "Population", buf, C_TEXT);
-    snprintf(buf, sizeof(buf), "%.0f / 100", pr->hab);
-    StatLine(c2, y, "Habitabilité", buf, LevelColor(pr->hab));
-    y += 14;
-    snprintf(buf, sizeof(buf), "%.1f / 10", Soc_ProvinceMilitancy(pr));
-    StatLine(x, y, "Militance", buf, Soc_ProvinceMilitancy(pr) > 6 ? C_BAD : C_TEXT);
-    snprintf(buf, sizeof(buf), "x%.2f", pr->prosperity);
-    StatLine(c2, y, "Prospérité", buf, C_TEXT);
-    y += 14;
-    snprintf(buf, sizeof(buf), "%.0f%%", pr->foreign * 100);
-    StatLine(x, y, "Pop. à intégrer", buf, C_TEXT);
-    snprintf(buf, sizeof(buf), "%.0f%%", pr->damage * 100);
-    StatLine(c2, y, "Dévastation", buf, pr->damage > 0.05f ? C_BAD : C_TEXT);
-    y += 14;
-    snprintf(buf, sizeof(buf), "-%.0f k / +%.0f k", pr->emig * 1000, pr->immig * 1000);
-    StatLine(x, y, "Émigr. / immigr.", buf, C_TEXT);
-    snprintf(buf, sizeof(buf), "%.1f Md/tour", Soc_ProvinceIncome(&game, p));
-    StatLine(c2, y, "Recettes fiscales", buf, C_TEXT);
-    y += 14;
-    snprintf(buf, sizeof(buf), "%.0f / %.0f / %.0f", PROVINCES[p].food * pr->hab / 100, PROVINCES[p].water * pr->hab / 100,
-             PROVINCES[p].energy);
-    StatLine(x, y, "Alim / eau / énergie", buf, C_TEXT);
-    snprintf(buf, sizeof(buf), "%.0f%%", PROVINCES[p].aridity * 100);
-    StatLine(c2, y, "Exposition climat", buf, C_TEXT);
-    y += 22;
+    float c2 = x + 275;
+    snprintf(buf, sizeof(buf), "%.2f M", pr->pop);                        StatLine(x, y, "Population", buf, C_TEXT);
+    snprintf(buf, sizeof(buf), "%.0f / 100", pr->hab);                     StatLine(c2, y, "Habitabilité", buf, LevelColor(pr->hab));
+    y += 13;
+    snprintf(buf, sizeof(buf), "%.0f%%", pr->literacy * 100);              StatLine(x, y, "Alphabétisation", buf, C_TEXT);
+    snprintf(buf, sizeof(buf), "x%.2f", pr->prosperity);                   StatLine(c2, y, "Prospérité", buf, C_TEXT);
+    y += 13;
+    snprintf(buf, sizeof(buf), "%.0f%%", pr->foreign * 100);               StatLine(x, y, "Pop. à intégrer", buf, C_TEXT);
+    snprintf(buf, sizeof(buf), "%.1f", pr->industry);                      StatLine(c2, y, "Usines", buf, C_TEXT);
+    y += 13;
+    snprintf(buf, sizeof(buf), "-%.0f k / +%.0f k", pr->emig * 1000, pr->immig * 1000); StatLine(x, y, "Émigr. / immigr.", buf, C_TEXT);
+    snprintf(buf, sizeof(buf), "%.1f Md/tour", Eco_ProvinceTax(&game, p)); StatLine(c2, y, "Recettes fiscales", buf, C_TEXT);
+    y += 13;
+    snprintf(buf, sizeof(buf), "%.0f / %.0f / %.0f / %.0f", PROVINCES[p].food * pr->hab / 100, PROVINCES[p].water * pr->hab / 100,
+             PROVINCES[p].energy, PROVINCE_MINERALS[p]);
+    StatLine(x, y, "Alim/eau/énerg/min", buf, C_TEXT);
+    static const char *terrain[3] = { "plaine", "collines", "montagne" };
+    snprintf(buf, sizeof(buf), "%s%s", terrain[PROVINCE_TERRAIN[p]], pr->fallout > 0.05f ? ", contaminé" : "");
+    StatLine(c2, y, "Terrain", buf, pr->fallout > 0.05f ? C_BAD : C_TEXT);
+    y += 18;
 
-    Text("STRATES SOCIALES (militance)", x, y, 10, C_DIM);
-    y += 14;
+    Text("STRATES", x, y, 10, C_DIM);
+    Text("part", x + 130, y, 10, C_DIM);
+    Text("militance", x + 175, y, 10, C_DIM);
+    Text("conscience", x + 355, y, 10, C_DIM);
+    y += 13;
     for (int s = 0; s < S_COUNT; s++) {
-        snprintf(buf, sizeof(buf), "%s (%.0f%%)", STRATA_NAMES[s], STRATA_SHARE[s] * 100);
-        Text(buf, x, y, 10, C_TEXT);
-        Bar((Rectangle){ x + 170, y + 1, 260, 8 }, pr->mil[s], 10, pr->mil[s] > 6 ? C_BAD : pr->mil[s] > 4 ? C_WARN : C_GOOD);
+        Text(STRATA_NAMES[s], x, y, 10, C_TEXT);
+        snprintf(buf, sizeof(buf), "%.0f%%", pr->share[s] * 100);
+        Text(buf, x + 130, y, 10, C_TEXT);
+        Bar((Rectangle){ x + 175, y + 1, 140, 8 }, pr->mil[s], 10, MilColor(pr->mil[s]));
         snprintf(buf, sizeof(buf), "%.1f", pr->mil[s]);
-        Text(buf, x + 440, y, 10, C_TEXT);
-        y += 14;
+        Text(buf, x + 320, y, 10, C_TEXT);
+        Bar((Rectangle){ x + 355, y + 1, 140, 8 }, pr->con[s], 10, C_EVENT);
+        snprintf(buf, sizeof(buf), "%.1f", pr->con[s]);
+        Text(buf, x + 500, y, 10, C_TEXT);
+        y += 13;
     }
-    y += 10;
+    snprintf(buf, sizeof(buf), "Seuil de révolte : %.1f (baisse avec la conscience politique)", Soc_RevoltThreshold(pr));
+    Text(buf, x, y + 2, 10, C_DIM);
+    y += 20;
 
-    if (pr->owner == N_FRANCE) {
-        TextWrap("Province française. Sa stabilité dépend du régime, des pénuries, de la guerre et de l'intégration "
-                 "des nouveaux arrivants.", x, y, RP_W - 20, 10, C_DIM);
-        return;
-    }
-    Panel((Rectangle){ RP_X + 6, y, RP_W - 12, 156 }, C_PANEL2);
+    Panel((Rectangle){ RP_X + 6, y, RP_W - 12, VH - 60 - y }, C_PANEL2);
     y += 8;
-    if (War_ProvinceAttackable(&game, p)) {
-        float avail = War_AvailableDivisions(&game);
-        if (attackDivs > avail) attackDivs = floorf(avail);
-        if (attackDivs < 1 && avail >= 1) attackDivs = 1;
-        Text("OFFENSIVE", x, y, 20, C_WAR);
-        y += 26;
-        snprintf(buf, sizeof(buf), "Divisions engagées : %.0f / %.1f disponibles", attackDivs, avail);
-        Text(buf, x, y + 6, 10, C_TEXT);
-        if (Button((Rectangle){ x + 300, y, 26, 22 }, "-", attackDivs > 1, 20)) attackDivs -= 1;
-        if (Button((Rectangle){ x + 330, y, 26, 22 }, "+", attackDivs + 1 <= avail, 20)) attackDivs += 1;
-        if (Button((Rectangle){ x + 360, y, 60, 22 }, "Toutes", avail >= 1, 10)) attackDivs = floorf(avail);
-        y += 30;
-        float odds = War_AttackOdds(&game, p, attackDivs);
-        snprintf(buf, sizeof(buf), "Lancer l'offensive (%.0f%% de succès)", odds * 100);
-        Rectangle br = { x, y, 300, 28 };
-        if (Button(br, buf, avail >= 1 && attackDivs >= 1, 10)) War_Attack(&game, p, attackDivs);
-        Tooltip(br, "Puissance = divisions x qualité (régime, synergies air/espace/cyber/EM). Une attaque par la mer seule est "
-                    "pénalisée sans capacité navale de 6. Victoire : la province est annexée mais doit être intégrée.");
-        y += 36;
-        Text("Les divisions engagées ne défendent qu'à moitié le territoire national ce tour.", x, y, 10, C_DIM);
+    if (pr->owner == N_FRANCE) {
+        Text("PROVINCE FRANÇAISE", x, y, 10, C_ACCENT);
+        y += 16;
+        if (pr->factoryBuild > 0) {
+            snprintf(buf, sizeof(buf), "Usine en construction : %d tour(s)", pr->factoryBuild);
+            Text(buf, x, y + 6, 10, C_WARN);
+        } else {
+            snprintf(buf, sizeof(buf), "Construire une usine (%.0f Md, 4 tours)", Eco_FactoryCost(&game));
+            if (ActionButton((Rectangle){ x, y, 300, 24 }, buf, Eco_FactoryBlocked(&game, p),
+                             "+1 usine : 2 biens industriels par tour (consomme énergie et minerais). Les biens satisfont "
+                             "les classes moyennes et les élites, équipent l'armée et soutiennent la prospérité."))
+                Eco_BuildFactory(&game, p);
+        }
+        y += 32;
+        TextWrap("Clic droit sur la carte pour déplacer les divisions sélectionnées. Recrutement : onglet ARMÉE.",
+                 x, y, RP_W - 30, 10, C_DIM);
         return;
     }
+
+    int enemyUnits = 0;
+    for (int i = 0; i < MAX_UNITS; i++)
+        if (game.units[i].active && game.units[i].prov == p && game.units[i].owner == pr->owner) enemyUnits++;
+
+    if (War_AtWar(&game, N_FRANCE, pr->owner)) {
+        Text("FRONT", x, y, 20, C_WAR);
+        y += 26;
+        int ordered = 0;
+        for (int i = 0; i < MAX_UNITS; i++)
+            if (game.units[i].active && game.units[i].owner == N_FRANCE && game.units[i].target == p) ordered++;
+        snprintf(buf, sizeof(buf), "Divisions ennemies sur place : %d.  Nos divisions engagées : %d.", enemyUnits, ordered);
+        Text(buf, x, y, 10, C_TEXT);
+        y += 14;
+        snprintf(buf, sizeof(buf), "Chances de percée estimées : %.0f%% %s", War_BattleOdds(&game, p, N_FRANCE) * 100,
+                 ordered ? "(divisions engagées)" : "(toutes les divisions voisines)");
+        Text(buf, x, y, 10, C_WARN);
+        y += 14;
+        TextWrap("Sélectionnez des divisions voisines (clic gauche sur leur province) puis clic droit ici. La bataille a lieu "
+                 "en fin de tour : il faut briser l'organisation des défenseurs pour prendre la province.", x, y, RP_W - 30, 10, C_DIM);
+        y += 44;
+        if (strikeArmed && strikeProvince == p) {
+            if (Button((Rectangle){ x, y, 260, 26 }, "CONFIRMER LA FRAPPE NUCLÉAIRE", true, 10)) {
+                Nuke_Strike(&game, p);
+                strikeArmed = false;
+            }
+            if (Button((Rectangle){ x + 270, y, 120, 26 }, "Annuler", true, 10)) strikeArmed = false;
+        } else if (ActionButton((Rectangle){ x, y, 260, 26 }, "Frappe nucléaire", Nuke_StrikeBlocked(&game, p),
+                                "Dévaste la province et contraint un ennemi non nucléaire à capituler. La France devient un paria "
+                                "(relations, influence, UE). Contre une puissance nucléaire : riposte et fin de partie.")) {
+            strikeArmed = true;
+            strikeProvince = p;
+        }
+        return;
+    }
+
     snprintf(buf, sizeof(buf), "Relation de %s avec la France : %+.0f", NATIONS[pr->owner].name, own->relation);
     Text(buf, x, y, 10, own->relation < 0 ? C_BAD : C_GOOD);
     y += 18;
     if (ActionButton((Rectangle){ x, y, 260, 26 }, "Ultimatum : exiger la cession", War_UltimatumBlocked(&game, p),
-                     "Exige la province sous menace de guerre (1 PC). Réussit si notre armée est 2,5 fois plus puissante. "
-                     "Échec : relation -25, Influence -5. Réputation d'agresseur accrue dans tous les cas."))
+                     "Exige la province sous menace de guerre (1 PC). Réussit si notre armée est 2,5 fois plus puissante "
+                     "(une dissuasion renforcée aide). Échec : relation -25, Influence -5."))
         War_Ultimatum(&game, p);
     if (ActionButton((Rectangle){ x + 270, y, 260, 26 }, "Déclarer la guerre", War_DeclareBlocked(&game, pr->owner), DECLARE_DESC))
         War_Declare(&game, pr->owner);
     y += 36;
-    snprintf(buf, sizeof(buf), "Armée %s : %.1f divisions (qualité %.2f). La nôtre : %.1f (qualité %.2f).",
-             NATIONS[pr->owner].name, own->army, War_Quality(&game, pr->owner),
+    snprintf(buf, sizeof(buf), "%s : %d divisions sur place, puissance totale %.1f (qualité %.2f). La nôtre : %.1f (qualité %.2f).",
+             NATIONS[pr->owner].name, enemyUnits, own->army, War_Quality(&game, pr->owner),
              game.nat[N_FRANCE].army, War_Quality(&game, N_FRANCE));
     TextWrap(buf, x, y, RP_W - 30, 10, C_DIM);
+}
+
+static void DrawArmyTab(void)
+{
+    char buf[220];
+    float x = RP_X + 10, y = RP_Y + 4;
+    int count = War_UnitCount(&game, N_FRANCE);
+    snprintf(buf, sizeof(buf), "DIVISIONS : %d / %d   -   qualité %.2f   -   entretien %.1f Md/tour",
+             count, (int)War_ArmyMax(&game, N_FRANCE), War_Quality(&game, N_FRANCE), War_ArmyUpkeep(&game));
+    Text(buf, x, y, 10, C_TEXT);
+    y += 16;
+    snprintf(buf, sizeof(buf), "Recruter en : %s", PROVINCE_NAMES[selProvince]);
+    Text(buf, x, y, 10, C_DIM);
+    y += 14;
+    float bw = (RP_W - 20 - 3 * 6) / 4.0f;
+    for (int t = 0; t < U_TYPE_COUNT; t++) {
+        const UnitDef *d = &UNIT_TYPES[t];
+        snprintf(buf, sizeof(buf), "%s %.0f Md", d->shortName, War_RecruitCost(&game, t));
+        char desc[300];
+        snprintf(desc, sizeof(desc), "%s : %s\nAttaque %.1f, défense %.1f. Entretien %.2f Md/tour, %.1f bien/tour. Formation %d tours.",
+                 d->name, d->desc, d->atk, d->def, d->upkeep, d->goods, d->train);
+        if (ActionButton((Rectangle){ x + t * (bw + 6), y, bw, 24 }, buf, War_RecruitBlocked(&game, t, selProvince), desc))
+            War_Recruit(&game, t, selProvince);
+    }
+    y += 32;
+
+    /* divisions de la province selectionnee */
+    snprintf(buf, sizeof(buf), "DIVISIONS EN %s", PROVINCE_NAMES[selProvince]);
+    Text(buf, x, y, 10, C_ACCENT);
+    y += 14;
+    int shown = 0;
+    for (int i = 0; i < MAX_UNITS && shown < 8; i++) {
+        const Unit *u = &game.units[i];
+        if (!u->active || u->owner != N_FRANCE || u->prov != selProvince) continue;
+        Rectangle row = { RP_X + 6, y, RP_W - 12, 18 };
+        bool h = Hover(row);
+        DrawRectangleRec(row, uiSel[i] ? (Color){ 60, 56, 30, 255 } : h ? C_PANEL2 : C_PANEL);
+        DrawRectangleLines((int)row.x + 4, (int)row.y + 4, 10, 10, uiSel[i] ? C_SEL : C_DIM);
+        if (uiSel[i]) DrawRectangle((int)row.x + 6, (int)row.y + 6, 6, 6, C_SEL);
+        Text(UNIT_TYPES[u->type].name, row.x + 20, row.y + 4, 10, C_TEXT);
+        Bar((Rectangle){ row.x + 170, row.y + 5, 80, 7 }, u->str, 1, C_GOOD);
+        Bar((Rectangle){ row.x + 260, row.y + 5, 80, 7 }, u->org, 1, C_ACCENT);
+        if (u->training) snprintf(buf, sizeof(buf), "formation : %d tour(s)", u->training);
+        else if (u->target >= 0) snprintf(buf, sizeof(buf), "> %s", PROVINCE_NAMES[u->target]);
+        else snprintf(buf, sizeof(buf), "en position");
+        Text(buf, row.x + 350, row.y + 4, 10, u->target >= 0 ? C_WARN : C_DIM);
+        Tooltip(row, "Clic : sélectionner / désélectionner. Barres : effectifs (vert) et organisation (bleu).");
+        if (h && clicked && !u->training) { uiSel[i] = !uiSel[i]; clicked = false; }
+        y += 20;
+        shown++;
+    }
+    if (!shown) { Text("Aucune division française ici.", x, y, 10, C_DIM); y += 16; }
+    y += 4;
+    if (Button((Rectangle){ x, y, 130, 22 }, "Tout sélectionner", true, 10)) SelectUnitsIn(selProvince, true);
+    if (Button((Rectangle){ x + 136, y, 130, 22 }, "Annuler les ordres", SelectedCount() > 0, 10))
+        for (int i = 0; i < MAX_UNITS; i++) if (uiSel[i] && game.units[i].active) game.units[i].target = -1;
+    if (Button((Rectangle){ x + 272, y, 130, 22 }, "Dissoudre", SelectedCount() > 0, 10))
+        for (int i = 0; i < MAX_UNITS; i++) if (uiSel[i]) { War_Disband(&game, i); uiSel[i] = false; }
+    snprintf(buf, sizeof(buf), "%d sélectionnée(s)", SelectedCount());
+    Text(buf, x + 412, y + 6, 10, C_SEL);
+    y += 30;
+
+    /* positions */
+    Text("POSITIONS (cliquer pour sélectionner)", x, y, 10, C_DIM);
+    y += 14;
+    int col = 0;
+    for (int p = 0; p < PROV_COUNT; p++) {
+        int n = 0;
+        for (int i = 0; i < MAX_UNITS; i++)
+            if (game.units[i].active && game.units[i].owner == N_FRANCE && game.units[i].prov == p) n++;
+        if (!n) continue;
+        Rectangle r = { RP_X + 6 + (col % 3) * 182, y + (col / 3) * 18, 178, 16 };
+        bool h = Hover(r);
+        DrawRectangleRec(r, p == selProvince ? (Color){ 44, 60, 80, 255 } : h ? C_PANEL2 : C_PANEL);
+        snprintf(buf, sizeof(buf), "%s (%d)", PROVINCE_NAMES[p], n);
+        Text(buf, r.x + 4, r.y + 3, 10, game.prov[p].owner == N_FRANCE ? C_TEXT : C_WAR);
+        if (h && clicked) { selProvince = p; SelectUnitsIn(p, false); clicked = false; }
+        col++;
+        if (col >= 12) break;
+    }
+    y = 520;
+
+    /* dissuasion */
+    Panel((Rectangle){ RP_X + 6, y, RP_W - 12, VH - 58 - y }, C_PANEL2);
+    y += 6;
+    Text("DISSUASION NUCLÉAIRE", x, y, 10, C_ACCENT);
+    snprintf(buf, sizeof(buf), "Crédibilité %.0f/100%s", game.credibility, game.nukesUsed ? "  -  ARME EMPLOYÉE" : "");
+    Text(buf, x + 200, y, 10, game.nukesUsed ? C_BAD : C_TEXT);
+    Bar((Rectangle){ x + 380, y + 1, 160, 8 }, game.credibility, 100, C_EVENT);
+    y += 16;
+    static const char *postureDesc[3] = {
+        "0,5 Md/tour. Crédibilité faible : nos adversaires n'hésiteront pas à frapper le sol national.",
+        "1,5 Md/tour. Sous-marins et composante aérienne en alerte : la plupart des agresseurs renoncent à envahir la France.",
+        "3 Md/tour. Posture maximale : crédibilité très élevée, ultimatums plus efficaces.",
+    };
+    for (int i = 0; i < 3; i++) {
+        snprintf(buf, sizeof(buf), "%s", NUKE_POSTURES[i]);
+        Rectangle r = { x + i * 120, y, 114, 20 };
+        if (Choice(r, buf, game.nukePosture == i)) Nuke_SetPosture(&game, i);
+        Tooltip(r, postureDesc[i]);
+    }
+    const char *ub = Nuke_UmbrellaBlocked(&game);
+    if (ActionButton((Rectangle){ x + 368, y, 172, 20 }, game.umbrella ? "Retirer le parapluie UE" : "Parapluie européen",
+                     ub, "Étend la dissuasion aux partenaires de l'UE (+1 Md/tour) : influence, relations, et les agresseurs "
+                         "hésitent à envahir un État membre."))
+        Nuke_ToggleUmbrella(&game);
+    y += 26;
+    TextWrap("La crédibilité dissuade les agresseurs de toucher au sol national. L'ultime avertissement se donne depuis "
+             "l'onglet NATIONS, la frappe depuis une province ennemie.", x, y, RP_W - 30, 10, C_DIM);
 }
 
 static void DrawNationsTab(void)
 {
     char buf[200];
-    Nation *fr = &game.nat[N_FRANCE];
-    float x = RP_X + 10, y = RP_Y + 6;
-
-    Panel((Rectangle){ RP_X + 6, y - 2, RP_W - 12, 58 }, C_PANEL2);
-    snprintf(buf, sizeof(buf), "ARMÉE : %.1f divisions (max %.0f)  -  qualité %.2f  -  disponibles %.1f",
-             fr->army, War_ArmyMax(&game, N_FRANCE), War_Quality(&game, N_FRANCE), War_AvailableDivisions(&game));
-    Text(buf, x, y + 4, 10, C_TEXT);
-    snprintf(buf, sizeof(buf), "Entretien %.1f Md/tour. Réputation d'agresseur : %.0f/100", War_ArmyUpkeep(&game), game.aggressionMemory);
-    Text(buf, x, y + 18, 10, C_DIM);
-    float rc = fr->regime >= RG_JUNTE ? 3 : 4;
-    snprintf(buf, sizeof(buf), "Recruter (%.0f Md)", rc);
-    Rectangle rb = { x, y + 32, 160, 20 };
-    if (Button(rb, buf, fr->army + 1 <= War_ArmyMax(&game, N_FRANCE) && game.res[R_BUDGET] >= rc, 10)) War_Recruit(&game);
-    Tooltip(rb, "+1 division. Le plafond dépend de la population intégrée et du régime (mobilisation). Entretien 0,5 Md/tour.");
-    if (Button((Rectangle){ x + 170, y + 32, 120, 20 }, "Démobiliser", War_AvailableDivisions(&game) >= 1, 10)) War_Disband(&game);
-    y += 64;
-
+    float y = RP_Y + 4;
     float lx = RP_X + 6, lw = 250;
     for (int n = 1; n < N_COUNT; n++) {
         const Nation *na = &game.nat[n];
-        Rectangle r = { lx, y + (n - 1) * 19, lw, 18 };
+        Rectangle r = { lx, y + (n - 1) * 20, lw, 19 };
         bool h = Hover(r);
         DrawRectangleRec(r, n == selNation ? (Color){ 44, 60, 80, 255 } : h ? C_PANEL2 : C_PANEL);
         DrawRectangle((int)r.x, (int)r.y, 4, (int)r.height, NationColor(n));
-        Text(NATIONS[n].name, r.x + 8, r.y + 4, 10, na->alive ? C_TEXT : C_DIM);
+        Text(NATIONS[n].name, r.x + 8, r.y + 5, 10, na->alive ? C_TEXT : C_DIM);
         if (!na->alive) {
-            Text("disparu", r.x + 140, r.y + 4, 10, C_DIM);
+            Text("disparu", r.x + 140, r.y + 5, 10, C_DIM);
         } else {
             snprintf(buf, sizeof(buf), "%+.0f", na->relation);
-            Text(buf, r.x + 140, r.y + 4, 10, na->relation < -20 ? C_BAD : na->relation > 20 ? C_GOOD : C_TEXT);
+            Text(buf, r.x + 140, r.y + 5, 10, na->relation < -20 ? C_BAD : na->relation > 20 ? C_GOOD : C_TEXT);
             const char *st = na->atWar ? "GUERRE" : na->warTarget >= 0 ? "conflit" : na->truce ? "trêve" : na->trade ? "accord" : "";
-            Text(st, r.x + 180, r.y + 4, 10, na->atWar ? C_WAR : C_DIM);
-            if (na->eu) Text("UE", r.x + 232, r.y + 4, 10, C_ACCENT);
+            Text(st, r.x + 178, r.y + 5, 10, na->atWar ? C_WAR : C_DIM);
+            if (na->eu) Text("UE", r.x + 232, r.y + 5, 10, C_ACCENT);
         }
         if (h && clicked) { selNation = n; clicked = false; }
     }
@@ -603,54 +875,61 @@ static void DrawNationsTab(void)
     int n = selNation == N_FRANCE ? N_ALLEMAGNE : selNation;
     const Nation *na = &game.nat[n];
     float dx = lx + lw + 8, dw = RP_X + RP_W - dx - 6;
-    Panel((Rectangle){ dx, y, dw, 26 * 19 - 4 }, C_PANEL2);
+    Panel((Rectangle){ dx, y, dw, 26 * 20 }, C_PANEL2);
     dx += 8;
     float dy = y + 6, bw = dw - 16;
     Text(NATIONS[n].name, dx, dy, 20, NationColor(n));
     dy += 26;
     snprintf(buf, sizeof(buf), "%s%s%s", REGIMES[na->regime].name, na->eu ? " - UE" : "", na->failed ? " - FAILLI" : "");
-    Text(buf, dx, dy, 10, C_TEXT); dy += 16;
+    Text(buf, dx, dy, 10, C_TEXT); dy += 14;
+    if (NATIONS[n].nuclear) { Text("Puissance nucléaire", dx, dy, 10, C_WARN); dy += 14; }
     snprintf(buf, sizeof(buf), "Relation : %+.0f", na->relation);
     Text(buf, dx, dy, 10, na->relation < 0 ? C_BAD : C_GOOD); dy += 14;
     snprintf(buf, sizeof(buf), "Population : %.1f M (%d prov.)", Soc_NationPop(&game, n), Soc_NationProvinces(&game, n));
     Text(buf, dx, dy, 10, C_TEXT); dy += 14;
-    snprintf(buf, sizeof(buf), "Armée : %.1f div. (max %.0f)", na->army, War_ArmyMax(&game, n));
+    snprintf(buf, sizeof(buf), "Divisions : %d (max %.0f)", War_UnitCount(&game, n), War_ArmyMax(&game, n));
     Text(buf, dx, dy, 10, C_TEXT); dy += 14;
-    snprintf(buf, sizeof(buf), "Qualité militaire : %.2f", War_Quality(&game, n));
+    snprintf(buf, sizeof(buf), "Puissance %.1f, qualité %.2f", na->army, War_Quality(&game, n));
     Text(buf, dx, dy, 10, C_TEXT); dy += 14;
-    if (na->atWar) { snprintf(buf, sizeof(buf), "En guerre contre nous (%d tours)", na->warTurns); Text(buf, dx, dy, 10, C_WAR); dy += 14; }
+    if (na->atWar) {
+        snprintf(buf, sizeof(buf), "En guerre contre nous (%d tours)", na->warTurns);
+        Text(buf, dx, dy, 10, C_WAR); dy += 14;
+        Text(na->deterred ? "Dissuadée de toucher au sol national" : "Prête à frapper le sol national", dx, dy, 10,
+             na->deterred ? C_GOOD : C_BAD);
+        dy += 14;
+    }
     if (na->truce) { snprintf(buf, sizeof(buf), "Trêve : %d tours", na->truce); Text(buf, dx, dy, 10, C_DIM); dy += 14; }
     if (na->warTarget >= 0) { snprintf(buf, sizeof(buf), "Envahit : %s", NATIONS[na->warTarget].name); Text(buf, dx, dy, 10, C_WAR); dy += 14; }
     if (na->trade) { Text("Accord commercial actif", dx, dy, 10, C_GOOD); dy += 14; }
-    dy += 8;
-    if (ActionButton((Rectangle){ dx, dy, bw, 24 }, "Rapprochement (5 Influence)", War_DiploBlocked(&game, n, 0),
-                     "Améliore la relation de 12 (1 PC)."))
+    dy += 6;
+    if (ActionButton((Rectangle){ dx, dy, bw, 24 }, "Rapprochement (5 Influence)", War_DiploBlocked(&game, n, 0), "Améliore la relation de 12 (1 PC)."))
         War_Diplomacy(&game, n, 0);
     dy += 28;
     if (ActionButton((Rectangle){ dx, dy, bw, 24 }, "Accord commercial", War_DiploBlocked(&game, n, 1),
-                     "Importe 25% de leurs excédents d'alimentation, d'eau et d'énergie, +0,4 Md/tour (1 PC). Relation 25 requise."))
+                     "La France est servie en priorité sur leurs excédents au marché mondial, +5 relation (1 PC). Relation 25 requise."))
         War_Diplomacy(&game, n, 1);
     dy += 28;
     if (na->atWar) {
         if (ActionButton((Rectangle){ dx, dy, bw, 24 }, "Proposer la paix", War_PeaceBlocked(&game, n),
-                         "Acceptée si l'ennemi est en difficulté ou si la guerre s'éternise. La France garde ses conquêtes (1 PC)."))
+                         "Acceptée si l'ennemi est en difficulté ou si la guerre s'éternise. Chacun garde ses conquêtes (1 PC)."))
             War_ProposePeace(&game, n);
+        dy += 28;
+        if (ActionButton((Rectangle){ dx, dy, bw, 24 }, "Ultime avertissement nucléaire", Nuke_WarningBlocked(&game, n),
+                         "Menace d'emploi si l'ennemi ne quitte pas le sol national (une fois par guerre, 1 PC). Succès selon la "
+                         "crédibilité ; un bluff percé coûte 20 points de crédibilité."))
+            Nuke_Warning(&game, n);
     } else if (ActionButton((Rectangle){ dx, dy, bw, 24 }, "Déclarer la guerre", War_DeclareBlocked(&game, n), DECLARE_DESC)) {
         War_Declare(&game, n);
     }
-    dy += 34;
-    TextWrap("En guerre, cliquez sur la carte une province ennemie marquée d'un X pour lancer une offensive.", dx, dy, bw, 10, C_DIM);
 }
 
 static void DrawDefenseTab(void)
 {
     int t = selTheater;
     Domain d = THEATERS[t].domain;
-    Color dc = DOMAIN_COLORS[d];
-    float y = RP_Y + 6;
+    float y = RP_Y + 4;
     char buf[200];
-
-    Text(THEATERS[t].name, RP_X + 10, y, 20, dc);
+    Text(THEATERS[t].name, RP_X + 10, y, 20, DOMAIN_COLORS[d]);
     snprintf(buf, sizeof(buf), "Milieu : %s", DOMAIN_NAMES[d]);
     Text(buf, RP_X + RP_W - 10 - TextW(buf, 10), y + 6, 10, C_DIM);
     y += 24;
@@ -673,8 +952,9 @@ static void DrawDefenseTab(void)
         snprintf(buf, sizeof(buf), "Investir +2 capacité (%.0f Md)", cost);
         Rectangle br = { RP_X + 290, y + 8, 256, 22 };
         if (Button(br, buf, game.res[R_BUDGET] >= cost, 10)) Game_InvestCapacity(&game, d);
-        Tooltip(br, "Recrutement et équipement, disponible après 2 tours. Capacité : 0,1 Md/tour, posture engagée : 0,6 Md/tour. "
-                    "Les capacités Air, Espace, Cyber et EM renforcent aussi l'armée conventionnelle.");
+        Tooltip(br, "Disponible après 2 tours. Capacité : 0,1 Md/tour, posture engagée : 0,6 Md/tour. Air, Espace, Cyber et EM "
+                    "renforcent aussi les divisions ; Mer permet les traversées et les débarquements ; Espace et Mer rendent la "
+                    "dissuasion plus crédible.");
     }
     y += 66;
 
@@ -736,8 +1016,8 @@ static void DrawDefenseTab(void)
 static void DrawHybridTab(void)
 {
     char buf[200];
-    float y = RP_Y + 6;
-    snprintf(buf, sizeof(buf), "Points de commandement : %d / %d (partagés avec la diplomatie et la guerre)", game.commandPoints, BASE_CP);
+    float y = RP_Y + 4;
+    snprintf(buf, sizeof(buf), "Points de commandement : %d / %d (partagés avec la diplomatie, la guerre et les décrets)", game.commandPoints, BASE_CP);
     Text(buf, RP_X + 10, y, 10, C_ACCENT);
     y += 16;
     for (int f = 0; f < F_COUNT; f++) {
@@ -790,135 +1070,268 @@ static void Sparkline(Rectangle r, const float *v, int n, float lo, float hi, Co
 
 static void DrawSocietyTab(void)
 {
-    char buf[200];
-    float x = RP_X + 10, y = RP_Y + 6;
-    float pop = Soc_NationPop(&game, N_FRANCE);
-    float mil[S_COUNT] = { 0 }, foreign = 0, popCore = 0;
+    char buf[220];
+    float x = RP_X + 10, y = RP_Y + 4;
+    float pop = Soc_NationPop(&game, N_FRANCE), w = 0;
+    float share[S_COUNT] = { 0 }, mil[S_COUNT] = { 0 }, con[S_COUNT] = { 0 }, lit = 0, foreign = 0;
     int revolts = 0;
     for (int p = 0; p < PROV_COUNT; p++) {
         const Province *pr = &game.prov[p];
         if (pr->owner != N_FRANCE) continue;
-        for (int s = 0; s < S_COUNT; s++) mil[s] += pr->mil[s] * pr->pop;
+        for (int s = 0; s < S_COUNT; s++) {
+            share[s] += pr->share[s] * pr->pop;
+            mil[s] += pr->mil[s] * pr->pop;
+            con[s] += pr->con[s] * pr->pop;
+        }
+        lit += pr->literacy * pr->pop;
         foreign += pr->foreign * pr->pop;
-        if (pr->core == N_FRANCE) popCore += pr->pop;
-        else foreign += pr->pop * (1 - pr->foreign) * (1 - pr->integration / 100.0f);
+        if (pr->core != N_FRANCE) foreign += pr->pop * (1 - pr->foreign) * (1 - pr->integration / 100.0f);
         if (pr->revolt) revolts++;
+        w += pr->pop;
     }
     Text("POPULATION FRANÇAISE", x, y, 20, C_ACCENT);
-    y += 26;
-    snprintf(buf, sizeof(buf), "%.1f millions d'habitants dans %d provinces (%.1f M de culture française)", pop,
-             Soc_NationProvinces(&game, N_FRANCE), popCore);
-    Text(buf, x, y, 10, C_TEXT); y += 14;
-    snprintf(buf, sizeof(buf), "Population non intégrée (migrants, territoires conquis) : %.0f%%   -   révoltes : %d",
-             foreign / pop * 100, revolts);
-    Text(buf, x, y, 10, C_TEXT); y += 14;
-    snprintf(buf, sizeof(buf), "Migrants admis : %.0f k   refoulés : %.0f k   départs : %.0f k  (dernier trimestre)",
+    y += 24;
+    snprintf(buf, sizeof(buf), "%.1f M d'habitants, %d provinces. Alphabétisation %.0f%%. Non intégrés %.0f%%. Révoltes : %d.",
+             pop, Soc_NationProvinces(&game, N_FRANCE), lit / w * 100, foreign / w * 100, revolts);
+    Text(buf, x, y, 10, C_TEXT); y += 13;
+    snprintf(buf, sizeof(buf), "Migrants admis %.0f k, refoulés %.0f k, départs %.0f k (dernier trimestre).",
              game.migrantsIn * 1000, game.migrantsRefused * 1000, game.migrantsOut * 1000);
-    Text(buf, x, y, 10, C_TEXT); y += 22;
+    Text(buf, x, y, 10, C_TEXT); y += 18;
 
-    Text("MILITANCE PAR STRATE", x, y, 10, C_DIM); y += 14;
+    Text("STRATE", x, y, 10, C_DIM);
+    Text("part", x + 125, y, 10, C_DIM);
+    Text("besoins", x + 165, y, 10, C_DIM);
+    Text("militance", x + 230, y, 10, C_DIM);
+    Text("conscience", x + 390, y, 10, C_DIM);
+    y += 13;
     for (int s = 0; s < S_COUNT; s++) {
-        float m = mil[s] / pop;
         Text(STRATA_NAMES[s], x, y, 10, C_TEXT);
-        Bar((Rectangle){ x + 130, y + 1, 300, 8 }, m, 10, m > 6 ? C_BAD : m > 4 ? C_WARN : C_GOOD);
-        snprintf(buf, sizeof(buf), "%.1f", m);
-        Text(buf, x + 440, y, 10, C_TEXT);
-        y += 14;
+        snprintf(buf, sizeof(buf), "%.0f%%", share[s] / w * 100);
+        Text(buf, x + 125, y, 10, C_TEXT);
+        float need = Eco_NeedSat(&game, N_FRANCE, s);
+        snprintf(buf, sizeof(buf), "%.0f%%", need * 100);
+        Text(buf, x + 165, y, 10, need < 0.97f ? C_BAD : C_GOOD);
+        Bar((Rectangle){ x + 230, y + 1, 120, 8 }, mil[s] / w, 10, MilColor(mil[s] / w));
+        snprintf(buf, sizeof(buf), "%.1f", mil[s] / w);
+        Text(buf, x + 355, y, 10, C_TEXT);
+        Bar((Rectangle){ x + 390, y + 1, 120, 8 }, con[s] / w, 10, C_EVENT);
+        snprintf(buf, sizeof(buf), "%.1f", con[s] / w);
+        Text(buf, x + 515, y, 10, C_TEXT);
+        y += 13;
     }
-    y += 2 + TextWrap("Travailleurs : sensibles à l'alimentation. Classes moyennes : à l'énergie et à la guerre. Élites : à "
-                      "l'impôt et à la dette. Le régime satisfait ou réprime chaque strate. Au-delà de 6,5, les révoltes éclatent.",
+    y += 2 + TextWrap("Besoins : vitaux (alimentation, eau), courants (énergie), biens industriels. Un manque fait monter la "
+                      "militance et la conscience ; la conscience amplifie la colère et abaisse le seuil de révolte.",
                       x, y + 2, RP_W - 20, 10, C_DIM);
-    y += 10;
+    y += 8;
 
-    Text("RESSOURCES (production / besoins)", x, y, 10, C_DIM); y += 14;
-    static const char *rn[3] = { "Alimentation", "Eau", "Énergie" };
-    for (int r = 0; r < 3; r++) {
-        snprintf(buf, sizeof(buf), "%s %.0f / %.0f", rn[r], game.prod[r], game.cons[r]);
-        Text(buf, x + r * 180, y, 10, game.prod[r] >= game.cons[r] ? C_GOOD : C_BAD);
-    }
+    float ideo[I_COUNT];
+    Pol_NationalIdeology(&game, ideo);
+    Text("COURANTS POLITIQUES", x, y, 10, C_DIM);
+    snprintf(buf, sizeof(buf), "Soutien au régime : %.0f%%", Pol_RegimeSupport(&game) * 100);
+    Text(buf, x + 330, y, 10, Pol_RegimeSupport(&game) < 0.45f ? C_BAD : C_GOOD);
     y += 14;
-    snprintf(buf, sizeof(buf), "Recettes %.1f Md - dépenses %.1f Md (dont armée %.1f)", Soc_Income(&game), Game_Upkeep(&game),
-             War_ArmyUpkeep(&game));
-    Text(buf, x, y, 10, C_TEXT); y += 22;
+    for (int i = 0; i < I_COUNT; i++) {
+        Rectangle row = { x, y, RP_W - 20, 12 };
+        Text(IDEOLOGY_NAMES[i], x, y, 10, game.government == i ? C_SEL : C_TEXT);
+        Bar((Rectangle){ x + 120, y + 1, 300, 8 }, ideo[i], 0.6f, IDEOLOGY_COLORS[i]);
+        snprintf(buf, sizeof(buf), "%.0f%%%s", ideo[i] * 100, game.government == i ? "  au pouvoir" : "");
+        Text(buf, x + 430, y, 10, game.government == i ? C_SEL : C_TEXT);
+        Tooltip(row, IDEOLOGY_DESC[i]);
+        y += 13;
+    }
+    if (game.nat[N_FRANCE].regime == RG_DEMOCRATIE)
+        snprintf(buf, sizeof(buf), "Prochaines élections dans %d tours.", game.nextElection - game.turn);
+    else
+        snprintf(buf, sizeof(buf), "Pas d'élections sous ce régime.");
+    Text(buf, x, y + 2, 10, C_DIM);
+    y += 20;
 
     int n = game.turn + 1 < HISTORY_LEN ? game.turn + 1 : HISTORY_LEN;
     float pmax = 0;
     for (int i = 0; i < n; i++) if (game.histPop[i] > pmax) pmax = game.histPop[i];
-    Sparkline((Rectangle){ RP_X + 6, y, RP_W - 12, 74 }, game.histPop, n, 0, pmax * 1.1f + 1, C_ACCENT, "Population (M)");
-    y += 80;
-    Sparkline((Rectangle){ RP_X + 6, y, (RP_W - 18) / 2, 74 }, game.histCohesion, n, 0, 100, C_GOOD, "Cohésion");
-    Sparkline((Rectangle){ RP_X + 12 + (RP_W - 18) / 2, y, (RP_W - 18) / 2, 74 }, game.histTemp, n, 1, 4, C_CLIMATE, "Température (+°C)");
+    float h = VH - 60 - y;
+    if (h > 110) h = 110;
+    Sparkline((Rectangle){ RP_X + 6, y, (RP_W - 18) / 3, h }, game.histPop, n, 0, pmax * 1.1f + 1, C_ACCENT, "Population");
+    Sparkline((Rectangle){ RP_X + 9 + (RP_W - 18) / 3, y, (RP_W - 18) / 3, h }, game.histCohesion, n, 0, 100, C_GOOD, "Cohésion");
+    Sparkline((Rectangle){ RP_X + 12 + 2 * (RP_W - 18) / 3, y, (RP_W - 18) / 3, h }, game.histTemp, n, 1, 4, C_CLIMATE, "Température");
+}
+
+static void Stepper(float x, float y, const char *label, float value, float *out, float step, const char *fmt, const char *tip)
+{
+    char buf[64];
+    Rectangle row = { x, y, 300, 20 };
+    Text(label, x, y + 5, 10, C_TEXT);
+    snprintf(buf, sizeof(buf), fmt, value * 100);
+    Text(buf, x + 170, y + 5, 10, C_SEL);
+    *out = value;
+    if (Button((Rectangle){ x + 220, y, 22, 20 }, "-", true, 10)) *out = value - step;
+    if (Button((Rectangle){ x + 246, y, 22, 20 }, "+", true, 10)) *out = value + step;
+    Tooltip(row, tip);
+}
+
+static void DrawEconomyTab(void)
+{
+    char buf[200];
+    float x = RP_X + 10, y = RP_Y + 4;
+    float v;
+
+    Text("IMPÔTS PAR STRATE", x, y, 10, C_ACCENT);
+    y += 14;
+    static const char *taxTip[S_COUNT] = {
+        "Les travailleurs sont nombreux mais pauvres. Au-delà de 30%, leur militance monte.",
+        "Les classes moyennes portent une large part de l'impôt.",
+        "Peu nombreuses, les élites pèsent lourd dans les recettes. Trop les taxer les fait basculer.",
+    };
+    for (int s = 0; s < S_COUNT; s++) {
+        Stepper(x, y, STRATA_NAMES[s], game.taxRate[s], &v, 0.05f, "%.0f%%", taxTip[s]);
+        if (v != game.taxRate[s]) Eco_SetTax(&game, s, v);
+        y += 22;
+    }
+    y += 6;
+    Text("DÉPENSES PUBLIQUES", x, y, 10, C_ACCENT);
+    y += 14;
+    for (int s = 0; s < SP_COUNT; s++) {
+        char tip[300];
+        snprintf(tip, sizeof(tip), "%s\nCoût actuel : %.1f Md/tour.", SPENDING_DESC[s], Eco_SpendingCost(&game, s));
+        Stepper(x, y, SPENDING_NAMES[s], game.spending[s], &v, 0.1f, "%.0f%%", tip);
+        if (v != game.spending[s]) Eco_SetSpending(&game, s, v);
+        y += 22;
+    }
+    Stepper(x, y, "Droits de douane", game.tariff, &v, 0.05f, "%.0f%%",
+            "Prélèvement sur les importations : recettes immédiates, mais prospérité en baisse.");
+    if (v != game.tariff) Eco_SetTariff(&game, v);
+    y += 30;
+
+    /* budget */
+    float l[BL_COUNT];
+    Eco_Budget(&game, l);
+    float bx = RP_X + 330, by = RP_Y + 4;
+    Text("BUDGET PRÉVISIONNEL", bx, by, 10, C_ACCENT);
+    by += 14;
+    float inc = 0, exp = 0;
+    for (int i = 0; i < BL_COUNT; i++) {
+        bool income = i < BL_DEFENSE;
+        snprintf(buf, sizeof(buf), "%s%.1f", income ? "+" : "-", l[i]);
+        Text(BUDGET_LINE_NAMES[i], bx, by, 10, C_DIM);
+        Text(buf, bx + 160, by, 10, income ? C_GOOD : C_BAD);
+        if (income) inc += l[i]; else exp += l[i];
+        by += 13;
+    }
+    snprintf(buf, sizeof(buf), "Solde : %+.1f Md/tour", inc - exp);
+    Text(buf, bx, by + 4, 10, inc - exp >= 0 ? C_TEXT : C_WARN);
+    if (game.res[R_BUDGET] < 0) Text("Dette : intérêts 3%/tour", bx, by + 18, 10, C_BAD);
+
+    /* marche */
+    Text("MARCHÉ MONDIAL", x, y, 10, C_ACCENT);
+    y += 14;
+    static const char *cols[] = { "Bien", "Prix", "Prod.", "Besoins", "Import", "Export", "Couvert" };
+    static const float cx[] = { 0, 130, 190, 245, 310, 370, 430 };
+    for (int c = 0; c < 7; c++) Text(cols[c], x + cx[c], y, 10, C_DIM);
+    y += 13;
+    const NationEconomy *e = &game.eco[N_FRANCE];
+    for (int k = 0; k < G_COUNT; k++) {
+        Text(GOOD_NAMES[k], x, y, 10, C_TEXT);
+        if (k == G_WATER) snprintf(buf, sizeof(buf), "local");
+        else snprintf(buf, sizeof(buf), "%.0f%%", game.price[k] / GOOD_BASE_PRICE[k] * 100);
+        Text(buf, x + cx[1], y, 10, k != G_WATER && game.price[k] > GOOD_BASE_PRICE[k] * 1.3f ? C_BAD : C_TEXT);
+        snprintf(buf, sizeof(buf), "%.0f", e->supply[k]);  Text(buf, x + cx[2], y, 10, C_TEXT);
+        snprintf(buf, sizeof(buf), "%.0f", e->demand[k]);  Text(buf, x + cx[3], y, 10, C_TEXT);
+        snprintf(buf, sizeof(buf), "%.0f", e->imports[k]); Text(buf, x + cx[4], y, 10, C_TEXT);
+        snprintf(buf, sizeof(buf), "%.0f", e->exports[k]); Text(buf, x + cx[5], y, 10, C_TEXT);
+        float sat = e->sat[k];
+        snprintf(buf, sizeof(buf), "%.0f%%", (sat > 1 ? 1 : sat) * 100);
+        Text(buf, x + cx[6], y, 10, sat < 0.97f ? C_BAD : C_GOOD);
+        y += 13;
+    }
+    y += 6;
+    float ind = 0;
+    for (int p = 0; p < PROV_COUNT; p++) if (game.prov[p].owner == N_FRANCE) ind += game.prov[p].industry;
+    snprintf(buf, sizeof(buf), "Industrie : %.0f usines. Prix en %% du prix de référence de 2030.", ind);
+    Text(buf, x, y, 10, C_DIM);
+    y += 14;
+    TextWrap("Les prix montent quand le monde manque d'un bien. Les excédents s'exportent, les déficits s'importent tant "
+             "que le marché le permet ; les accords commerciaux nous servent en priorité. Les usines se construisent "
+             "depuis l'onglet PROVINCE.", x, y, RP_W - 20, 10, C_DIM);
 }
 
 static void DrawPolitiqueTab(void)
 {
-    char buf[200];
+    char buf[220];
     float x = RP_X + 10, y = RP_Y + 4;
-    Text("RÉGIME POLITIQUE", x, y, 20, C_ACCENT);
+    Regime cur = game.nat[N_FRANCE].regime;
+    Text("RÉGIME", x, y, 10, C_ACCENT);
     if (game.regimeCooldown > 0) {
         snprintf(buf, sizeof(buf), "prochain changement dans %d tours", game.regimeCooldown);
-        Text(buf, RP_X + RP_W - 10 - TextW(buf, 10), y + 6, 10, C_DIM);
+        Text(buf, RP_X + RP_W - 10 - TextW(buf, 10), y, 10, C_DIM);
     }
-    y += 24;
+    y += 14;
     for (int r = 0; r < RG_COUNT; r++) {
         const RegimeDef *rg = &REGIMES[r];
-        bool cur = game.nat[N_FRANCE].regime == (Regime)r;
-        Rectangle row = { RP_X + 6, y, RP_W - 12, 46 };
-        DrawRectangleRec(row, cur ? (Color){ 40, 62, 92, 255 } : C_PANEL2);
-        DrawRectangleLinesEx(row, 1, cur ? C_ACCENT : C_BORDER);
-        Text(rg->name, row.x + 8, row.y + 4, 10, cur ? C_TEXT : C_DIM);
-        snprintf(buf, sizeof(buf), "Impôt x%.2f  Mobilisation %.2f  Répression %.2f  Qualité x%.2f  Influence %+.1f",
+        bool isCur = cur == (Regime)r;
+        Rectangle row = { RP_X + 6, y, RP_W - 12, 30 };
+        DrawRectangleRec(row, isCur ? (Color){ 40, 62, 92, 255 } : C_PANEL2);
+        DrawRectangleLinesEx(row, 1, isCur ? C_ACCENT : C_BORDER);
+        Text(rg->name, row.x + 8, row.y + 3, 10, isCur ? C_TEXT : C_DIM);
+        snprintf(buf, sizeof(buf), "Impôt x%.2f  Mobil. %.2f  Répression %.2f  Qualité x%.2f  Influence %+.1f",
                  rg->taxEff, rg->mobilization, rg->repression, rg->quality, rg->influence);
-        Text(buf, row.x + 8, row.y + 18, 10, C_DIM);
-        snprintf(buf, sizeof(buf), "Lassitude de guerre %.1f  Coût d'agression %.0f  Intégration x%.1f  Projets x%.2f",
-                 rg->warWeariness, rg->aggressionCost, rg->assimilation, rg->projectCost);
-        Text(buf, row.x + 8, row.y + 31, 10, C_DIM);
-        if (!cur) {
+        Text(buf, row.x + 8, row.y + 16, 10, C_DIM);
+        char desc[600];
+        snprintf(desc, sizeof(desc), "%s\n%s\nLassitude de guerre %.1f, coût d'agression %.0f, intégration x%.1f, projets x%.2f.",
+                 rg->desc, rg->mechanic, rg->warWeariness, rg->aggressionCost, rg->assimilation, rg->projectCost);
+        if (!isCur) {
             snprintf(buf, sizeof(buf), "Adopter (-%.0f coh.)", Soc_RegimeChangeCost(&game, r));
-            Rectangle br = { row.x + row.width - 130, row.y + 4, 124, 20 };
-            char desc[400];
-            snprintf(desc, sizeof(desc), "%s\nMilitance accrue pendant la transition. Quitter la démocratie fait suspendre la France de l'UE.",
-                     rg->desc);
-            if (ActionButton(br, buf, Soc_RegimeBlocked(&game, r), desc)) Soc_ChangeRegime(&game, r);
+            if (ActionButton((Rectangle){ row.x + row.width - 128, row.y + 5, 122, 20 }, buf, Soc_RegimeBlocked(&game, r), desc))
+                Soc_ChangeRegime(&game, r);
         } else {
-            Tooltip(row, rg->desc);
+            Tooltip(row, desc);
         }
-        y += 49;
+        y += 33;
     }
-    y += 4;
+    y += 2;
+    y += TextWrap(REGIMES[cur].mechanic, x, y, RP_W - 20, 10, C_SEL) + 4;
+    snprintf(buf, sizeof(buf), "Gouvernement : %s", game.government >= 0 ? IDEOLOGY_NAMES[game.government] : "aucun");
+    Text(buf, x, y, 10, C_TEXT);
+    y += 16;
+    for (int k = 0; k < 2; k++) {
+        const DecreeDef *d = &DECREES[cur][k];
+        char desc[300];
+        snprintf(desc, sizeof(desc), "%s\nCoût : 1 PC%s. Recharge : %d tours.", d->desc, d->budget > 0 ? ", budget" : "", d->cooldown);
+        snprintf(buf, sizeof(buf), d->budget > 0 ? "%s (%.0f Md)" : "%s", d->name, d->budget);
+        if (ActionButton((Rectangle){ x + k * 274, y, 266, 24 }, buf, Pol_DecreeBlocked(&game, k), desc)) Pol_Decree(&game, k);
+    }
+    y += 32;
+
     Text("DOCTRINE MIGRATOIRE", x, y, 10, C_ACCENT);
+    Text("NIVEAU D'ALERTE", x + 280, y, 10, C_ACCENT);
     y += 14;
     for (int i = 0; i < 3; i++) {
-        Rectangle r = { RP_X + 6 + i * 184, y, 180, 22 };
-        bool sel = game.migrationDoctrine == i, h = Hover(r);
-        DrawRectangleRec(r, sel ? (Color){ 40, 62, 92, 255 } : h ? C_PANEL2 : C_PANEL);
-        DrawRectangleLinesEx(r, 1, sel ? C_ACCENT : C_BORDER);
-        Text(MIGRATION_DOCTRINES[i], r.x + (r.width - TextW(MIGRATION_DOCTRINES[i], 10)) / 2, r.y + 6, 10, sel ? C_TEXT : C_DIM);
+        Rectangle r = { x, y + i * 22, 260, 20 };
+        if (Choice(r, MIGRATION_DOCTRINES[i], game.migrationDoctrine == i)) Game_SetMigrationDoctrine(&game, i);
         Tooltip(r, MIGRATION_DESC[i]);
-        if (h && clicked) { Game_SetMigrationDoctrine(&game, i); clicked = false; }
+        Rectangle a = { x + 280, y + i * 22, 260, 20 };
+        if (Choice(a, ALERT_LEVELS[i], game.alertLevel == i)) Game_SetAlertLevel(&game, i);
+        Tooltip(a, ALERT_DESC[i]);
     }
-    y += 26;
-    TextWrap(MIGRATION_DESC[game.migrationDoctrine], x, y, RP_W - 20, 10, C_DIM);
-    y += 34;
-    Text("NIVEAU D'ALERTE", x, y, 10, C_ACCENT);
+    y += 72;
+
+    int parts[SC_COUNT];
+    int score = Game_Score(&game, parts);
+    VictoryType v = Game_Victory(&game);
+    snprintf(buf, sizeof(buf), "SCORE %d  -  victoire visée : %s", score, VICTORY_NAMES[v]);
+    Rectangle sr = { x, y, RP_W - 20, 12 };
+    Text(buf, x, y, 10, C_SEL);
+    Tooltip(sr, VICTORY_DESC[v]);
     y += 14;
-    for (int i = 0; i < 3; i++) {
-        Rectangle r = { RP_X + 6 + i * 184, y, 180, 22 };
-        bool sel = game.alertLevel == i, h = Hover(r);
-        DrawRectangleRec(r, sel ? (Color){ 40, 62, 92, 255 } : h ? C_PANEL2 : C_PANEL);
-        DrawRectangleLinesEx(r, 1, sel ? C_ACCENT : C_BORDER);
-        Text(ALERT_LEVELS[i], r.x + (r.width - TextW(ALERT_LEVELS[i], 10)) / 2, r.y + 6, 10, sel ? C_TEXT : C_DIM);
-        Tooltip(r, ALERT_DESC[i]);
-        if (h && clicked) { Game_SetAlertLevel(&game, i); clicked = false; }
+    for (int i = 0; i < SC_COUNT; i++) {
+        snprintf(buf, sizeof(buf), "%s %d", SCORE_PART_NAMES[i], parts[i]);
+        Text(buf, x + (i % 3) * 180, y + (i / 3) * 12, 10, parts[i] < 0 ? C_BAD : C_DIM);
     }
-    y += 26;
-    Text(ALERT_DESC[game.alertLevel], x, y, 10, C_DIM);
 }
 
 static void DrawProjectsTab(void)
 {
     char buf[160];
-    float y = RP_Y + 6;
+    float y = RP_Y + 4;
     Text("Projets civils de résilience : investissements uniques, effets permanents.", RP_X + 10, y, 10, C_DIM);
     y += 16;
     for (int p = 0; p < P_COUNT; p++) {
@@ -946,6 +1359,18 @@ static void DrawProjectsTab(void)
 /* ------------------------------------------------------------------ */
 /* Journal, modales, infobulles                                        */
 /* ------------------------------------------------------------------ */
+static Color LogColor(LogKind k)
+{
+    switch (k) {
+    case EV_GOOD:    return C_GOOD;
+    case EV_BAD:     return C_BAD;
+    case EV_CLIMATE: return C_CLIMATE;
+    case EV_EVENT:   return C_EVENT;
+    case EV_WAR:     return C_WAR;
+    default:         return C_TEXT;
+    }
+}
+
 static void DrawLog(void)
 {
     Rectangle r = { 0, MAP_Y + MAP_PH + 2, 708, VH - MAP_Y - MAP_PH - 2 };
@@ -962,15 +1387,7 @@ static void DrawLog(void)
         int idx = game.logCount - 1 - i - logScroll;
         if (idx < 0) break;
         const LogEntry *e = &game.log[idx];
-        Color c = C_TEXT;
-        switch (e->kind) {
-        case EV_GOOD:    c = C_GOOD; break;
-        case EV_BAD:     c = C_BAD; break;
-        case EV_CLIMATE: c = C_CLIMATE; break;
-        case EV_EVENT:   c = C_EVENT; break;
-        case EV_WAR:     c = C_WAR; break;
-        default:         c = C_TEXT; break;
-        }
+        Color c = LogColor(e->kind);
         if (e->turn < game.turn - 1) c = Fade(c, 0.55f);
         Text(e->text, 8, r.y + 5 + i * 13, 10, c);
     }
@@ -986,18 +1403,16 @@ static void DrawDilemma(void)
     Text("DÉCISION DU CONSEIL DE DÉFENSE", r.x + 20, r.y + 16, 10, C_EVENT);
     Text(d->title, r.x + 20, r.y + 32, 20, C_TEXT);
     float ty = r.y + 62;
-    if (game.pendingDilemma >= DLM_ALLY_CALL) {
+    int dp = game.pendingDilemma, n = game.dilemmaParam;
+    if (dp == DLM_ALLY_CALL || dp == DLM_PEACE_OFFER || dp == DLM_NUKE_BLACKMAIL) {
         char buf[200];
-        int n = game.dilemmaParam;
-        if (game.pendingDilemma == DLM_ALLY_CALL)
-            snprintf(buf, sizeof(buf), "%s envahit %s.", NATIONS[n].name, NATIONS[game.nat[n].warTarget].name);
-        else
-            snprintf(buf, sizeof(buf), "%s demande la fin des combats.", NATIONS[n].name);
+        if (dp == DLM_ALLY_CALL) snprintf(buf, sizeof(buf), "%s envahit %s.", NATIONS[n].name, NATIONS[game.nat[n].warTarget].name);
+        else if (dp == DLM_PEACE_OFFER) snprintf(buf, sizeof(buf), "%s demande la fin des combats.", NATIONS[n].name);
+        else snprintf(buf, sizeof(buf), "Crédibilité de notre dissuasion : %.0f/100.", game.credibility);
         Text(buf, r.x + 20, ty, 10, C_WAR);
         ty += 16;
     }
     TextWrap(d->text, r.x + 20, ty, r.width - 40, 10, C_DIM);
-
     for (int i = 0; i < 2; i++) {
         Rectangle b = { r.x + 20 + i * 340, r.y + 150, 320, 150 };
         bool h = Hover(b);
@@ -1010,15 +1425,78 @@ static void DrawDilemma(void)
     Text("Choisissez une option pour poursuivre.", r.x + 20, r.y + r.height - 26, 10, C_DIM);
 }
 
+static void DeltaLine(float x, float y, const char *label, float before, float after, const char *fmt)
+{
+    char buf[64];
+    Text(label, x, y, 10, C_DIM);
+    snprintf(buf, sizeof(buf), fmt, after);
+    Text(buf, x + 110, y, 10, C_TEXT);
+    float d = after - before;
+    if (fabsf(d) >= 0.05f) {
+        snprintf(buf, sizeof(buf), "%+.1f", d);
+        Text(buf, x + 160, y, 10, d > 0 ? C_GOOD : C_BAD);
+    }
+}
+
+static void DrawReport(void)
+{
+    DrawRectangle(0, 0, VW, VH, Fade(BLACK, 0.55f));
+    Rectangle r = { 190, 90, 900, 540 };
+    Panel(r, C_PANEL);
+    DrawRectangle((int)r.x, (int)r.y, (int)r.width, 4, C_ACCENT);
+    char date[32], buf[200];
+    Game_DateString(game.turn, date, sizeof(date));
+    snprintf(buf, sizeof(buf), "RAPPORT DU TRIMESTRE - %s", date);
+    Text(buf, r.x + 20, r.y + 16, 20, C_TEXT);
+
+    float x = r.x + 20, y = r.y + 50;
+    for (int i = 0; i < R_COUNT; i++) {
+        DeltaLine(x, y, RESOURCE_NAMES[i], game.reportRes[i], game.res[i], "%.0f");
+        y += 15;
+    }
+    y += 6;
+    DeltaLine(x, y, "Population (M)", game.reportPop, Soc_NationPop(&game, N_FRANCE), "%.1f"); y += 15;
+    DeltaLine(x, y, "Provinces", (float)game.reportProv, (float)Soc_NationProvinces(&game, N_FRANCE), "%.0f"); y += 15;
+    DeltaLine(x, y, "Divisions", (float)game.reportUnits, (float)War_UnitCount(&game, N_FRANCE), "%.0f"); y += 15;
+    DeltaLine(x, y, "Score", (float)game.reportScore, (float)Game_Score(&game, NULL), "%.0f"); y += 22;
+    snprintf(buf, sizeof(buf), "+%.2f°C", game.temp);
+    Text("Climat", x, y, 10, C_DIM);
+    Text(buf, x + 110, y, 10, C_CLIMATE);
+
+    /* evenements notables du tour */
+    float ex = r.x + 250, ey = r.y + 50;
+    Text("ÉVÉNEMENTS", ex, ey, 10, C_ACCENT);
+    ey += 16;
+    int shown = 0;
+    for (int i = game.reportLogStart; i < game.logCount && shown < 30; i++) {
+        const LogEntry *e = &game.log[i];
+        if (e->kind == EV_INFO) continue;
+        ey += TextWrap(e->text, ex, ey, r.width - 270, 10, LogColor(e->kind));
+        shown++;
+        if (ey > r.y + r.height - 60) break;
+    }
+    if (!shown) Text("Trimestre calme.", ex, ey, 10, C_DIM);
+
+    Rectangle cb = { r.x + 20, r.y + r.height - 36, 16, 16 };
+    DrawRectangleLinesEx(cb, 1, C_TEXT);
+    if (showReports) DrawRectangle((int)cb.x + 4, (int)cb.y + 4, 8, 8, C_ACCENT);
+    Text("Afficher ce rapport à chaque tour", cb.x + 24, cb.y + 3, 10, C_DIM);
+    if (Hover((Rectangle){ cb.x, cb.y, 220, 16 }) && clicked) { showReports = !showReports; clicked = false; }
+
+    if (Button((Rectangle){ r.x + r.width - 180, r.y + r.height - 44, 160, 32 }, "CONTINUER", true, 20)
+        || IsKeyPressed(KEY_SPACE) || IsKeyPressed(KEY_ENTER) || IsKeyPressed(KEY_ESCAPE))
+        game.reportReady = false;
+}
+
 static void DrawTooltip(void)
 {
     if (!tooltip[0]) return;
     char copy[600];
     snprintf(copy, sizeof(copy), "%s", tooltip);
-    const char *lines[10];
+    const char *lines[14];
     int n = 0, w = 0;
     char *s = copy;
-    while (s && n < 10) {
+    while (s && n < 14) {
         lines[n++] = s;
         char *nl = strchr(s, '\n');
         if (nl) { *nl = 0; s = nl + 1; } else s = NULL;
@@ -1033,6 +1511,7 @@ static void DrawTooltip(void)
     float x = mouse.x + 16, y = mouse.y + 16;
     if (x + w + 20 > VW) x = VW - w - 20;
     if (y + h + 12 > VH) y = mouse.y - h - 16;
+    if (y < 0) y = 0;
     Panel((Rectangle){ x, y, (float)w + 16, (float)h + 10 }, (Color){ 12, 16, 22, 245 });
     float yy = y + 6;
     for (int i = 0; i < n; i++)
@@ -1042,16 +1521,39 @@ static void DrawTooltip(void)
 /* ------------------------------------------------------------------ */
 /* Ecrans                                                              */
 /* ------------------------------------------------------------------ */
-static void NewGame(void)
+static void ResetUi(void)
 {
-    Game_Init(&game, (unsigned)time(NULL));
     selProvince = PV_FR_NORD;
     selNation = N_ALLEMAGNE;
     tab = TAB_PROVINCE;
     logScroll = 0;
     mapSignature = 0;
+    memset(uiSel, 0, sizeof(uiSel));
+    strikeArmed = false;
     screen = SCR_GAME;
     inProgress = true;
+}
+
+static void NewGame(void)
+{
+    Game_Init(&game, (unsigned)time(NULL), newDifficulty);
+    ResetUi();
+}
+
+static void LoadGame(const char *path)
+{
+    if (Game_Load(&game, path)) {
+        ResetUi();
+        Toast("Partie chargée.");
+        if (game.state != GAME_RUNNING) screen = SCR_END;
+    } else {
+        Toast("Sauvegarde illisible ou d'une autre version.");
+    }
+}
+
+static void SaveGame(void)
+{
+    Toast(Game_Save(&game, SAVE_FILE) ? "Partie sauvegardée (" SAVE_FILE ")." : "Échec de la sauvegarde.");
 }
 
 static void DrawBackdrop(void)
@@ -1068,53 +1570,66 @@ static void DrawBackdrop(void)
 static void DrawTitle(void)
 {
     DrawBackdrop();
-    Text("BOUCLIER 2050", VW / 2 - TextW("BOUCLIER 2050", 60) / 2, 100, 60, C_ACCENT);
+    Text("BOUCLIER 2050", VW / 2 - TextW("BOUCLIER 2050", 60) / 2, 70, 60, C_ACCENT);
     const char *sub = "Grande stratégie et guerre hybride en Europe et en Méditerranée, 2030-2060";
-    Text(sub, VW / 2 - TextW(sub, 20) / 2, 176, 20, C_TEXT);
+    Text(sub, VW / 2 - TextW(sub, 20) / 2, 146, 20, C_TEXT);
     const char *pitch =
         "2030. Le monde a franchi +1,5°C et le réchauffement s'accélère. Sécheresses, mégafeux et effondrement agricole "
-        "vident le Sud et jettent des millions de personnes sur les routes. L'eau, l'énergie et la nourriture deviennent des "
-        "armes. Puissances, cartels et mercenaires numériques mènent une guerre hybride dans tous les milieux. "
-        "Gérez votre population, choisissez votre régime, de la commune utopique à l'État totalitaire, défendez "
-        "vos frontières ou conquérez celles des autres. Tenez trente ans.";
-    TextWrap(pitch, 280, 222, 720, 10, C_DIM);
+        "vident le Sud et jettent des millions de personnes sur les routes. Gérez une population vivante et son économie, "
+        "choisissez votre régime, de la commune utopique à l'État totalitaire, menez vos divisions, maniez la dissuasion "
+        "et défendez vos frontières dans tous les milieux. Tenez trente ans.";
+    TextWrap(pitch, 280, 186, 720, 10, C_DIM);
 
-    float y = 330;
+    float y = 262, bx = VW / 2 - 140;
     if (inProgress) {
-        if (Button((Rectangle){ VW / 2 - 140, y, 280, 44 }, "CONTINUER", true, 20)) screen = SCR_GAME;
-        y += 54;
+        if (Button((Rectangle){ bx, y, 280, 38 }, "CONTINUER", true, 20)) screen = SCR_GAME;
+        y += 46;
+        if (Button((Rectangle){ bx, y, 280, 38 }, "SAUVEGARDER", true, 20)) SaveGame();
+        y += 46;
     }
-    if (Button((Rectangle){ VW / 2 - 140, y, 280, 44 }, "NOUVELLE PARTIE", true, 20)) NewGame();
-    if (Button((Rectangle){ VW / 2 - 140, y + 54, 280, 44 }, "COMMENT JOUER", true, 20)) screen = SCR_HELP;
-    if (Button((Rectangle){ VW / 2 - 140, y + 108, 280, 44 }, "QUITTER", true, 20)) quitRequested = true;
+    if (Button((Rectangle){ bx, y, 136, 38 }, "CHARGER", FileExists(SAVE_FILE), 20)) LoadGame(SAVE_FILE);
+    if (Button((Rectangle){ bx + 144, y, 136, 38 }, "AUTO", FileExists(AUTOSAVE_FILE), 20)) LoadGame(AUTOSAVE_FILE);
+    Tooltip((Rectangle){ bx + 144, y, 136, 38 }, "Sauvegarde automatique (tous les 4 tours).");
+    y += 46;
+    if (Button((Rectangle){ bx, y, 280, 38 }, "NOUVELLE PARTIE", true, 20)) NewGame();
+    y += 46;
+    char buf[64];
+    snprintf(buf, sizeof(buf), "Difficulté : %s", DIFFICULTY_NAMES[newDifficulty]);
+    Rectangle dr = { bx, y, 280, 30 };
+    if (Button(dr, buf, true, 10)) newDifficulty = (newDifficulty + 1) % DIFF_COUNT;
+    Tooltip(dr, "Facile : menaces et climat atténués, recettes accrues.\nDifficile : menaces, climat et IA plus agressifs, "
+                "recettes réduites ; le score est multiplié par 1,3.");
+    y += 38;
+    if (Button((Rectangle){ bx, y, 136, 38 }, "AIDE", true, 20)) screen = SCR_HELP;
+    if (Button((Rectangle){ bx + 144, y, 136, 38 }, "QUITTER", true, 20)) quitRequested = true;
 
     const char *dom = "Terre - Mer - Air - Espace - Cyber - Informationnel - Electromagnétique";
-    Text(dom, VW / 2 - TextW(dom, 10) / 2, 600, 10, C_DIM);
+    Text(dom, VW / 2 - TextW(dom, 10) / 2, 660, 10, C_DIM);
     Text("Fiction prospective. Contours : Natural Earth (domaine public).", 10, VH - 18, 10, C_DIM);
+    if (toastTime > 0) Text(toast, VW / 2 - TextW(toast, 10) / 2, 640, 10, C_SEL);
 }
 
 static void DrawHelp(void)
 {
     DrawBackdrop();
-    Panel((Rectangle){ 110, 30, 1060, 660 }, C_PANEL);
-    Text("COMMENT JOUER", 130, 44, 20, C_ACCENT);
+    Panel((Rectangle){ 90, 20, 1100, 680 }, C_PANEL);
+    Text("COMMENT JOUER", 110, 32, 20, C_ACCENT);
     static const char *help[] = {
-        "OBJECTIF : tenir 120 trimestres (2030-2060). Défaite si la Cohésion ou la Souveraineté tombe à 0, si le Budget passe sous -60 ou si Paris tombe.",
-        "TOUR : agissez puis FIN DU TOUR (Espace). Menaces, climat, population, migrations et guerres sont alors résolus. 3 points de commandement (PC) par tour pour la diplomatie, la guerre et la lutte hybride.",
-        "CARTE : 66 provinces en Europe et en Méditerranée, 27 nations. Cliquez une province pour l'inspecter. Modes : politique, climat (habitabilité), militance, population.",
-        "POPULATION : chaque province a ses habitants, leur croissance, leur part à intégrer et la militance de trois strates (travailleurs, classes moyennes, élites). Pénuries, guerre, dette et occupation les agitent ; au-delà de 6,5 éclatent des révoltes.",
-        "CLIMAT : le réchauffement réduit l'habitabilité, d'abord au Sud. Récoltes et eau baissent, les populations migrent vers les provinces plus vivables et plus riches. Votre doctrine décide combien entrent ; les refoulés deviennent des flux clandestins aux frontières.",
-        "RESSOURCES : énergie, eau et alimentation comparent la production de vos provinces (plus projets et accords commerciaux) aux besoins de la population.",
-        "GUERRE : déclarez la guerre à un voisin (terre ou mer), puis cliquez ses provinces marquées d'un X pour lancer des offensives. Les conquêtes apportent ressources et recettes mais doivent être intégrées. L'agression ruine votre réputation : l'Europe se réarme et forme des coalitions.",
-        "RÉGIME : de la Commune écologique à l'État totalitaire. Chaque régime modifie l'impôt, la mobilisation, la répression, l'intégration, la diplomatie et la satisfaction des strates.",
-        "DÉFENSE M2MC : répartissez la capacité de chaque milieu entre 12 théâtres. L'orbite améliore la détection, un spectre brouillé affaiblit l'air et la mer ; air, espace, cyber et EM renforcent aussi l'armée.",
-        "HYBRIDE : 4 factions mènent la guerre sous le seuil : Fédération Boréale, Ligue des Sables, Consortium Hydra, Réseau Nébula.",
-        "RACCOURCIS : Espace/Entrée = fin du tour, 1-7 = onglets, M = mode de carte, F11 = plein écran, Échap = menu.",
+        "OBJECTIF : tenir 120 trimestres (2030-2060) et maximiser le score. Défaite si la Cohésion ou la Souveraineté tombe à 0, si le Budget passe sous -60, si Paris tombe ou en cas d'échange nucléaire. Victoires spéciales : Transition, Hégémonie, Utopie, Ordre nouveau.",
+        "TOUR : agissez puis FIN DU TOUR (Espace). Un rapport résume le trimestre. 3 points de commandement (PC) par tour pour la diplomatie, la guerre, les décrets et la lutte hybride.",
+        "ARMÉE : chaque pion est un ensemble de divisions. Clic gauche sur une province : sélectionner nos divisions (Maj pour ajouter). Clic droit sur une province voisine : s'y déplacer ou l'attaquer. Les batailles se jouent en fin de tour : il faut briser l'organisation des défenseurs. Le terrain, les débarquements (infanterie de marine, capacité Mer) et le ravitaillement comptent.",
+        "DISSUASION : la posture fixe la crédibilité. Une nation dissuadée ne touche pas au sol national. Ultime avertissement depuis NATIONS, frappe depuis une province ennemie : la France devient alors un paria, et frapper une puissance nucléaire provoque la riposte.",
+        "POPULATION : trois strates (travailleurs, classes moyennes, élites) avec leur part, leurs besoins, leur militance et leur conscience politique. L'éducation fait monter l'alphabétisation et l'ascension sociale, mais aussi la conscience ; la répression calme la militance mais accumule la conscience.",
+        "ÉCONOMIE : provinces produisant alimentation, eau, énergie, minerais et biens industriels (usines). Marché mondial avec prix, importations et exportations. Impôts par strate, dépenses d'éducation, d'administration et de protection sociale, droits de douane.",
+        "POLITIQUE : six courants (écologistes, socialistes, libéraux, conservateurs, souverainistes, autoritaires) évoluent selon la situation. En démocratie, des élections désignent le gouvernement. Chaque régime a ses mécaniques et deux décrets propres.",
+        "CLIMAT ET MIGRATIONS : le réchauffement réduit l'habitabilité, d'abord au Sud ; les populations migrent. La doctrine migratoire décide combien entrent ; les refoulés deviennent des flux clandestins.",
+        "DÉFENSE M2MC ET HYBRIDE : 12 théâtres (terre, mer, air, espace, cyber, informationnel, électromagnétique) et 4 factions qui mènent la guerre sous le seuil.",
+        "RACCOURCIS : Espace/Entrée = fin du tour, 1-9 = onglets, M = mode de carte, F5 = sauvegarder, F9 = charger, F11 = plein écran, Échap = menu.",
     };
-    float y = 76;
+    float y = 62;
     for (int i = 0; i < (int)(sizeof(help) / sizeof(help[0])); i++)
-        y += TextWrap(help[i], 130, y, 1020, 10, i % 2 ? C_TEXT : (Color){ 200, 210, 220, 255 }) + 9;
-    if (Button((Rectangle){ VW / 2 - 100, 636, 200, 40 }, "RETOUR", true, 20) || IsKeyPressed(KEY_ESCAPE))
+        y += TextWrap(help[i], 110, y, 1060, 10, i % 2 ? C_TEXT : (Color){ 200, 210, 220, 255 }) + 8;
+    if (Button((Rectangle){ VW / 2 - 100, 648, 200, 38 }, "RETOUR", true, 20) || IsKeyPressed(KEY_ESCAPE))
         screen = SCR_TITLE;
 }
 
@@ -1123,49 +1638,66 @@ static void DrawEnd(void)
     DrawBackdrop();
     bool won = game.state == GAME_WON;
     const char *title = won ? "LA FRANCE A TENU" : "DÉFAITE";
-    Text(title, VW / 2 - TextW(title, 60) / 2, 100, 60, won ? C_GOOD : C_BAD);
+    Text(title, VW / 2 - TextW(title, 60) / 2, 50, 60, won ? C_GOOD : C_BAD);
     const char *why = "";
     switch (game.state) {
-    case GAME_WON: why = "2060 : malgré les tempêtes, la France est debout. L'histoire jugera le prix payé."; break;
+    case GAME_WON: why = VICTORY_DESC[Game_Victory(&game)]; break;
     case GAME_LOST_COHESION: why = "Effondrement social : émeutes, sécessions locales, le pays se fracture."; break;
     case GAME_LOST_SOUVERAINETE: why = "Perte de souveraineté : la France ne décide plus de son destin."; break;
     case GAME_LOST_BUDGET: why = "Défaut de paiement : les créanciers dictent désormais la politique nationale."; break;
     case GAME_LOST_CONQUEST: why = "Paris est tombée. Le gouvernement capitule."; break;
+    case GAME_LOST_NUCLEAR: why = "Échange nucléaire. Il n'y a pas de vainqueur."; break;
     default: break;
     }
-    Text(why, VW / 2 - TextW(why, 10) / 2, 178, 10, C_TEXT);
-
-    char buf[200], date[32];
-    Game_DateString(game.turn, date, sizeof(date));
-    Panel((Rectangle){ 390, 210, 500, 270 }, C_PANEL);
-    float y = 226;
-    snprintf(buf, sizeof(buf), "Fin : %s (+%.2f°C) - régime : %s", date, game.temp, REGIMES[game.nat[N_FRANCE].regime].name);
-    Text(buf, 410, y, 10, C_TEXT); y += 18;
-    snprintf(buf, sizeof(buf), "Population : %.1f M dans %d provinces", Soc_NationPop(&game, N_FRANCE), Soc_NationProvinces(&game, N_FRANCE));
-    Text(buf, 410, y, 10, C_TEXT); y += 18;
-    snprintf(buf, sizeof(buf), "Provinces conquises : %d - perdues : %d", game.statConquered, game.statLost);
-    Text(buf, 410, y, 10, C_WAR); y += 18;
-    snprintf(buf, sizeof(buf), "Menaces neutralisées : %d - subies : %d", game.statNeutralized, game.statSuffered);
-    Text(buf, 410, y, 10, C_GOOD); y += 18;
-    snprintf(buf, sizeof(buf), "Catastrophes climatiques : %d", game.statDisasters);
-    Text(buf, 410, y, 10, C_CLIMATE); y += 24;
-    for (int r = 0; r < R_COUNT; r++) {
-        snprintf(buf, sizeof(buf), "%s : %.0f", RESOURCE_NAMES[r], game.res[r]);
-        Text(buf, 410 + (r % 2) * 240, y, 10, C_DIM);
-        if (r % 2) y += 16;
+    char buf[220], date[32];
+    if (won) {
+        snprintf(buf, sizeof(buf), "Victoire : %s", VICTORY_NAMES[Game_Victory(&game)]);
+        Text(buf, VW / 2 - TextW(buf, 20) / 2, 122, 20, C_SEL);
     }
-    y += 26;
-    snprintf(buf, sizeof(buf), "SCORE : %d", Game_Score(&game));
-    Text(buf, 640 - TextW(buf, 20) / 2, y, 20, C_ACCENT);
+    Text(why, VW / 2 - TextW(why, 10) / 2, 150, 10, C_TEXT);
 
-    if (Button((Rectangle){ VW / 2 - 140, 510, 280, 44 }, "REJOUER", true, 20)) NewGame();
-    if (Button((Rectangle){ VW / 2 - 140, 564, 280, 44 }, "MENU", true, 20)) screen = SCR_TITLE;
+    Game_DateString(game.turn, date, sizeof(date));
+    Panel((Rectangle){ 240, 176, 800, 330 }, C_PANEL);
+    float x = 260, y = 192;
+    snprintf(buf, sizeof(buf), "Fin : %s (+%.2f°C) - régime : %s - difficulté : %s", date, game.temp,
+             REGIMES[game.nat[N_FRANCE].regime].name, DIFFICULTY_NAMES[game.difficulty]);
+    Text(buf, x, y, 10, C_TEXT); y += 16;
+    snprintf(buf, sizeof(buf), "Population : %.1f M dans %d provinces. Conquises : %d, perdues : %d.",
+             Soc_NationPop(&game, N_FRANCE), Soc_NationProvinces(&game, N_FRANCE), game.statConquered, game.statLost);
+    Text(buf, x, y, 10, C_TEXT); y += 16;
+    snprintf(buf, sizeof(buf), "Batailles gagnées : %d, perdues : %d. Menaces neutralisées : %d, subies : %d. Catastrophes : %d.",
+             game.statBattlesWon, game.statBattlesLost, game.statNeutralized, game.statSuffered, game.statDisasters);
+    Text(buf, x, y, 10, C_TEXT); y += 16;
+    if (game.nukesUsed) { snprintf(buf, sizeof(buf), "Armes nucléaires employées : %d.", game.nukesUsed); Text(buf, x, y, 10, C_BAD); }
+    y += 22;
+
+    int parts[SC_COUNT];
+    int score = Game_Score(&game, parts);
+    Text("DÉTAIL DU SCORE", x, y, 10, C_ACCENT);
+    y += 16;
+    int maxPart = 1;
+    for (int i = 0; i < SC_COUNT; i++) if (abs(parts[i]) > maxPart) maxPart = abs(parts[i]);
+    for (int i = 0; i < SC_COUNT; i++) {
+        Text(SCORE_PART_NAMES[i], x, y, 10, C_DIM);
+        Bar((Rectangle){ x + 120, y + 1, 500, 8 }, (float)abs(parts[i]), (float)maxPart, parts[i] < 0 ? C_BAD : C_ACCENT);
+        snprintf(buf, sizeof(buf), "%d", parts[i]);
+        Text(buf, x + 630, y, 10, parts[i] < 0 ? C_BAD : C_TEXT);
+        y += 14;
+    }
+    y += 8;
+    snprintf(buf, sizeof(buf), "SCORE FINAL : %d", score);
+    Text(buf, 640 - TextW(buf, 20) / 2, y, 20, C_SEL);
+
+    if (Button((Rectangle){ VW / 2 - 140, 530, 280, 40 }, "REJOUER", true, 20)) NewGame();
+    if (Button((Rectangle){ VW / 2 - 140, 580, 280, 40 }, "MENU", true, 20)) screen = SCR_TITLE;
 }
 
 static void DrawGame(void)
 {
     ClearBackground(C_BG);
-    activeLayer = game.pendingDilemma >= 0 ? 1 : 0;
+    bool report = game.reportReady && showReports && game.pendingDilemma < 0 && game.state == GAME_RUNNING;
+    if (!showReports) game.reportReady = false;
+    activeLayer = (game.pendingDilemma >= 0 || report) ? 1 : 0;
     inputLayer = 0;
 
     DrawMap();
@@ -1173,8 +1705,10 @@ static void DrawGame(void)
     DrawTopBar();
 
     Panel((Rectangle){ RP_X - 4, 48, RP_W + 8, VH - 52 }, C_PANEL);
-    static const char *tabNames[TAB_COUNT] = { "PROVINCE", "NATIONS", "DÉFENSE", "HYBRIDE", "SOCIÉTÉ", "POLITIQUE", "PROJETS" };
-    float tw = (RP_W - 6 * 2) / (float)TAB_COUNT;
+    static const char *tabNames[TAB_COUNT] = {
+        "PROVINCE", "ARMÉE", "NATIONS", "DÉFENSE", "HYBRIDE", "SOCIÉTÉ", "ÉCONOMIE", "POLITIQUE", "PROJETS"
+    };
+    float tw = (RP_W - (TAB_COUNT - 1) * 2) / (float)TAB_COUNT;
     for (int i = 0; i < TAB_COUNT; i++) {
         Rectangle r = { RP_X + i * (tw + 2), 52, tw, 28 };
         bool sel = tab == (Tab)i, h = Hover(r);
@@ -1185,10 +1719,12 @@ static void DrawGame(void)
     }
     switch (tab) {
     case TAB_PROVINCE:  DrawProvinceTab(); break;
+    case TAB_ARMEE:     DrawArmyTab(); break;
     case TAB_NATIONS:   DrawNationsTab(); break;
     case TAB_DEFENSE:   DrawDefenseTab(); break;
     case TAB_HYBRIDE:   DrawHybridTab(); break;
     case TAB_SOCIETE:   DrawSocietyTab(); break;
+    case TAB_ECONOMIE:  DrawEconomyTab(); break;
     case TAB_POLITIQUE: DrawPolitiqueTab(); break;
     case TAB_PROJETS:   DrawProjectsTab(); break;
     default: break;
@@ -1201,23 +1737,32 @@ static void DrawGame(void)
     snprintf(lbl, sizeof(lbl), "PC restants : %d", game.commandPoints);
     Text(lbl, RP_X + 10, VH - 32, 10, C_ACCENT);
     if (activeLayer == 0 && (IsKeyPressed(KEY_SPACE) || IsKeyPressed(KEY_ENTER))) endTurn = true;
-    if (endTurn) {
+    if (endTurn && activeLayer == 0) {
         Game_EndTurn(&game);
         logScroll = 0;
+        strikeArmed = false;
+        for (int i = 0; i < MAX_UNITS; i++) if (!game.units[i].active) uiSel[i] = false;
+        if (game.turn % 4 == 0 && game.state == GAME_RUNNING) Game_Save(&game, AUTOSAVE_FILE);
     }
     if (activeLayer == 0) {
         for (int i = 0; i < TAB_COUNT; i++) if (IsKeyPressed(KEY_ONE + i)) tab = (Tab)i;
         if (IsKeyPressed(KEY_M)) mapMode = (MapMode)((mapMode + 1) % MAP_MODE_COUNT);
+        if (IsKeyPressed(KEY_F5)) SaveGame();
+        if (IsKeyPressed(KEY_F9) && FileExists(SAVE_FILE)) LoadGame(SAVE_FILE);
     }
 
     if (game.pendingDilemma >= 0) {
         tooltip[0] = 0;
         inputLayer = 1;
         DrawDilemma();
+    } else if (report) {
+        tooltip[0] = 0;
+        inputLayer = 1;
+        DrawReport();
     }
 
     if (game.state != GAME_RUNNING) { screen = SCR_END; inProgress = false; }
-    if (IsKeyPressed(KEY_ESCAPE)) screen = SCR_TITLE;
+    else if (activeLayer == 0 && IsKeyPressed(KEY_ESCAPE)) screen = SCR_TITLE;
 }
 
 /* ------------------------------------------------------------------ */
@@ -1236,6 +1781,7 @@ static void UpdateView(void)
     Vector2 m = GetMousePosition();
     mouse = (Vector2){ (m.x - viewOffset.x) / s, (m.y - viewOffset.y) / s };
     clicked = IsMouseButtonPressed(MOUSE_BUTTON_LEFT);
+    rclicked = IsMouseButtonPressed(MOUSE_BUTTON_RIGHT);
 }
 
 int main(void)
@@ -1258,10 +1804,12 @@ int main(void)
     Image img = GenImageColor(MAP_PW, MAP_PH, C_SEA);
     mapTex = LoadTextureFromImage(img);
     UnloadImage(img);
-    Game_Init(&game, (unsigned)time(NULL));
+    Game_Init(&game, (unsigned)time(NULL), DIFF_NORMAL);
 
     while (!WindowShouldClose() && !quitRequested) {
-        timeAcc += GetFrameTime();
+        float dt = GetFrameTime();
+        timeAcc += dt;
+        if (toastTime > 0) toastTime -= dt;
         UpdateView();
         tooltip[0] = 0;
         inputLayer = activeLayer = 0;
