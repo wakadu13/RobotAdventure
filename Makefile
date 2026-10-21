@@ -28,6 +28,9 @@ else
 endif
 
 ifdef RAYLIB_PATH
+    ifeq ($(wildcard $(RAYLIB_PATH)/libraylib.a),)
+        $(error $(RAYLIB_PATH)/libraylib.a introuvable : compilez raylib (make dans raylib/src) ou utilisez CMake)
+    endif
     RAYLIB_CFLAGS := -I$(RAYLIB_PATH)
     RAYLIB_LIBS   := $(RAYLIB_PATH)/libraylib.a $(PLATFORM_LIBS)
 else
