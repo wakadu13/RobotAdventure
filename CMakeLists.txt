@@ -9,6 +9,8 @@ if (NOT raylib_FOUND)
     include(FetchContent)
     set(BUILD_EXAMPLES OFF CACHE BOOL "" FORCE)
     set(BUILD_GAMES OFF CACHE BOOL "" FORCE)
+    # raylib 5.0 declare cmake_minimum_required(VERSION 3.0), refuse par CMake >= 4
+    set(CMAKE_POLICY_VERSION_MINIMUM 3.5)
     FetchContent_Declare(raylib
         GIT_REPOSITORY https://github.com/raysan5/raylib.git
         GIT_TAG 5.0
