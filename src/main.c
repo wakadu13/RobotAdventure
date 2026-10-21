@@ -92,6 +92,8 @@ static bool     inProgress;
 static bool     treatyOpen;
 static int      selGeneral = -1;
 static int      provScroll;
+static int      nationView;          /* 0 diplomatie, 1 operations */
+static char     negoMsg[160];
 
 /* camera de la carte : zoom et coin superieur gauche (en cellules) */
 static float    zoom = 1;
@@ -296,6 +298,51 @@ static unsigned  mapSignature = 1;
 static float     nationLabel[N_COUNT][3];
 static Color     provColor[PROV_COUNT];
 static short     colOf[MAP_VW + 1], rowOf[MAP_VH + 1];
+static unsigned char seaDist[MAP_H][MAP_W];     /* distance a la mer (cellules) */
+static unsigned short floodHist[PROV_COUNT][64];   /* cellules par distance a la mer */
+
+/* distances a la mer, calculees une fois : les cellules les plus proches sont submergees d'abord */
+static void ComputeSeaDistance(void)
+{
+    static short qx[MAP_W * MAP_H], qy[MAP_W * MAP_H];
+    int head = 0, tail = 0;
+    for (int r = 0; r < MAP_H; r++)
+        for (int c = 0; c < MAP_W; c++) {
+            seaDist[r][c] = 255;
+            if (MAP_CELLS[r][c] == MAP_SEA) { seaDist[r][c] = 0; qx[tail] = (short)c; qy[tail] = (short)r; tail++; }
+        }
+    static const int dx[4] = { 1, -1, 0, 0 }, dy[4] = { 0, 0, 1, -1 };
+    while (head < tail) {
+        int c = qx[head], r = qy[head];
+        head++;
+        for (int k = 0; k < 4; k++) {
+            int nc = c + dx[k], nr = r + dy[k];
+            if (nc < 0 || nr < 0 || nc >= MAP_W || nr >= MAP_H || seaDist[nr][nc] != 255) continue;
+            if (MAP_CELLS[nr][nc] >= PROV_COUNT) continue;
+            seaDist[nr][nc] = (unsigned char)(seaDist[r][c] < 254 ? seaDist[r][c] + 1 : 254);
+            qx[tail] = (short)nc; qy[tail] = (short)nr; tail++;
+        }
+    }
+    memset(floodHist, 0, sizeof(floodHist));
+    for (int r = 0; r < MAP_H; r++)
+        for (int c = 0; c < MAP_W; c++) {
+            int v = MAP_CELLS[r][c];
+            if (v < PROV_COUNT) floodHist[v][seaDist[r][c] < 63 ? seaDist[r][c] : 63]++;
+        }
+}
+
+/* distance a la mer en deca de laquelle les terres de p sont submergees (-1 : aucune) */
+static int FloodThreshold(int p)
+{
+    float f = game.prov[p].flooded;
+    if (f < 0.005f) return -1;
+    int want = (int)(f * PROVINCE_CELLS[p]), cum = 0;
+    for (int d = 1; d < 64; d++) {
+        cum += floodHist[p][d];
+        if (cum >= want) return d;
+    }
+    return 63;
+}
 
 static float CellW(void) { return CW0 * zoom; }
 static float CellH(void) { return CH0 * zoom; }
@@ -440,9 +487,13 @@ static unsigned ComputeSignature(void)
 
 static void RebuildMap(void)
 {
+    static bool seaReady;
+    if (!seaReady) { ComputeSeaDistance(); seaReady = true; }
+    int floodThr[PROV_COUNT];
     for (int p = 0; p < PROV_COUNT; p++) {
         provColor[p] = ProvinceBaseColor(p);
         if (p == selProvince) provColor[p] = Shade(provColor[p], 1.3f);
+        floodThr[p] = FloodThreshold(p);
     }
     for (int x = 0; x <= MAP_VW; x++) {
         int c = (int)(camX + x / CellW());
@@ -462,6 +513,8 @@ static void RebuildMap(void)
             else if (v == MAP_OUT) c = C_OUT;
             else {
                 c = PatternColor(v, provColor[v], px, py);
+                if (floodThr[v] >= 0 && seaDist[row][col] <= floodThr[v])
+                    c = (px + py) % 5 == 0 ? (Color){ 70, 120, 160, 255 } : (Color){ 34, 64, 98, 255 };   /* terres submergees */
                 int r = colR != col ? MAP_CELLS[row][colR] : v;
                 int b = rowB != row ? MAP_CELLS[rowB][col] : v;
                 int own = game.prov[v].owner;
@@ -728,7 +781,7 @@ static void DrawMap(void)
     }
     static const char *legend[MAP_MODE_COUNT] = {
         "Clic : sélectionner. Clic droit : envoyer. Molette : zoom. Rayures : territoire occupé.",
-        "Habitabilité : vert = tempéré, rouge = invivable, points verts = contamination.",
+        "Habitabilité : vert = tempéré, rouge = invivable, points verts = contamination, bleu = terres submergées.",
         "Militance : vert = calme, rouge = agitée, violet = révolte.",
         "Densité de population.",
         "Culture majoritaire (couleur de sa nation) ; points : seconde culture au-delà de 15%.",
@@ -756,10 +809,10 @@ static void DrawTopBar(void)
     char date[32], buf[160];
     Game_DateString(game.turn, date, sizeof(date));
     Text("BOUCLIER 2050", 10, 4, 20, C_ACCENT);
-    snprintf(buf, sizeof(buf), "%s - %d/%d - +%.2f°C", date, game.turn + 1, TOTAL_TURNS, game.temp);
+    snprintf(buf, sizeof(buf), "%s - %d/%d - +%.2f°C - mer +%.2f m", date, game.turn + 1, TOTAL_TURNS, game.temp, game.seaLevel);
     Text(buf, 10, 26, 10, C_TEXT);
     snprintf(buf, sizeof(buf), "Score %d", Game_Score(&game, NULL));
-    Rectangle sr = { 176, 26, 70, 12 };
+    Rectangle sr = { 176, 4, 70, 12 };
     Text(buf, sr.x, sr.y, 10, C_SEL);
     Tooltip(sr, "Score de victoire : détail dans l'onglet POLITIQUE.");
 
@@ -865,7 +918,22 @@ static void DrawProvinceTab(void)
     static const char *terrain[3] = { "plaine", "collines", "montagne" };
     snprintf(buf, sizeof(buf), "%s%s%s", terrain[PROVINCE_TERRAIN[p]], PROVINCE_COASTAL[p] ? ", côtière" : "", pr->fallout > 0.05f ? ", contaminé" : "");
     StatLine(c2, y, "Terrain", buf, pr->fallout > 0.05f ? C_BAD : C_TEXT);
-    y += 16;
+    y += 13;
+    {
+        int l2 = 0;
+        char res[200] = "";
+        for (int r = 0; r < SR_COUNT; r++) {
+            float d = Strat_Deposit(p, r) + (r == SR_PUCES ? pr->fabs : 0);
+            if (d > 0) l2 += snprintf(res + l2, sizeof(res) - l2, "%s%s %.1f", l2 ? ", " : "", STRATS[r].name, d);
+        }
+        if (l2 && pr->mineClosed) l2 += snprintf(res + l2, sizeof(res) - l2, " (fermé)");
+        StatLine(x, y, "Ressources", l2 ? res : "aucune", l2 ? C_ACCENT : C_DIM);
+        if (PROVINCE_SEA_EXPOSURE[p] > 0) {
+            snprintf(buf, sizeof(buf), "%.0f%% (menacé %.0f%%)", pr->flooded * 100, PROVINCE_SEA_EXPOSURE[p] * 100);
+            StatLine(c2, y, "Terres submergées", buf, pr->flooded > 0.05f ? C_BAD : C_WARN);
+        }
+        y += 16;
+    }
 
     /* cultures et religions */
     int order[CULT_COUNT];
@@ -929,7 +997,20 @@ static void DrawProvinceTab(void)
                              "Une usine sans main-d'oeuvre tourne au ralenti."))
                 Eco_BuildFactory(&game, p);
         }
-        y += 32;
+        if (pr->fabBuild > 0) {
+            snprintf(buf, sizeof(buf), "Fonderie en construction : %d tour(s)", pr->fabBuild);
+            Text(buf, x + 310, y + 6, 10, C_WARN);
+        } else if (ActionButton((Rectangle){ x + 310, y, 220, 24 }, "Fonderie de puces (15 Md)", Strat_FabBlocked(&game, p),
+                                "Semi-conducteurs : +0,6 lot par tour (6 tours de chantier). Il faut un tissu industriel (3 usines) "
+                                "et de l'énergie."))
+            Strat_BuildFab(&game, p);
+        y += 30;
+        if (pr->mineClosed) {
+            if (ActionButton((Rectangle){ x, y, 300, 24 }, "Rouvrir les mines (10 Md)", Strat_MineBlocked(&game, p),
+                             "Exploite le gisement de la province : souveraineté accrue, mais les riverains protestent."))
+                Strat_OpenMine(&game, p);
+            y += 30;
+        }
         TextWrap("Clic droit sur la carte pour déplacer les unités sélectionnées. Recrutement : onglet ARMÉE ; généraux : ÉT.-MAJOR.",
                  x, y, RP_W - 30, 10, C_DIM);
         return;
@@ -997,6 +1078,17 @@ static void DrawProvinceTab(void)
 }
 
 static const char *DOMAIN_LABELS[3] = { "terre", "air", "mer" };
+
+static const char *StratCostText(int type)
+{
+    static char buf[120];
+    int len = 0;
+    buf[0] = 0;
+    for (int r = 0; r < SR_COUNT; r++)
+        if (UNIT_STRAT[type][r])
+            len += snprintf(buf + len, sizeof(buf) - len, "%s%d %s", len ? ", " : "\nRessources : ", UNIT_STRAT[type][r], STRATS[r].name);
+    return buf;
+}
 static void Stepper(float x, float y, const char *label, float value, float *out, float step, const char *fmt, const char *tip);
 
 static void DrawArmyTab(void)
@@ -1019,9 +1111,9 @@ static void DrawArmyTab(void)
         snprintf(buf, sizeof(buf), "%s %.0f Md", d->shortName, War_RecruitCost(&game, t));
         char desc[420];
         snprintf(desc, sizeof(desc), "%s (%s) : %s\nAttaque %.1f, défense %.1f, antiaérien %.1f, naval %.1f. Vitesse %d, portée %d.\n"
-                 "Entretien %.2f Md/tour, %.1f bien/tour, poids %.2f. Formation %d tours.\nTechnologie : %s niveau %d.",
+                 "Entretien %.2f Md/tour, %.1f bien/tour, poids %.2f. Formation %d tours.\nTechnologie : %s niveau %d.%s",
                  d->name, DOMAIN_LABELS[d->domain], d->desc, d->atk, d->def, d->aa, d->naval, d->speed, d->range,
-                 d->upkeep, d->goods, d->capWeight, d->train, TECHS[d->tech].name, d->techLevel);
+                 d->upkeep, d->goods, d->capWeight, d->train, TECHS[d->tech].name, d->techLevel, StratCostText(t));
         Rectangle r = { x + (t % 4) * (bw + 4), y + (t / 4) * 24, bw, 21 };
         if (ActionButton(r, buf, War_RecruitBlocked(&game, t, selProvince), desc)) War_Recruit(&game, t, selProvince);
     }
@@ -1201,8 +1293,49 @@ static void DrawStaffTab(void)
 }
 
 
+static void DrawOpsPanel(int n, float dx, float dy, float bw)
+{
+    char buf[260];
+    const Nation *na = &game.nat[n];
+    Text("OPÉRATIONS CIBLÉES (1 PC)", dx, dy, 10, C_ACCENT);
+    dy += 14;
+    int len = 0;
+    buf[0] = 0;
+    if (na->outage > 0) len += snprintf(buf + len, sizeof(buf) - len, "réseau paralysé %d t  ", na->outage);
+    if (na->jammed > 0) len += snprintf(buf + len, sizeof(buf) - len, "brouillée %d t  ", na->jammed);
+    if (na->recon > 0) len += snprintf(buf + len, sizeof(buf) - len, "sous surveillance %d t  ", na->recon);
+    if (na->asat > 0) len += snprintf(buf + len, sizeof(buf) - len, "sans satellites %d t", na->asat);
+    Text(len ? buf : "Aucune opération en cours contre elle.", dx, dy, 10, len ? C_GOOD : C_DIM);
+    dy += 16;
+    for (int op = 0; op < OP_COUNT; op++) {
+        const OpDef *o = &OPS[op];
+        Rectangle r = { dx, dy, bw, 36 };
+        const char *b = Ops_Blocked(&game, n, op);
+        bool h = Hover(r) && !b;
+        DrawRectangleRec(r, h ? (Color){ 52, 82, 120, 255 } : C_PANEL);
+        DrawRectangleLinesEx(r, 1, h ? C_ACCENT : C_BORDER);
+        DrawRectangle((int)r.x, (int)r.y, 4, (int)r.height, DOMAIN_COLORS[o->domain]);
+        Text(o->name, r.x + 10, r.y + 5, 10, b ? C_DIM : C_TEXT);
+        static const char *SHORT_DOMAINS[D_COUNT] = { "Terre", "Mer", "Air", "Espace", "Cyber", "Info", "EM" };
+        snprintf(buf, sizeof(buf), "%s %d - %.0f Md%s - réussite %.0f%% - attrib. %.0f%%", SHORT_DOMAINS[o->domain], o->capacity,
+                 o->budget, o->influence > 0 ? "+infl." : "", Ops_Chance(&game, n, op) * 100, fminf(1, o->risk) * 100);
+        Text(buf, r.x + 10, r.y + 20, 10, b ? (Color){ 90, 100, 112, 255 } : C_DIM);
+        char tip[500];
+        snprintf(tip, sizeof(tip), "%s\n%s\nCapacité %s %d requise, %.0f Md%s.%s%s%s", o->name, o->desc, DOMAIN_NAMES[o->domain], o->capacity,
+                 o->budget, o->influence > 0 ? ", de l'influence" : "", o->needWar ? " Contre un ennemi seulement." : "",
+                 b ? "\nIndisponible : " : "", b ? b : "");
+        Tooltip(r, tip);
+        if (h && clicked) { clicked = false; Ops_Run(&game, n, op); }
+        dy += 39;
+    }
+    TextWrap("Une opération attribuée à la France dégrade la relation et l'influence ; une nation très hostile peut riposter "
+             "par une cyberattaque, voire déclarer la guerre. Investissez dans les capacités Cyber, Info, Espace et EM "
+             "(onglet DÉFENSE).", dx, dy + 2, bw, 10, C_DIM);
+}
+
 static void OpenTreaty(int n)
 {
+    negoMsg[0] = 0;
     War_TreatyDraft(&game, n);
     treatyOpen = true;
     provScroll = 0;
@@ -1245,6 +1378,10 @@ static void DrawNationsTab(void)
     float dy = y + 6, bw = dw - 16;
     Text(NATIONS[n].name, dx, dy, 20, NationColor(n));
     dy += 24;
+    if (Choice((Rectangle){ dx, dy, bw / 2 - 3, 18 }, "Diplomatie", nationView == 0)) nationView = 0;
+    if (Choice((Rectangle){ dx + bw / 2 + 3, dy, bw / 2 - 3, 18 }, "Opérations", nationView == 1)) nationView = 1;
+    dy += 24;
+    if (nationView == 1 && na->alive) { DrawOpsPanel(n, dx, dy, bw); return; }
     snprintf(buf, sizeof(buf), "%s%s%s", REGIMES[na->regime].name, na->eu ? " - UE" : "", na->failed ? " - FAILLI" : "");
     Text(buf, dx, dy, 10, C_TEXT); dy += 13;
     if (na->government >= 0) snprintf(buf, sizeof(buf), "Gouvernement : %s%s", IDEOLOGY_NAMES[na->government],
@@ -1353,7 +1490,7 @@ static void DrawTreaty(void)
     Text(buf, r.x + 20, r.y + 42, 10, win ? C_GOOD : C_BAD);
     Bar((Rectangle){ r.x + 20, r.y + 58, r.width - 40, 8 }, cost, fmaxf(5, fabsf(score) + 10), cost <= fabsf(score) + 5 ? C_GOOD : C_BAD);
     TextWrap(win ? "Cochez les provinces que l'ennemi nous cède. Une province que nous n'occupons pas coûte le double. Les réparations "
-                   "coûtent 5 points par milliard et par tour, pendant 4 ans."
+                   "coûtent 5 points par milliard et par tour, pendant 4 ans. Un ennemi las de la guerre cède davantage."
                  : "L'ennemi exige des concessions à la mesure de son avantage : cochez les provinces cédées et les réparations versées.",
              r.x + 20, r.y + 72, r.width - 40, 10, C_DIM);
 
@@ -1411,15 +1548,30 @@ static void DrawTreaty(void)
     snprintf(buf, sizeof(buf), "%d province(s) cédée(s) à %s", ceded, NATIONS[t->winner].name);
     Text(buf, x2, y2, 10, C_TEXT);
     y2 += 16;
-    const char *blocked = War_TreatyBlocked(&game, t);
-    if (blocked) y2 += TextWrap(blocked, x2, y2, 260, 10, C_BAD) + 4;
-    y2 += 10;
-    if (ActionButton((Rectangle){ x2, y2, 260, 30 }, "SIGNER LE TRAITÉ", blocked, "Fin de la guerre, application du traité et trêve de 4 ans (1 PC).")) {
-        War_ProposeTreaty(&game);
-        treatyOpen = false;
+    float ex = War_Exhaustion(&game, n);
+    float limit = win ? score + 5 + ex : -score - 10 - ex;
+    snprintf(buf, sizeof(buf), win ? "Lassitude de l'ennemi : %.0f. Il cédera jusqu'à environ %.0f points." :
+                                     "Lassitude de l'ennemi : %.0f. Il se contentera d'environ %.0f points.", ex, limit);
+    y2 += TextWrap(buf, x2, y2, 260, 10, C_WARN) + 4;
+    const Nation *na = &game.nat[n];
+    int rounds = na->negoTurn == game.turn ? na->negoRounds : 0;
+    const char *blocked = NULL;
+    if (rounds >= 3) blocked = "L'ennemi a quitté la table pour ce trimestre";
+    else if (rounds == 0 && game.commandPoints < 1) blocked = "Plus de points de commandement";
+    if (negoMsg[0]) y2 += TextWrap(negoMsg, x2, y2, 260, 10, t->countered ? C_SEL : C_BAD) + 4;
+    y2 += 6;
+    snprintf(buf, sizeof(buf), "PROPOSER (%d/3)", rounds);
+    if (ActionButton((Rectangle){ x2, y2, 260, 30 }, buf, blocked,
+                     "Soumet le traité (1 PC pour la séance, 3 propositions par trimestre). L'ennemi accepte s'il reste dans "
+                     "la limite de son score et de sa lassitude ; sinon il fait une contre-proposition, à accepter telle quelle "
+                     "ou à amender.")) {
+        int r = War_Negotiate(&game);
+        if (r == 1) { treatyOpen = false; Toast("Traité signé."); }
+        else if (r == 2) snprintf(negoMsg, sizeof(negoMsg), "Contre-proposition de %s : conditions modifiées ci-contre. Proposez-les pour signer.", NATIONS[n].name);
+        else snprintf(negoMsg, sizeof(negoMsg), "Négociations rompues pour ce trimestre.");
     }
     y2 += 36;
-    if (Button((Rectangle){ x2, y2, 260, 26 }, "Conditions par défaut", true, 10)) War_TreatyDraft(&game, n);
+    if (Button((Rectangle){ x2, y2, 260, 26 }, "Conditions par défaut", true, 10)) { War_TreatyDraft(&game, n); negoMsg[0] = 0; }
     y2 += 32;
     if (Button((Rectangle){ x2, y2, 260, 26 }, "Quitter la table", true, 10) || IsKeyPressed(KEY_ESCAPE)) {
         treatyOpen = false;
@@ -1813,10 +1965,36 @@ static void DrawEconomyTab(void)
              Eco_NationUnemployment(&game, N_FRANCE) * 100, game.nat[N_FRANCE].blockade * 100, embargos);
     Text(buf, x, y, 10, game.nat[N_FRANCE].blockade > 0.1f ? C_WARN : C_DIM);
     y += 14;
-    TextWrap("Prix en % de 2030 : ils montent quand le monde manque d'un bien. Les excédents s'exportent, la moitié du reste est "
-             "stockée (jusqu'à deux tours de besoins) et les stocks comblent les pénuries. On n'achète pas à un ennemi ni sous "
-             "embargo ; un blocus naval coupe jusqu'à 70% des échanges. Une usine demande des travailleurs : le chômage alimente "
-             "la militance et l'émigration.", x, y, RP_W - 20, 10, C_DIM);
+    Tooltip((Rectangle){ x, y - 14, RP_W - 20, 14 },
+            "Prix en % de 2030 : ils montent quand le monde manque d'un bien. Les excédents s'exportent, la moitié du reste est "
+            "stockée (jusqu'à deux tours de besoins) et les stocks comblent les pénuries. On n'achète pas à un ennemi ni sous "
+            "embargo ; un blocus naval coupe jusqu'à 70% des échanges. Une usine demande des travailleurs : le chômage alimente "
+            "la militance et l'émigration.");
+    y += 6;
+    Text("RESSOURCES STRATÉGIQUES", x, y, 10, C_ACCENT);
+    y += 14;
+    static const char *scol[] = { "Ressource", "Stock", "Prod.", "Import", "Besoins", "Couvert" };
+    static const float sx[] = { 0, 120, 170, 220, 275, 335 };
+    for (int c = 0; c < 6; c++) Text(scol[c], x + sx[c], y, 10, C_DIM);
+    y += 13;
+    for (int r = 0; r < SR_COUNT; r++) {
+        const Nation *fr = &game.nat[N_FRANCE];
+        Text(STRATS[r].name, x, y + 4, 10, C_TEXT);
+        snprintf(buf, sizeof(buf), "%.1f", fr->strat[r]);                          Text(buf, x + sx[1], y + 4, 10, fr->strat[r] < 2 ? C_BAD : C_TEXT);
+        snprintf(buf, sizeof(buf), "%.1f", Strat_Production(&game, N_FRANCE, r));  Text(buf, x + sx[2], y + 4, 10, C_TEXT);
+        snprintf(buf, sizeof(buf), "%.1f", Strat_Imports(&game, N_FRANCE, r));     Text(buf, x + sx[3], y + 4, 10, C_TEXT);
+        snprintf(buf, sizeof(buf), "%.1f", Strat_Use(&game, N_FRANCE, r));         Text(buf, x + sx[4], y + 4, 10, C_TEXT);
+        float sat = Strat_Sat(&game, N_FRANCE, r);
+        snprintf(buf, sizeof(buf), "%.0f%%%s", sat * 100, game.stratShock[r] > 0 ? " CRISE" : "");
+        Text(buf, x + sx[5], y + 4, 10, sat < 0.99f || game.stratShock[r] > 0 ? C_BAD : C_GOOD);
+        snprintf(buf, sizeof(buf), "+2 : %.1f Md", Strat_Price(&game, r) * 2);
+        char tip[300];
+        snprintf(tip, sizeof(tip), "%s : %s\nAchat de 2 %s sur le marché mondial (prix x2,5 en période de crise). Le recrutement des "
+                 "unités modernes en consomme ; une pénurie bride l'énergie nucléaire, la recherche, l'industrie ou la dissuasion.",
+                 STRATS[r].name, STRATS[r].desc, STRATS[r].unit);
+        if (ActionButton((Rectangle){ x + 420, y, 120, 18 }, buf, Strat_BuyBlocked(&game, r), tip)) Strat_Buy(&game, r);
+        y += 20;
+    }
 }
 
 static void DrawPolitiqueTab(void)
@@ -2205,7 +2383,8 @@ static void DrawHelp(void)
         "POPULATION : trois strates avec leur part, leurs besoins, leur militance, leur conscience et leurs propres courants politiques. 32 cultures et 5 religions ; les minorités s'agitent selon la politique culturelle, et une région dont la culture devient majoritairement étrangère peut faire sécession vers sa patrie.",
         "ÉCONOMIE : production, emplois et chômage, stocks, marché mondial avec prix, embargos et blocus. Les autres nations ont un trésor et investissent. Impôts par strate, dépenses publiques, droits de douane, réparations et réquisitions.",
         "POLITIQUE : en démocratie, des élections désignent le gouvernement ; chaque régime a ses mécaniques et deux décrets. Les autres nations ont aussi leurs élections, révolutions et coups d'État.",
-        "DÉFENSE HYBRIDE : 13 théâtres M2MC, dont les territoires extérieurs où naissent guérillas et attentats contre l'occupant.",
+        "DÉFENSE HYBRIDE : 13 théâtres M2MC, dont les territoires extérieurs où naissent guérillas et attentats contre l'occupant. OPÉRATIONS (onglet NATIONS) : frappe sur le réseau électrique, vol de technologies, paralysie logistique, ingérence électorale, déstabilisation, reconnaissance satellitaire, brouillage, tir antisatellite ; chacune peut être attribuée à la France.",
+        "RESSOURCES ET CLIMAT : terres rares, uranium et semi-conducteurs (gisements, fonderies, importations, crises mondiales) conditionnent les unités modernes, les SMR, la recherche et la dissuasion. La mer monte avec le réchauffement : deltas et côtes basses sont submergés peu à peu.",
         "RACCOURCIS : Espace/Entrée = fin du tour, 1-9 et 0 = onglets, M = mode de carte, F5 = sauvegarder, F9 = charger, F11 = plein écran, Échap = menu.",
     };
     float y = 62;

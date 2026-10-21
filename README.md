@@ -37,6 +37,12 @@ cultures.
   (occupations, batailles, blocus).
 - Les IA mènent plusieurs guerres à la fois, forment des **alliances** entre elles et appellent leurs
   alliés aux armes.
+- **IA militaire** : armées interarmes dosées selon la richesse et l'accès à la mer, offensives préparées
+  (concentration des divisions à deux pas, aviation placée à portée, flottes pour couvrir les
+  débarquements), renforts vers le point le plus menacé, généraux affectés selon leur trait.
+- **Négociation** : l'ennemi pèse sa lassitude (durée de la guerre, blocus, armée épuisée, agitation,
+  dissuasion) ; il accepte, ou fait une contre-proposition qu'on peut accepter ou amender (trois
+  propositions par trimestre).
 
 ### Dissuasion nucléaire
 - La posture (minimale, crédible, renforcée) fixe la crédibilité. Une nation dissuadée ne touche
@@ -58,6 +64,28 @@ cultures.
   devenue majoritairement étrangère peut faire sécession vers sa patrie, qui la revendique.
 - Alphabétisation, ascension sociale, migrations climatiques, intégration des territoires annexés,
   révoltes et sécessions.
+
+### Opérations ciblées (M2MC)
+Huit opérations contre une nation précise (onglet NATIONS, vue Opérations), selon nos capacités :
+- cyber : frappe sur le réseau électrique (-40 % d'énergie), vol de technologies, paralysie logistique ;
+- informationnel : ingérence électorale (élections anticipées), déstabilisation ;
+- espace : reconnaissance satellitaire (+15 % en attaque, +10 % en défense face à elle), tir
+  antisatellite (débris et réprobation) ;
+- électromagnétique : brouillage de son aviation et de ses drones.
+
+Chaque opération peut être attribuée à la France : relations, influence, riposte cyber, voire casus
+belli. Les ennemis capables mènent aussi des cyberattaques contre notre réseau.
+
+### Ressources stratégiques et montée des eaux
+- **Terres rares, uranium, semi-conducteurs** : gisements (Kiruna, Kola, Ukraine, Turquie, Limousin…),
+  fonderies (Eindhoven, Saxe, Grenoble, Irlande…), importations des partenaires et du reste du monde,
+  crises mondiales (embargo chinois, blocus de Taïwan, coups d'État au Sahel). Les unités modernes en
+  consomment au recrutement ; une pénurie bride les SMR, l'éolien, la recherche, l'industrie et la
+  crédibilité de la dissuasion. On peut acheter sur le marché, rouvrir les mines françaises ou bâtir
+  des fonderies.
+- **Montée des eaux** liée au réchauffement : les deltas et les côtes basses (Pays-Bas, Flandre, Venise,
+  delta du Nil, Camargue, Vendée…) sont submergés peu à peu, visible sur la carte ; submersions marines
+  lors des tempêtes. Les digues des pays riches et le Plan Adaptation Climat limitent les dégâts.
 
 ### Économie (à la Victoria)
 - Production d'alimentation, d'eau, d'énergie, de minerais et de biens industriels.
@@ -149,7 +177,8 @@ Machines anciennes : compilez raylib en OpenGL 2.1
 
 - `make test` vérifie les mécaniques rares : frappes stratégiques et tactiques, riposte, prolifération et
   contre-prolifération, avertissement, chantage, les douze décrets, élections, usines, recrutement,
-  parapluie européen, traités, défaite à Paris, généraux, technologies, embargo, cultures, sauvegarde.
+  parapluie européen, traités et contre-propositions, défaite à Paris, généraux, technologies, embargo,
+  cultures, opérations ciblées, ressources stratégiques, montée des eaux, sauvegarde.
 - `make sim` (ou `./build/autoplay [parties] [difficulté 0-2]`) joue des parties automatiques sans
   interface.
 
@@ -158,13 +187,15 @@ Taux de victoire indicatifs des bots (qui jouent leur stratégie sans erreur) :
 | Stratégie | Facile | Normale | Difficile |
 |---|---|---|---|
 | Passive (ne fait rien) | 0 % | 0 %, effondrement vers 2041 | 0 % |
-| Gestionnaire défensif | 100 % | 100 % | 83 % |
-| Stratège (régime autoritaire, armée, guerres choisies) | 100 % | 26 % | 0 % |
+| Gestionnaire défensif | 100 % | 100 % | 63 % |
+| Stratège (régime autoritaire, armée, guerres choisies) | 100 % | 10 % | 0 % |
 | Conquérant total (junte, guerres en chaîne) | 0 % | 0 % : coalitions, révoltes, faillite | 0 % |
 
-Les bots ne négocient que les traités par défaut, n'affectent pas de généraux et ne gèrent ni les
-minorités ni l'occupation : les conquêtes leur coûtent cher. Un joueur qui stationne des troupes dans
-les territoires occupés et choisit sa politique culturelle s'en sort mieux.
+Les bots n'affectent pas de généraux, ne mènent pas d'opérations et ne gèrent ni les minorités ni
+l'occupation ; le stratège dépense en outre tout son budget et son influence, puis cède à la guerre
+hybride. Depuis que l'IA adverse prépare ses offensives, ses conquêtes lui coûtent encore plus cher. Un
+joueur qui stationne des troupes dans les territoires occupés, choisit sa politique culturelle et garde
+des réserves s'en sort mieux.
 
 ## Organisation du code
 
@@ -173,11 +204,13 @@ src/game.h          types et API de la simulation
 src/game_internal.h outils partagés entre modules
 src/world.c         données : nations, provinces, régimes, unités, idéologies, décrets, dilemmes
 src/game.c          tour de jeu, guerre hybride M2MC, projets, dilemmes, score, sauvegarde
-src/society.c       climat, population, strates, cultures, religions, migrations, révoltes, régimes
+src/society.c       climat, montée des eaux, population, strates, cultures, migrations, révoltes, régimes
 src/economy.c       production, emploi, stocks, marché mondial, embargos, blocus, impôts, usines, trésor des IA
 src/politics.c      courants par strate, élections, décrets, vie politique des IA
 src/war.c           unités, batailles, blocus, ravitaillement, IA militaire, alliances, traités
 src/military.c      généraux et technologies militaires
+src/ops.c           opérations cyber, informationnelles, spatiales et électromagnétiques
+src/resources.c     ressources stratégiques (terres rares, uranium, semi-conducteurs)
 src/nuclear.c       dissuasion, prolifération, armes tactiques
 src/map_data.c/.h   carte générée (grille 0,125°, 130 régions, adjacences, cultures, religions)
 src/main.c          interface raylib

@@ -16,6 +16,9 @@ static const float GOODS_NEED[S_COUNT] = { 0.25f, 0.8f, 4.0f };
 /* part des echanges captee par l'Etat (TVA, taxes, subventions) */
 #define TRADE_STATE_SHARE 0.35f
 
+/* satisfaction des besoins en ressources strategiques, calculee une fois par tour */
+static float stratSat[N_COUNT][SR_COUNT];
+
 /* ------------------------------------------------------------------ */
 /* Production et besoins                                               */
 /* ------------------------------------------------------------------ */
@@ -26,8 +29,8 @@ static float RawSupply(const Game *g, int p, int good)
     const ProvinceDef *d = &PROVINCES[p];
     float e = ProvinceEfficiency(pr);
     switch (good) {
-    case G_FOOD:     return d->food * pr->hab / 100.0f * e;
-    case G_WATER:    return d->water * pr->hab / 100.0f * e;
+    case G_FOOD:     return d->food * pr->hab / 100.0f * e * (1 - pr->flooded);
+    case G_WATER:    return d->water * pr->hab / 100.0f * e * (1 - pr->flooded * 0.5f);
     case G_ENERGY:   return d->energy * (0.8f + 0.2f * pr->hab / 100.0f) * e;
     case G_MINERALS: return PROVINCE_MINERALS[p] * e;
     default: {
@@ -36,7 +39,8 @@ static float RawSupply(const Game *g, int p, int good)
         float input = fminf(1, fminf(ne->sat[G_ENERGY], ne->sat[G_MINERALS]));
         /* une usine sans travailleurs ne produit pas */
         float staff = pr->jobs > 1 ? fmaxf(0.5f, 1 / pr->jobs) : 1;
-        return pr->industry * 2.0f * e * (0.3f + 0.7f * input) * staff;
+        float chips = 0.8f + 0.2f * stratSat[pr->owner][SR_PUCES];
+        return pr->industry * 2.0f * e * (0.3f + 0.7f * input) * staff * chips;
     }
     }
 }
@@ -78,13 +82,14 @@ static void NationSupplyDemand(const Game *g, int n, NationEconomy *ne)
     if (n == N_FRANCE) {
         if (g->proj[P_AGRO].state == 2)   ne->supply[G_FOOD] += 8;
         if (g->proj[P_DESSAL].state == 2) ne->supply[G_WATER] += 9;
-        if (g->proj[P_SMR].state == 2)    ne->supply[G_ENERGY] += 12;
-        if (g->proj[P_ENR].state == 2)    ne->supply[G_ENERGY] += 7;
+        if (g->proj[P_SMR].state == 2)    ne->supply[G_ENERGY] += 12 * stratSat[N_FRANCE][SR_URANIUM];
+        if (g->proj[P_ENR].state == 2)    ne->supply[G_ENERGY] += 7 * (0.6f + 0.4f * stratSat[N_FRANCE][SR_TERRES_RARES]);
         ne->supply[G_ENERGY] += g->importBonus;
     } else {
         ne->supply[G_FOOD]  += g->nat[n].foodBonus;
         ne->supply[G_WATER] += g->nat[n].waterBonus;
     }
+    if (g->nat[n].outage > 0) ne->supply[G_ENERGY] *= 0.6f;   /* reseau electrique paralyse */
 }
 
 /* ------------------------------------------------------------------ */
@@ -184,6 +189,8 @@ bool Eco_ToggleEmbargo(Game *g, int n)
 
 static void WorldMarket(Game *g)
 {
+    for (int n = 0; n < N_COUNT; n++)
+        for (int r = 0; r < SR_COUNT; r++) stratSat[n][r] = g->nat[n].alive ? Strat_Sat(g, n, r) : 1;
     for (int n = 0; n < N_COUNT; n++) {
         NationEconomy *ne = &g->eco[n];
         if (g->nat[n].alive) NationSupplyDemand(g, n, ne);

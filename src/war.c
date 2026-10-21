@@ -171,6 +171,7 @@ float War_Quality(const Game *g, int n)
         q *= Clampf(0.7f + AvgWealth(g, n) * 0.8f, 0.7f, 1.2f);
     }
     if (g->eco[n].sat[G_GOODS] < 0.7f) q *= 0.85f;
+    if (g->nat[n].asat > 0) q *= 0.9f;   /* plus de satellites militaires */
     return q;
 }
 
@@ -237,19 +238,37 @@ int War_SpawnUnit(Game *g, int owner, int type, int prov, int training)
     return -1;
 }
 
+/* composition cible d'une armee selon la richesse, l'acces a la mer et le relief */
 static int PickType(Game *g, int n, bool coastal)
 {
-    float w = AvgWealth(g, n), r = Randf(g);
-    int t;
-    if (coastal && w > 0.15f && r < 0.12f) t = Randf(g) < 0.6f ? U_FREGATE : U_SNA;
-    else if (w > 0.25f && r < 0.22f) t = Randf(g) < 0.6f ? U_CHASSE : U_MALE;
-    else {
-        float q = Randf(g);
-        if (w > 0.25f) t = q < 0.35f ? U_INF : q < 0.55f ? U_MECA : q < 0.72f ? U_BLINDE : q < 0.82f ? U_ARTILLERIE : q < 0.9f ? U_DRONES : U_DCA;
-        else t = q < 0.6f ? U_INF : q < 0.75f ? U_MECA : q < 0.85f ? U_BLINDE : q < 0.93f ? U_DRONES : U_ARTILLERIE;
+    float w = AvgWealth(g, n);
+    float want[U_TYPE_COUNT] = { 0 };
+    want[U_INF] = 0.30f; want[U_MECA] = 0.14f; want[U_BLINDE] = 0.12f; want[U_ARTILLERIE] = 0.08f;
+    want[U_DRONES] = 0.07f; want[U_DCA] = 0.05f; want[U_FS] = 0.02f;
+    bool mountains = false;
+    for (int p = 0; p < PROV_COUNT; p++) if (g->prov[p].owner == n && PROVINCE_TERRAIN[p] == 2) mountains = true;
+    if (mountains) want[U_MONTAGNE] = 0.05f;
+    if (w > 0.3f) want[U_ROBOTS] = 0.04f;
+    if (w > 0.35f) want[U_HYPER] = 0.02f;
+    if (coastal) want[U_MARINE] = 0.03f;
+    if (w > 0.15f) { want[U_CHASSE] = 0.07f; want[U_MALE] = 0.04f; }
+    if (coastal && w > 0.15f) {
+        want[U_FREGATE] = 0.06f; want[U_SNA] = 0.03f; want[U_USV] = 0.02f;
+        if (w > 0.35f) want[U_PA] = 0.01f;
     }
-    if (!Mil_UnitUnlocked(g, n, t)) t = U_INF;
-    return t;
+    if (w < 0.15f) { want[U_INF] += 0.15f; want[U_BLINDE] *= 0.5f; }
+
+    int have[U_TYPE_COUNT] = { 0 }, total = 0;
+    for (int i = 0; i < MAX_UNITS; i++)
+        if (g->units[i].active && g->units[i].owner == n) { have[g->units[i].type]++; total++; }
+    int best = U_INF;
+    float bestGap = -1e9f;
+    for (int t = 0; t < U_TYPE_COUNT; t++) {
+        if (want[t] <= 0 || !Mil_UnitUnlocked(g, n, t) || Strat_RecruitBlocked(g, n, t)) continue;
+        float gap = want[t] * (total + 1) - have[t] + Randf(g) * 0.5f;
+        if (gap > bestGap) { bestGap = gap; best = t; }
+    }
+    return best;
 }
 
 static int SpawnSite(const Game *g, int n, int type)
@@ -324,7 +343,7 @@ const char *War_RecruitBlocked(const Game *g, int type, int p)
     if (War_StackCount(g, N_FRANCE, p, d->domain) >= StackLimit(d->domain)) return "Province saturée (limite d'empilement)";
     if (War_UnitLoad(g, N_FRANCE) + d->capWeight > War_ArmyMax(g, N_FRANCE) + 0.01f) return "Plafond de mobilisation atteint";
     if (g->res[R_BUDGET] < War_RecruitCost(g, type)) return "Budget insuffisant";
-    return NULL;
+    return Strat_RecruitBlocked(g, N_FRANCE, type);
 }
 
 bool War_Recruit(Game *g, int type, int p)
@@ -332,6 +351,7 @@ bool War_Recruit(Game *g, int type, int p)
     if (War_RecruitBlocked(g, type, p)) return false;
     if (War_SpawnUnit(g, N_FRANCE, type, p, UNIT_TYPES[type].train) < 0) return false;
     g->res[R_BUDGET] -= War_RecruitCost(g, type);
+    Strat_PayRecruit(g, N_FRANCE, type);
     return true;
 }
 
@@ -441,7 +461,7 @@ static float AirPower(const Game *g, int side, int enemy, int p)
         if (d->domain != DOM_AIR && u->type != U_PA) continue;
         int r = Distance(u->prov, p, d->range, false);
         if (r < 0) continue;
-        a += d->atk * Readiness(u) * Mil_TechBonus(g, u->owner, u->type);
+        a += d->atk * Readiness(u) * Mil_TechBonus(g, u->owner, u->type) * (g->nat[u->owner].jammed > 0 ? 0.6f : 1.0f);
     }
     return a;
 }
@@ -493,7 +513,10 @@ static float UnitAttack(const Game *g, const Unit *u, int p, int defender)
     if (u->type == U_DRONES) {
         float jam = AntiAir(g, defender, p) * 0.04f + g->nat[defender].tech[T_GE] * 0.05f;
         a *= 1 - Clampf(jam, 0, 0.6f);
+        if (g->nat[u->owner].jammed > 0) a *= 0.7f;
     }
+    /* reconnaissance satellitaire francaise */
+    if (u->owner == N_FRANCE && g->nat[defender].recon > 0) a *= 1.15f;
     return a;
 }
 
@@ -549,7 +572,9 @@ static float DefensePower(const Game *g, int p, int a)
         if (IsDefender(g, &g->units[i], p, a)) d += UnitDefense(g, &g->units[i], p);
     d *= 1 + 0.2f * PROVINCE_TERRAIN[p];
     d += FireSupport(g, defender, p, false, NULL);
-    return d + Garrison(g, p);
+    d += Garrison(g, p);
+    if (defender == N_FRANCE && g->nat[a].recon > 0) d *= 1.1f;
+    return d;
 }
 
 static float AttackPower(const Game *g, int p, int a, bool ordered)
@@ -824,50 +849,104 @@ static bool CanAttack(const Game *g, int n, int e)
     return true;
 }
 
-static void AiOrders(Game *g, int n)
+/* valeur d'une province ennemie pour l'IA */
+static float TargetValue(const Game *g, int n, int e)
 {
-    if (!War_AtWarAny(g, n)) return;
-    static bool used[MAX_UNITS];
-    memset(used, 0, sizeof(used));
+    float v = g->prov[e].pop + 2;
+    if (g->prov[e].owner == n) v += 8;                     /* reprendre son propre territoire */
+    if (e == Capital(g, g->prov[e].ctrl)) v += 5;
+    for (int r = 0; r < SR_COUNT; r++) v += Strat_Deposit(e, r) * 2;
+    return v;
+}
 
-    /* 1. attaques terrestres sur les provinces les plus vulnerables */
-    for (int attempt = 0; attempt < 3; attempt++) {
-        int best = -1;
-        float bestRatio = 1.25f;
-        for (int e = 0; e < PROV_COUNT; e++) {
-            if (!CanAttack(g, n, e)) continue;
-            float att = 0;
-            int count = 0;
-            for (int i = 0; i < MAX_UNITS; i++) {
-                const Unit *u = &g->units[i];
-                if (u->active && u->owner == n && !u->training && !used[i] && u->org > 0.4f && IsAdjacent(u->prov, e)
-                    && UNIT_TYPES[u->type].domain == DOM_LAND && CanCross(g, u, u->prov, e)) {
-                    att += UnitAttack(g, u, e, g->prov[e].ctrl);
-                    count++;
-                }
-            }
-            if (!count) continue;
-            float ratio = att / DefensePower(g, e, n);
-            if (ratio > bestRatio) { bestRatio = ratio; best = e; }
+static bool ReadyLand(const Game *g, const Unit *u, int n, const bool *used)
+{
+    return u->active && u->owner == n && !u->training && !used[u - g->units] && u->org > 0.4f
+        && UNIT_TYPES[u->type].domain == DOM_LAND;
+}
+
+/* puissance offensive estimee des unites de n adjacentes a e (ou a deux pas, ponderees) */
+static float StagedAttack(const Game *g, int n, int e, const bool *used, bool near)
+{
+    float att = 0;
+    int defender = g->prov[e].ctrl;
+    for (int i = 0; i < MAX_UNITS; i++) {
+        const Unit *u = &g->units[i];
+        if (!ReadyLand(g, u, n, used)) continue;
+        if (IsAdjacent(u->prov, e) && CanCross(g, u, u->prov, e)) { att += UnitAttack(g, u, e, defender); continue; }
+        if (!near || UNIT_TYPES[u->type].speed < 1) continue;
+        for (int k = 0; k < MAX_ADJ && PROVINCE_ADJ[u->prov][k] >= 0; k++) {
+            int q = PROVINCE_ADJ[u->prov][k];
+            if (War_Friendly(g, n, q) && IsAdjacent(q, e)) { att += 0.8f * UnitAttack(g, u, e, defender); break; }
         }
-        if (best < 0) break;
-        for (int i = 0; i < MAX_UNITS; i++) {
-            Unit *u = &g->units[i];
-            if (u->active && u->owner == n && !u->training && !used[i] && u->org > 0.4f && IsAdjacent(u->prov, best)
-                && UNIT_TYPES[u->type].domain == DOM_LAND && CanCross(g, u, u->prov, best)) {
-                u->target = (short)best;
+    }
+    return att;
+}
+
+static void LaunchAttack(Game *g, int n, int e, bool *used)
+{
+    for (int i = 0; i < MAX_UNITS; i++) {
+        Unit *u = &g->units[i];
+        if (ReadyLand(g, u, n, used) && IsAdjacent(u->prov, e) && CanCross(g, u, u->prov, e)) {
+            u->target = (short)e;
+            used[i] = true;
+        }
+    }
+}
+
+/* les unites a deux pas se rapprochent de l'objectif */
+static void Stage(Game *g, int n, int e, bool *used)
+{
+    for (int i = 0; i < MAX_UNITS; i++) {
+        Unit *u = &g->units[i];
+        if (!ReadyLand(g, u, n, used) || IsAdjacent(u->prov, e)) continue;
+        for (int k = 0; k < MAX_ADJ && PROVINCE_ADJ[u->prov][k] >= 0; k++) {
+            int q = PROVINCE_ADJ[u->prov][k];
+            if (War_Friendly(g, n, q) && IsAdjacent(q, e) && War_StackCount(g, n, q, DOM_LAND) < STACK_LAND) {
+                u->target = (short)q;
                 used[i] = true;
+                break;
             }
         }
     }
+}
 
-    /* 2. les autres unites rejoignent le front */
-    int dist[PROV_COUNT], queue[PROV_COUNT], head = 0, tail = 0;
+/* menace pesant sur une province amie : attaque ennemie voisine moins notre defense */
+static float FrontThreat(const Game *g, int n, int f, int *enemyOut)
+{
+    float enemy[N_COUNT] = { 0 };
+    for (int i = 0; i < MAX_UNITS; i++) {
+        const Unit *u = &g->units[i];
+        if (!u->active || u->training || UNIT_TYPES[u->type].domain != DOM_LAND || !War_AtWar(g, n, u->owner)) continue;
+        if (IsAdjacent(u->prov, f)) enemy[u->owner] += UNIT_TYPES[u->type].atk * Readiness(u);
+    }
+    int e = -1;
+    float tot = 0;
+    for (int k = 0; k < N_COUNT; k++) { tot += enemy[k]; if (enemy[k] > 0 && (e < 0 || enemy[k] > enemy[e])) e = k; }
+    if (e < 0) return 0;
+    if (enemyOut) *enemyOut = e;
+    return tot * 1.1f - DefensePower(g, f, e);
+}
+
+/* deplacement d'une unite d'un pas vers la destination la plus proche selon des distances BFS */
+static void StepToward(Game *g, Unit *u, const int dist[PROV_COUNT])
+{
+    UnitDomain dom = UNIT_TYPES[u->type].domain;
+    int d = dist[u->prov];
+    if (d <= 0) return;
+    for (int k = 0; k < MAX_ADJ && PROVINCE_ADJ[u->prov][k] >= 0; k++) {
+        int q = PROVINCE_ADJ[u->prov][k];
+        if (dist[q] >= 0 && dist[q] < d && War_StackCount(g, u->owner, q, dom) < StackLimit(dom)) { u->target = (short)q; return; }
+    }
+}
+
+/* distances a travers le territoire ami depuis un ensemble de provinces sources */
+static void FriendlyBfs(const Game *g, int n, const bool src[PROV_COUNT], int dist[PROV_COUNT])
+{
+    int queue[PROV_COUNT], head = 0, tail = 0;
     for (int p = 0; p < PROV_COUNT; p++) {
         dist[p] = -1;
-        if (!War_Friendly(g, n, p)) continue;
-        for (int k = 0; k < MAX_ADJ && PROVINCE_ADJ[p][k] >= 0; k++)
-            if (Hostile(g, n, PROVINCE_ADJ[p][k])) { dist[p] = 0; queue[tail++] = p; break; }
+        if (src[p] && War_Friendly(g, n, p)) { dist[p] = 0; queue[tail++] = p; }
     }
     while (head < tail) {
         int p = queue[head++];
@@ -876,30 +955,122 @@ static void AiOrders(Game *g, int n)
             if (War_Friendly(g, n, q) && dist[q] < 0) { dist[q] = dist[p] + 1; queue[tail++] = q; }
         }
     }
+}
+
+static void AiOrders(Game *g, int n)
+{
+    Nation *na = &g->nat[n];
+    na->aiTarget = na->aiThreat = -1;
+    if (!War_AtWarAny(g, n)) return;
+    static bool used[MAX_UNITS];
+    memset(used, 0, sizeof(used));
+    float aggro = NATIONS[n].aggressiveness;
+
+    /* 1. le point le plus menace */
+    float worst = 0;
+    for (int f = 0; f < PROV_COUNT; f++) {
+        if (g->prov[f].ctrl != n) continue;
+        float t = FrontThreat(g, n, f, NULL);
+        if (t > worst) { worst = t; na->aiThreat = (short)f; }
+    }
+
+    /* 2. offensive principale : la cible la plus rentable, preparee si besoin */
+    int cand[3] = { -1, -1, -1 };
+    float cscore[3] = { 0, 0, 0 };
+    for (int e = 0; e < PROV_COUNT; e++) {
+        if (!CanAttack(g, n, e)) continue;
+        float att = StagedAttack(g, n, e, used, true);
+        if (att <= 0) continue;
+        float sc = att / DefensePower(g, e, n) * sqrtf(TargetValue(g, n, e));
+        for (int k = 0; k < 3; k++)
+            if (sc > cscore[k]) {
+                for (int j = 2; j > k; j--) { cand[j] = cand[j - 1]; cscore[j] = cscore[j - 1]; }
+                cand[k] = e; cscore[k] = sc;
+                break;
+            }
+    }
+    float need = 0.62f - aggro * 0.2f;   /* les nations agressives prennent plus de risques */
+    for (int k = 0; k < 3; k++) {
+        int e = cand[k];
+        if (e < 0) continue;
+        float now = StagedAttack(g, n, e, used, false);
+        if (now <= 0 && k > 0) continue;
+        float fa, fd;
+        AirFactors(g, e, n, &fa, &fd);
+        float odds = Odds(now * fa, DefensePower(g, e, n) * fd);
+        if (odds >= need) {
+            LaunchAttack(g, n, e, used);
+            if (na->aiTarget < 0) na->aiTarget = (short)e;
+        } else if (k == 0) {
+            Stage(g, n, e, used);
+            na->aiTarget = (short)e;
+        }
+    }
+
+    /* 3. reserves : vers le point menace, sinon vers le front */
+    bool src[PROV_COUNT] = { false };
+    int distThreat[PROV_COUNT], distFront[PROV_COUNT];
+    if (na->aiThreat >= 0) src[na->aiThreat] = true;
+    FriendlyBfs(g, n, src, distThreat);
+    for (int p = 0; p < PROV_COUNT; p++) {
+        src[p] = false;
+        if (!War_Friendly(g, n, p)) continue;
+        for (int k = 0; k < MAX_ADJ && PROVINCE_ADJ[p][k] >= 0; k++)
+            if (Hostile(g, n, PROVINCE_ADJ[p][k])) { src[p] = true; break; }
+    }
+    FriendlyBfs(g, n, src, distFront);
+    int sent = 0;
     for (int i = 0; i < MAX_UNITS; i++) {
         Unit *u = &g->units[i];
         if (!u->active || u->owner != n || u->training || used[i] || u->target >= 0) continue;
         UnitDomain dom = UNIT_TYPES[u->type].domain;
-        if (dom == DOM_SEA) {
-            /* les flottes se portent vers les cotes ennemies */
-            int best = -1, bd = 99;
-            for (int p = 0; p < PROV_COUNT; p++) {
-                if (!PROVINCE_COASTAL[p] || !War_Friendly(g, n, p) || War_StackCount(g, n, p, DOM_SEA) >= STACK_SEA) continue;
+        if (dom != DOM_LAND) continue;
+        if (na->aiThreat >= 0 && worst > 0 && sent < 6 && distThreat[u->prov] > 0 && distThreat[u->prov] <= 4) {
+            StepToward(g, u, distThreat);
+            sent++;
+        } else {
+            StepToward(g, u, distFront);
+        }
+    }
+
+    /* 4. aviation : a portee de l'offensive, sinon du point menace */
+    int focus = na->aiTarget >= 0 ? na->aiTarget : na->aiThreat;
+    for (int i = 0; i < MAX_UNITS && focus >= 0; i++) {
+        Unit *u = &g->units[i];
+        if (!u->active || u->owner != n || u->training || UNIT_TYPES[u->type].domain != DOM_AIR) continue;
+        int range = UNIT_TYPES[u->type].range;
+        if (Distance(u->prov, focus, range, false) >= 0) continue;
+        int best = -1, bd = 99;
+        for (int q = 0; q < PROV_COUNT; q++) {
+            if (!War_Friendly(g, n, q) || War_StackCount(g, n, q, DOM_AIR) >= STACK_AIR) continue;
+            if (Distance(q, focus, range, false) < 0) continue;
+            int d = Distance(u->prov, q, 4, false);
+            if (d >= 0 && d < bd) { bd = d; best = q; }
+        }
+        if (best >= 0) u->target = (short)best;
+    }
+
+    /* 5. flottes : appuyer un debarquement ou bloquer les cotes ennemies */
+    for (int i = 0; i < MAX_UNITS; i++) {
+        Unit *u = &g->units[i];
+        if (!u->active || u->owner != n || u->training || UNIT_TYPES[u->type].domain != DOM_SEA || u->target >= 0) continue;
+        int best = -1, bd = 99;
+        bool landing = na->aiTarget >= 0 && PROVINCE_COASTAL[na->aiTarget];
+        for (int p = 0; p < PROV_COUNT; p++) {
+            if (!PROVINCE_COASTAL[p] || !War_Friendly(g, n, p) || War_StackCount(g, n, p, DOM_SEA) >= STACK_SEA) continue;
+            if (Distance(u->prov, p, UNIT_TYPES[u->type].speed, true) < 0) continue;
+            int d = 99;
+            if (landing) d = Distance(p, na->aiTarget, 2, true);
+            if (d < 0 || d == 99) {
                 for (int e = 0; e < PROV_COUNT; e++) {
                     if (!PROVINCE_COASTAL[e] || !Hostile(g, n, e)) continue;
-                    int d = Distance(p, e, 2, true);
-                    if (d >= 0 && d < bd && Distance(u->prov, p, UNIT_TYPES[u->type].speed, true) >= 0) { bd = d; best = p; }
+                    int de = Distance(p, e, 2, true);
+                    if (de >= 0 && de + 1 < d) d = de + 1;
                 }
             }
-            if (best >= 0 && best != u->prov) u->target = (short)best;
-            continue;
+            if (d >= 0 && d < bd) { bd = d; best = p; }
         }
-        int d = dist[u->prov];
-        if (d <= 0) continue;
-        for (int k = 0; k < MAX_ADJ && PROVINCE_ADJ[u->prov][k] >= 0; k++) {
-            int q = PROVINCE_ADJ[u->prov][k];
-            if (dist[q] >= 0 && dist[q] < d && War_StackCount(g, n, q, dom) < StackLimit(dom)) { u->target = (short)q; break; }
-        }
+        if (best >= 0 && best != u->prov) u->target = (short)best;
     }
 }
 
@@ -916,6 +1087,7 @@ static void AiRecruit(Game *g, int n)
     int site = SpawnSite(g, n, type);
     if (site < 0) return;
     na->treasury -= cost;
+    Strat_PayRecruit(g, n, type);
     War_SpawnUnit(g, n, type, site, UNIT_TYPES[type].train);
 }
 
@@ -1223,6 +1395,78 @@ bool War_ProposeTreaty(Game *g)
     return true;
 }
 
+/* lassitude de n face a la France : ce qu'elle est prete a ceder (ou a renoncer a exiger) en plus du score */
+float War_Exhaustion(const Game *g, int n)
+{
+    const Nation *na = &g->nat[n];
+    float e = Clampf((War_Turns(g, N_FRANCE, n) - 6) * 1.5f, 0, 15);
+    e += na->blockade * 15;
+    if (na->army < War_ArmyMax(g, n) * 0.4f) e += 10;
+    float mil = 0, pop = 0;
+    for (int p = 0; p < PROV_COUNT; p++)
+        if (g->prov[p].owner == n) { mil += Soc_ProvinceMilitancy(&g->prov[p]) * g->prov[p].pop; pop += g->prov[p].pop; }
+    if (pop > 0 && mil / pop > 5) e += 8;
+    if (na->failed) e += 10;
+    if (na->outage > 0) e += 4;
+    if (Nuke_IsPower(g, N_FRANCE) && !Nuke_IsPower(g, n)) e += g->credibility / 20;
+    if (IsDemocratic(na->regime)) e += 4;     /* l'opinion pese */
+    if (na->regime == RG_TOTALITAIRE || na->regime == RG_JUNTE) e -= 5;
+    return Clampf(e, 0, 40);
+}
+
+/* negociation : l'IA accepte, refuse ou fait une contre-proposition */
+int War_Negotiate(Game *g)
+{
+    Treaty *t = &g->treaty;
+    int n = t->other;
+    if (!t->active || !g->war[N_FRANCE][n]) return 0;
+    if (g->commandPoints < 1) return 0;
+    Nation *na = &g->nat[n];
+    if (na->negoTurn != g->turn) { na->negoTurn = g->turn; na->negoRounds = 0; }
+    if (na->negoRounds >= 3) {
+        Game_Log(g, EV_BAD, "%s quitte la table des négociations pour ce trimestre.", NATIONS[n].name);
+        return 0;
+    }
+    if (na->negoRounds == 0) g->commandPoints--;
+    na->negoRounds++;
+    float s = War_Score(g, N_FRANCE, n), ex = War_Exhaustion(g, n), cost = War_TreatyCost(g, t);
+    bool frWins = t->winner == N_FRANCE;
+    /* ce que l'ennemi accepte : nos exigences dans la limite du score et de sa lassitude ;
+       s'il gagne, il se contente de moins quand il est las */
+    float limit = frWins ? s + 5 + ex : -s - 10 - ex;
+    bool ok = frWins ? cost <= limit : cost >= limit;
+    if (ok) {
+        War_SignTreaty(g, t);
+        return 1;
+    }
+    /* contre-proposition */
+    if (frWins) {
+        while (War_TreatyCost(g, t) > limit) {
+            if (t->reparations > 0) { t->reparations -= 2; if (t->reparations < 0.1f) t->reparations = 0; continue; }
+            /* rendre d'abord la province la plus couteuse non occupee, puis la plus couteuse */
+            int drop = -1;
+            float worst = -1;
+            for (int p = 0; p < PROV_COUNT; p++) {
+                if (!t->cede[p]) continue;
+                float c = CedeCost(g, p) * (g->prov[p].ctrl == N_FRANCE ? 1 : 3);
+                if (c > worst) { worst = c; drop = p; }
+            }
+            if (drop < 0) break;
+            t->cede[drop] = false;
+        }
+    } else {
+        /* l'ennemi exige davantage : nos provinces qu'il occupe, puis des reparations */
+        for (int p = 0; p < PROV_COUNT && War_TreatyCost(g, t) < limit; p++)
+            if (g->prov[p].owner == N_FRANCE && g->prov[p].ctrl == n && !t->cede[p]) t->cede[p] = true;
+        while (War_TreatyCost(g, t) < limit && t->reparations < 6) { t->reparations += 2; t->reparationTurns = 16; }
+        for (int p = 0; p < PROV_COUNT && War_TreatyCost(g, t) < limit; p++)
+            if (g->prov[p].owner == N_FRANCE && !t->cede[p] && TouchesNation(g, p, n)) t->cede[p] = true;
+    }
+    t->countered = true;
+    Game_Log(g, EV_WAR, "%s fait une contre-proposition (lassitude %.0f).", NATIONS[n].name, ex);
+    return 2;
+}
+
 /* paix entre deux IA : le vainqueur annexe ce qu'il occupe, dans la limite du score */
 static void AiPeace(Game *g, int a, int b)
 {
@@ -1384,7 +1628,8 @@ static void Supply(Game *g)
         int n = u->owner;
         bool goods = g->eco[n].sat[G_GOODS] >= 0.7f;
         float recov = 0.15f * (g->nat[n].regime == RG_JUNTE ? 1.3f : 1.0f) * (goods ? 1 : 0.5f)
-                    * (1 + 0.03f * g->nat[n].tech[T_LOG]) * Mil_GeneralBonus(g, n, u->prov, -1, false);
+                    * (1 + 0.03f * g->nat[n].tech[T_LOG]) * Mil_GeneralBonus(g, n, u->prov, -1, false)
+                    * (g->nat[n].outage > 0 ? 0.6f : 1.0f);
         bool blockaded = PROVINCE_COASTAL[u->prov] && g->nat[n].blockade > 0.5f && UNIT_TYPES[u->type].domain == DOM_SEA;
         if (War_Friendly(g, n, u->prov)) {
             u->org = Clampf(u->org + recov, 0, 1);

@@ -23,7 +23,8 @@ float Mil_ResearchPoints(const Game *g)
         if (g->prov[p].owner == N_FRANCE) { lit += g->prov[p].literacy * g->prov[p].pop; pop += g->prov[p].pop; }
     lit = pop > 0 ? lit / pop : 0.5f;
     static const float regime[RG_COUNT] = { 1.1f, 1.0f, 1.3f, 1.0f, 0.9f, 0.9f };
-    return g->researchBudget * 1.6f * (0.5f + lit) * regime[g->nat[N_FRANCE].regime];
+    float chips = 0.5f + 0.5f * Strat_Sat(g, N_FRANCE, SR_PUCES);
+    return g->researchBudget * 1.6f * (0.5f + lit) * regime[g->nat[N_FRANCE].regime] * chips;
 }
 
 void Mil_SetResearch(Game *g, int area)
@@ -228,25 +229,40 @@ void Mil_Turn(Game *g)
             int t = (int)(Rand(g) % T_COUNT);
             if (t != T_NUC && na->tech[t] < TECH_MAX) na->tech[t]++;
         }
-        /* les generaux rejoignent le front le plus garni */
-        int best = -1, bestCount = 0;
-        if (War_AtWarAny(g, n)) {
-            for (int p = 0; p < PROV_COUNT; p++) {
-                if (!War_Friendly(g, n, p) || Mil_GeneralAt(g, n, p) >= 0) continue;
-                int c = War_StackCount(g, n, p, DOM_LAND);
-                if (c > bestCount) { bestCount = c; best = p; }
-            }
-        }
+        /* les generaux sont affectes selon leur trait : l'offensif a l'offensive, le defensif au point menace */
         bool has = false;
+        bool taken[PROV_COUNT] = { false };
         for (int i = 0; i < MAX_GENERALS; i++) {
             General *gen = &g->generals[i];
             if (!gen->active || gen->owner != n) continue;
             has = true;
             if (gen->prov >= 0 && !War_Friendly(g, n, gen->prov)) gen->prov = (short)NationCapital(g, n);
-            if (best >= 0 && (gen->prov < 0 || War_StackCount(g, n, gen->prov, DOM_LAND) < bestCount)) {
-                gen->prov = (short)best;
-                best = -1;
+            if (!War_AtWarAny(g, n)) continue;
+            int best = -1;
+            float bestScore = 0;
+            for (int p = 0; p < PROV_COUNT; p++) {
+                if (!War_Friendly(g, n, p) || taken[p]) continue;
+                int c = War_StackCount(g, n, p, DOM_LAND);
+                if (!c) continue;
+                float sc = (float)c;
+                bool nearTarget = false;
+                if (na->aiTarget >= 0)
+                    for (int k = 0; k < MAX_ADJ && PROVINCE_ADJ[p][k] >= 0; k++) if (PROVINCE_ADJ[p][k] == na->aiTarget) nearTarget = true;
+                if (gen->trait == GT_OFFENSIF && nearTarget) sc *= 2;
+                if (gen->trait == GT_DEFENSIF && p == na->aiThreat) sc *= 2.5f;
+                if (gen->trait == GT_MONTAGNE && PROVINCE_TERRAIN[p] >= 1) sc *= 1.6f;
+                if (gen->trait == GT_BLINDES) {
+                    int armor = 0;
+                    for (int u = 0; u < MAX_UNITS; u++) {
+                        const Unit *un = &g->units[u];
+                        if (un->active && un->owner == n && un->prov == p && (un->type == U_BLINDE || un->type == U_MECA)) armor++;
+                    }
+                    sc += armor * 1.5f;
+                }
+                if (gen->trait == GT_LOGISTICIEN && nearTarget) sc *= 1.4f;
+                if (sc > bestScore) { bestScore = sc; best = p; }
             }
+            if (best >= 0) { gen->prov = (short)best; taken[best] = true; }
         }
         if (!has && Randf(g) < 0.1f) SpawnGeneral(g, n, NATIONS[n].general[Rand(g) % 2], NationCapital(g, n), 1);
     }

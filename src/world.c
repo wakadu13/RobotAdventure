@@ -402,3 +402,74 @@ const DecreeDef DECREES[RG_COUNT][2] = {
       { "Propagande totale", "Pendant 12 tours : cohésion soutenue, courants autoritaires renforcés. Influence -6.", 16, 2 } },
 };
 
+
+/* ------------------------------------------------------------------ */
+/* Operations ciblees (milieux cyber, informationnel, espace, EM)      */
+/* ------------------------------------------------------------------ */
+const OpDef OPS[OP_COUNT] = {
+    { "Frappe sur le réseau électrique",
+      "Cyberattaque contre le réseau : -40% d'énergie pendant 3 tours, usines et armée ralenties.",
+      D_CYBER, 4, 3, 0, false, 0.35f, 3 },
+    { "Vol de technologies",
+      "Intrusion dans les laboratoires de défense : accélère notre recherche, surtout si la cible est en avance.",
+      D_CYBER, 3, 2, 0, false, 0.25f, 0 },
+    { "Paralysie logistique",
+      "Attaque des systèmes de commandement et de ravitaillement : toutes ses unités perdent de l'organisation.",
+      D_CYBER, 5, 3, 0, true, 0.2f, 0 },
+    { "Ingérence électorale",
+      "Campagne d'influence : ses courants proches de notre régime progressent ; élections anticipées en démocratie.",
+      D_INFO, 3, 2, 8, false, 0.4f, 0 },
+    { "Déstabilisation",
+      "Attise les colères sociales et les minorités : militance en forte hausse, risque de révolution.",
+      D_INFO, 4, 3, 6, false, 0.45f, 0 },
+    { "Reconnaissance satellitaire",
+      "Surveillance de ses forces pendant 6 tours : +15% à nos attaques et +10% à nos défenses face à elle, "
+      "programme nucléaire suivi.",
+      D_ESPACE, 2, 1, 0, false, 0.05f, 6 },
+    { "Brouillage électromagnétique",
+      "Brouillage GNSS et des liaisons de données : son aviation et ses drones perdent 30 à 40% d'efficacité pendant 3 tours.",
+      D_EM, 3, 2, 0, true, 0.3f, 3 },
+    { "Tir antisatellite",
+      "Détruit ses satellites militaires pendant 10 tours (qualité de l'armée -10%). Les débris menacent aussi nos "
+      "satellites et le monde condamne.",
+      D_ESPACE, 5, 4, 0, true, 1.0f, 10 },
+};
+
+/* ------------------------------------------------------------------ */
+/* Ressources strategiques                                             */
+/* ------------------------------------------------------------------ */
+const StratDef STRATS[SR_COUNT] = {
+    { "Terres rares",      "t", "Aimants des moteurs, des drones, des radars et des éoliennes.", 1.5f },
+    { "Uranium",           "t", "Combustible des réacteurs (SMR), des sous-marins et de la dissuasion.", 2.0f },
+    { "Semi-conducteurs",  "lots", "Puces de l'électronique militaire, de la recherche et de l'industrie.", 1.2f },
+};
+
+/* gisements et fonderies (unites par tour) */
+const DepositDef DEPOSITS[] = {
+    { PV_SE_N, SR_TERRES_RARES, 1.5f }, { PV_NO_S, SR_TERRES_RARES, 0.7f }, { PV_FI, SR_TERRES_RARES, 0.4f },
+    { PV_UA_C, SR_TERRES_RARES, 0.8f }, { PV_TR_ANK, SR_TERRES_RARES, 1.0f }, { PV_RU_NORD, SR_TERRES_RARES, 1.6f },
+    { PV_RU_VOL, SR_URANIUM, 1.2f }, { PV_UA_C, SR_URANIUM, 1.0f }, { PV_CZ_W, SR_URANIUM, 0.4f },
+    { PV_FR_NAQ, SR_URANIUM, 0.8f }, { PV_MA_C, SR_URANIUM, 0.6f }, { PV_DZ_S, SR_URANIUM, 0.6f },
+    { PV_RO_TRA, SR_URANIUM, 0.3f },
+    { PV_NL_S, SR_PUCES, 1.5f }, { PV_DE_SAX, SR_PUCES, 1.2f }, { PV_FR_ARA, SR_PUCES, 0.8f },
+    { PV_IE, SR_PUCES, 0.8f }, { PV_IT_LOM, SR_PUCES, 0.4f }, { PV_BE_FL, SR_PUCES, 0.3f },
+};
+const int DEPOSIT_COUNT = (int)(sizeof(DEPOSITS) / sizeof(DEPOSITS[0]));
+
+/* consommation au recrutement : terres rares, uranium, semi-conducteurs */
+const unsigned char UNIT_STRAT[U_TYPE_COUNT][SR_COUNT] = {
+    [U_BLINDE] = { 1, 0, 0 }, [U_ARTILLERIE] = { 0, 0, 1 }, [U_DRONES] = { 1, 0, 1 },
+    [U_ROBOTS] = { 2, 0, 2 }, [U_DCA] = { 1, 0, 1 }, [U_HYPER] = { 2, 0, 1 },
+    [U_CHASSE] = { 2, 0, 2 }, [U_MALE] = { 1, 0, 1 },
+    [U_FREGATE] = { 1, 0, 1 }, [U_SNA] = { 1, 2, 1 }, [U_PA] = { 2, 3, 2 }, [U_USV] = { 0, 0, 1 },
+};
+
+/* exposition des cotes basses a la montee des eaux (part des terres menacees a +1 m) */
+const float PROVINCE_SEA_EXPOSURE[PROV_COUNT] = {
+    [PV_NL_N] = 0.9f, [PV_NL_S] = 0.55f, [PV_BE_FL] = 0.45f, [PV_DE_NDS] = 0.3f, [PV_DE_SH] = 0.35f,
+    [PV_DE_MV] = 0.12f, [PV_DK] = 0.25f, [PV_UK_LDN] = 0.25f, [PV_UK_MID] = 0.15f, [PV_IT_VEN] = 0.4f,
+    [PV_IT_EMR] = 0.25f, [PV_EG_ALX] = 0.6f, [PV_EG_CAI] = 0.25f, [PV_FR_OCC] = 0.12f, [PV_FR_PAC] = 0.08f,
+    [PV_FR_PDL] = 0.15f, [PV_FR_NAQ] = 0.12f, [PV_FR_HDF] = 0.12f, [PV_FR_NOR] = 0.08f, [PV_PL_POM] = 0.15f,
+    [PV_RO_MOL] = 0.1f, [PV_UA_OD] = 0.1f, [PV_TN_N] = 0.08f, [PV_LY_TRI] = 0.05f, [PV_ES_VAL] = 0.08f,
+    [PV_ES_CAT] = 0.05f, [PV_LV] = 0.05f, [PV_EE] = 0.05f, [PV_LT] = 0.05f, [PV_GR_C] = 0.04f, [PV_TR_IST] = 0.03f,
+};

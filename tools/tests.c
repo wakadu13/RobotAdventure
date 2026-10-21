@@ -60,6 +60,26 @@ int main(void){ int fails=0; Game g;
  /* cultures */
  Game_Init(&g, 46, 1); CHECK(Soc_MainCulture(&g.prov[PV_FR_COR])==C_CORSE || Soc_MainCulture(&g.prov[PV_FR_COR])==C_FRANCAISE);
  CHECK(Soc_NonAccepted(&g, PV_FR_IDF)<0.5f); CHECK(Soc_CulturePolicyBlocked(&g, CP_REPRESSION)!=NULL);
+ /* negociation : exigences excessives -> contre-proposition, puis signature */
+ Game_Init(&g, 50, 1); g.commandPoints=3; CHECK(War_Declare(&g, N_ESPAGNE)); War_Occupy(&g, PV_ES_CAT, N_FRANCE);
+ War_TreatyDraft(&g, N_ESPAGNE); for(int p=0;p<PROV_COUNT;p++) if(g.prov[p].owner==N_ESPAGNE) g.treaty.cede[p]=true; g.treaty.reparations=6;
+ { float before=War_TreatyCost(&g,&g.treaty); int r=War_Negotiate(&g); CHECK(r==2); CHECK(War_TreatyCost(&g,&g.treaty)<before); CHECK(g.treaty.countered);
+   r=War_Negotiate(&g); CHECK(r==1); CHECK(!War_AtWar(&g,N_FRANCE,N_ESPAGNE)); }
+ /* operations : avec de fortes capacites, la plupart reussissent */
+ { int okc=0; for(int op=0;op<OP_COUNT;op++){ Game_Init(&g, 60+op, 1); for(int d=0;d<D_COUNT;d++) g.capacity[d]=12; g.res[R_INFLUENCE]=60; g.res[R_BUDGET]=60; g.commandPoints=3;
+     War_StartWar(&g, N_BOREALE, N_FRANCE, false); CHECK(Ops_Blocked(&g, N_BOREALE, op)==NULL); if(Ops_Run(&g, N_BOREALE, op)) okc++; CHECK(Ops_Blocked(&g, N_BOREALE, op)!=NULL);
+     for(int i=0;i<3;i++){ g.pendingDilemma=-1; Game_EndTurn(&g);} }
+   CHECK(okc>=5); }
+ Game_Init(&g, 70, 1); g.commandPoints=3; CHECK(Ops_Blocked(&g, N_ALLEMAGNE, OP_LOGISTIQUE)!=NULL);
+ /* ressources strategiques : pas de drones sans terres rares */
+ Game_Init(&g, 71, 1); g.res[R_BUDGET]=200; g.nat[N_FRANCE].strat[SR_TERRES_RARES]=0; g.nat[N_FRANCE].tech[T_AIR]=2;
+ CHECK(War_RecruitBlocked(&g, U_DRONES, PV_FR_GES)!=NULL); CHECK(Strat_Buy(&g, SR_TERRES_RARES)); CHECK(War_Recruit(&g, U_DRONES, PV_FR_GES));
+ CHECK(g.nat[N_FRANCE].strat[SR_TERRES_RARES]<1.5f); CHECK(Strat_MineBlocked(&g, PV_FR_NAQ)==NULL); CHECK(Strat_OpenMine(&g, PV_FR_NAQ));
+ CHECK(Strat_Production(&g, N_FRANCE, SR_URANIUM)>0.5f);
+ g.prov[PV_FR_ARA].industry=4; CHECK(Strat_BuildFab(&g, PV_FR_ARA)); for(int i=0;i<6;i++){ g.pendingDilemma=-1; Game_EndTurn(&g);} CHECK(g.prov[PV_FR_ARA].fabs>0.5f);
+ /* montee des eaux */
+ Game_Init(&g, 72, 1); g.temp=3.4f; for(int i=0;i<40 && g.state==GAME_RUNNING;i++){ g.pendingDilemma=-1; g.res[R_COHESION]=60; g.res[R_SOUVERAINETE]=60; Game_EndTurn(&g);}
+ CHECK(g.seaLevel>0.8f); CHECK(g.prov[PV_NL_N].flooded>0.2f); CHECK(g.prov[PV_FR_IDF].flooded==0);
  /* sauvegarde */
  Game_Init(&g, 47, 1); for(int i=0;i<6;i++){ g.pendingDilemma=-1; Game_EndTurn(&g);} 
  { static Game h; CHECK(Game_Save(&g, "build/test.sav")); CHECK(Game_Load(&h, "build/test.sav")); CHECK(memcmp(&g,&h,sizeof g)==0); }

@@ -433,6 +433,7 @@ void Nuke_Turn(Game *g)
     if (r == RG_JUNTE || r == RG_TOTALITAIRE) target += 8;   /* imprevisibilite */
     if (g->nukesUsed) target += 15;                           /* elle a deja servi */
     if (g->tacticalUsed) target += 5;
+    if (Strat_Sat(g, N_FRANCE, SR_URANIUM) < 0.5f) target -= 15;   /* penurie d'uranium */
     target = Clampf(target, 0, 100);
     g->credibility += (target - g->credibility) * 0.1f;
     if (g->umbrella) AddRes(g, R_INFLUENCE, 0.5f);

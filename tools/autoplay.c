@@ -69,7 +69,7 @@ static void SeekPeace(Game *g, int n, int minTurns)
 {
     if (War_Turns(g, N_FRANCE, n) < minTurns) return;
     War_TreatyDraft(g, n);
-    if (!War_TreatyBlocked(g, &g->treaty)) War_ProposeTreaty(g);
+    for (int k = 0; k < 2 && g->treaty.active; k++) if (War_Negotiate(g) != 2) break;
     g->treaty.active = false;
 }
 
@@ -107,6 +107,8 @@ static void Manage(Game *g)
     if (net < 0 && g->res[R_BUDGET] < 30) for (int s = 0; s < S_COUNT; s++) Eco_SetTax(g, s, g->taxRate[s] + 0.05f);
     if (net > 8 && g->res[R_BUDGET] > 80) for (int s = 0; s < S_COUNT; s++) Eco_SetTax(g, s, g->taxRate[s] - 0.05f);
 
+    for (int r = 0; r < SR_COUNT; r++)
+        if (g->nat[N_FRANCE].strat[r] < 4 && g->res[R_BUDGET] > 40) Strat_Buy(g, r);
     for (int n = 1; n < N_COUNT; n++) War_Diplomacy(g, n, 1);
     for (int k = 0; k < BASE_CP; k++) {
         int best = -1; float bv = 0;

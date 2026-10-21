@@ -22,7 +22,7 @@
 #define BASE_CP       3       /* points de commandement par tour */
 #define THREAT_SCALE  0.6f    /* intensite globale des effets des menaces */
 #define HISTORY_LEN   (TOTAL_TURNS + 1)
-#define SAVE_VERSION  4
+#define SAVE_VERSION  5
 #define STACK_LAND    10      /* divisions terrestres par province et par nation */
 #define STACK_AIR     6
 #define STACK_SEA     8
@@ -69,6 +69,10 @@ typedef enum { SP_EDUCATION, SP_ADMIN, SP_SOCIAL, SP_COUNT } Spending;
 typedef enum { CP_ASSIMILATION, CP_PLURALISME, CP_REPRESSION, CP_COUNT } CulturePolicy;
 typedef enum { DIFF_FACILE, DIFF_NORMAL, DIFF_DIFFICILE, DIFF_COUNT } Difficulty;
 typedef enum { DOM_LAND, DOM_AIR, DOM_SEA } UnitDomain;
+typedef enum { SR_TERRES_RARES, SR_URANIUM, SR_PUCES, SR_COUNT } StratRes;
+typedef enum {
+    OP_RESEAU, OP_VOL_TECH, OP_LOGISTIQUE, OP_INGERENCE, OP_DESTAB, OP_RECON, OP_BROUILLAGE, OP_ASAT, OP_COUNT
+} OpType;
 
 typedef enum {
     U_INF, U_MECA, U_BLINDE, U_MARINE, U_MONTAGNE, U_ARTILLERIE, U_DRONES, U_ROBOTS, U_FS, U_DCA, U_HYPER,
@@ -195,6 +199,20 @@ typedef struct {
 
 typedef struct { const char *name; const char *desc; } TechDef;
 
+typedef struct {
+    const char *name;
+    const char *desc;
+    Domain domain;         /* milieu de la capacite requise */
+    int capacity;          /* niveau de capacite requis */
+    float budget, influence;
+    bool needWar;          /* reservee aux nations en guerre contre nous (ou tres hostiles) */
+    float risk;            /* risque d'attribution en cas de succes */
+    int duration;          /* tours d'effet (0 : immediat) */
+} OpDef;
+
+typedef struct { const char *name; const char *unit; const char *desc; float price; } StratDef;
+typedef struct { short prov; unsigned char res; float amount; } DepositDef;
+
 extern const char       *DOMAIN_NAMES[D_COUNT];
 extern const char       *RESOURCE_NAMES[R_COUNT];
 extern const char       *RESOURCE_DESC[R_COUNT];
@@ -218,6 +236,12 @@ extern const char       *VICTORY_DESC[VIC_COUNT];
 extern const char       *NUKE_POSTURES[3];
 extern const UnitDef     UNIT_TYPES[U_TYPE_COUNT];
 extern const TechDef     TECHS[T_COUNT];
+extern const OpDef       OPS[OP_COUNT];
+extern const StratDef    STRATS[SR_COUNT];
+extern const DepositDef  DEPOSITS[];
+extern const int         DEPOSIT_COUNT;
+extern const unsigned char UNIT_STRAT[U_TYPE_COUNT][SR_COUNT];
+extern const float       PROVINCE_SEA_EXPOSURE[PROV_COUNT];
 extern const char       *GENERAL_TRAITS[GT_COUNT];
 extern const char       *FRENCH_GENERALS[20];
 extern const DecreeDef   DECREES[RG_COUNT][2];
@@ -297,6 +321,10 @@ typedef struct {
     float unemployment;
     float jobs;            /* emplois / population active */
     int factoryBuild;
+    int fabBuild;          /* fonderie de semi-conducteurs en construction */
+    float fabs;            /* production de semi-conducteurs */
+    bool mineClosed;       /* gisement inexploite */
+    float flooded;         /* part des terres submergees */
     int revolt;
     float emig, immig;
 } Province;
@@ -353,6 +381,14 @@ typedef struct {
     float reparations;     /* versees a la France par tour (negatif : la France paie) */
     int reparationTurns;
     unsigned char tech[T_COUNT];
+    float strat[SR_COUNT];     /* stocks de ressources strategiques */
+    short outage;              /* reseau electrique paralyse (tours) */
+    short jammed;              /* aviation et drones brouilles */
+    short recon;               /* sous surveillance satellitaire francaise */
+    short asat;                /* satellites detruits */
+    bool opsThisTurn;
+    int negoTurn, negoRounds;  /* negociations de paix en cours */
+    short aiTarget, aiThreat;  /* objectif offensif et point menace (IA) */
 } Nation;
 
 typedef struct {
@@ -363,6 +399,7 @@ typedef struct {
     int winner;
     float reparations;
     int reparationTurns;
+    bool countered;            /* contre-proposition de l'IA */
 } Treaty;
 
 typedef struct {
@@ -387,6 +424,8 @@ typedef struct {
     Unit units[MAX_UNITS];
     General generals[MAX_GENERALS];
     float aggressionMemory;
+    float seaLevel;            /* elevation du niveau de la mer (m) */
+    int stratShock[SR_COUNT];  /* crise d'approvisionnement mondiale (tours) */
 
     /* relations internationales */
     bool war[N_COUNT][N_COUNT];
@@ -572,6 +611,8 @@ void        War_TreatyDraft(Game *g, int other);
 float       War_TreatyCost(const Game *g, const Treaty *t);
 const char *War_TreatyBlocked(const Game *g, const Treaty *t);
 bool        War_ProposeTreaty(Game *g);
+int         War_Negotiate(Game *g);      /* 0 refus, 1 signe, 2 contre-proposition */
+float       War_Exhaustion(const Game *g, int n);
 void        War_SignTreaty(Game *g, const Treaty *t);
 void        War_WhitePeace(Game *g, int a, int b, bool log);
 
@@ -591,6 +632,30 @@ bool        Mil_Assign(Game *g, int gen, int p);
 void        Mil_BattleXp(Game *g, int n, int p, bool won);
 void        Mil_Init(Game *g);
 void        Mil_Turn(Game *g);
+
+/* ops.c : operations cyber, informationnelles, spatiales et electromagnetiques */
+float       Ops_Chance(const Game *g, int n, int op);
+const char *Ops_Blocked(const Game *g, int n, int op);
+bool        Ops_Run(Game *g, int n, int op);
+void        Ops_Turn(Game *g);
+
+/* resources.c : ressources strategiques */
+float       Strat_Deposit(int p, int r);
+float       Strat_Production(const Game *g, int n, int r);
+float       Strat_Imports(const Game *g, int n, int r);
+float       Strat_Use(const Game *g, int n, int r);
+float       Strat_Sat(const Game *g, int n, int r);
+float       Strat_Price(const Game *g, int r);
+const char *Strat_BuyBlocked(const Game *g, int r);
+bool        Strat_Buy(Game *g, int r);
+const char *Strat_FabBlocked(const Game *g, int p);
+bool        Strat_BuildFab(Game *g, int p);
+const char *Strat_MineBlocked(const Game *g, int p);
+bool        Strat_OpenMine(Game *g, int p);
+const char *Strat_RecruitBlocked(const Game *g, int n, int type);
+void        Strat_PayRecruit(Game *g, int n, int type);
+void        Strat_Init(Game *g);
+void        Strat_Turn(Game *g);
 
 /* nuclear.c */
 bool        Nuke_IsPower(const Game *g, int n);

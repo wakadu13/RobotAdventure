@@ -28,7 +28,7 @@ float Soc_Habitability(const Game *g, int p)
     const Province *pr = &g->prov[p];
     float arid = PROVINCES[p].aridity;
     if (pr->owner == N_FRANCE && g->proj[P_ADAPT].state == 2) arid *= 0.8f;
-    float h = 100 - arid * (10 + 32 * (g->temp - 1.0f)) - pr->damage * 30 - pr->fallout * 60;
+    float h = 100 - arid * (10 + 32 * (g->temp - 1.0f)) - pr->damage * 30 - pr->fallout * 60 - pr->flooded * 70;
     return Clampf(h, 3, 100);
 }
 
@@ -222,6 +222,44 @@ bool Soc_ChangeRegime(Game *g, int r)
 }
 
 /* ------------------------------------------------------------------ */
+/* Montee des eaux                                                     */
+/* ------------------------------------------------------------------ */
+
+static void SeaLevel(Game *g)
+{
+    g->seaLevel = 0.2f + 0.45f * fmaxf(0, g->temp - 1.5f);
+    float rise = Clampf((g->seaLevel - 0.2f) / 0.8f, 0, 1.2f);
+    for (int p = 0; p < PROV_COUNT; p++) {
+        float exp = PROVINCE_SEA_EXPOSURE[p];
+        if (exp <= 0) continue;
+        Province *pr = &g->prov[p];
+        /* digues : les pays riches se protegent, le plan d'adaptation francais aussi */
+        float dikes = 1 - 0.45f * Clampf(PROVINCES[p].wealth * pr->prosperity * 2, 0, 1);
+        if (pr->owner == N_FRANCE && g->proj[P_ADAPT].state == 2) dikes *= 0.5f;
+        float target = Clampf(exp * rise * dikes, 0, 0.95f);
+        if (target > pr->flooded) {
+            float before = pr->flooded, d = fminf(target - pr->flooded, 0.01f);
+            pr->flooded += d;
+            pr->prosperity = Clampf(pr->prosperity - d * 2, 0.4f, 2.5f);
+            static const float steps[3] = { 0.1f, 0.25f, 0.5f };
+            for (int k = 0; k < 3; k++)
+                if (before < steps[k] && pr->flooded >= steps[k] && (pr->owner == N_FRANCE || exp >= 0.3f))
+                    Game_Log(g, pr->owner == N_FRANCE ? EV_BAD : EV_CLIMATE, "Montée des eaux : %.0f%% des terres de %s sont submergées.",
+                             steps[k] * 100, PROVINCE_NAMES[p]);
+        }
+        /* submersions marines lors des tempetes */
+        if (Randf(g) < exp * g->seaLevel * 0.03f * DiffClimate(g)) {
+            float k = pr->owner == N_FRANCE && g->proj[P_ADAPT].state == 2 ? 0.5f : 1.0f;
+            pr->damage = Clampf(pr->damage + 0.25f * k, 0, 1);
+            pr->pop *= 1 - 0.004f * k;
+            if (pr->owner == N_FRANCE || exp >= 0.3f)
+                Game_Log(g, pr->owner == N_FRANCE ? EV_BAD : EV_CLIMATE, "Submersion marine en %s : digues rompues, quartiers évacués.",
+                         PROVINCE_NAMES[p]);
+        }
+    }
+}
+
+/* ------------------------------------------------------------------ */
 /* Migrations                                                          */
 /* ------------------------------------------------------------------ */
 
@@ -266,7 +304,7 @@ static void Migrations(Game *g)
         if (g->nat[pr->owner].failed) push += 0.005f;
         if (Soc_ProvinceMilitancy(pr) > 6) push += 0.003f;
         if (pr->owner == N_FRANCE && g->nat[N_FRANCE].regime == RG_TOTALITAIRE) push += 0.002f;
-        push += pr->unemployment * 0.01f;
+        push += pr->unemployment * 0.01f + pr->flooded * 0.02f;
         if (pr->owner == N_FRANCE && g->culturePolicy == CP_REPRESSION) push += Soc_NonAccepted(g, p) * 0.004f;
 
         float out = pr->pop * push;
@@ -518,7 +556,8 @@ static void SocialProgress(Game *g, int p)
 
 void Soc_Turn(Game *g)
 {
-    /* 1. habitabilite, contamination */
+    /* 1. montee des eaux, habitabilite, contamination */
+    SeaLevel(g);
     for (int p = 0; p < PROV_COUNT; p++) {
         Province *pr = &g->prov[p];
         pr->damage *= 0.93f;

@@ -123,8 +123,10 @@ void Game_Init(Game *g, unsigned seed, int difficulty)
     g->credibility = 60;
     g->culturePolicy = CP_ASSIMILATION;
 
-    War_InitUnits(g);
+    g->seaLevel = 0.2f;
+    Strat_Init(g);
     Mil_Init(g);
+    War_InitUnits(g);
 
     g->migrationDoctrine = 1;
     g->alertLevel = 0;
@@ -762,6 +764,8 @@ void Game_EndTurn(Game *g)
     War_Turn(g);
     Mil_Turn(g);
     Nuke_Turn(g);
+    Ops_Turn(g);
+    Strat_Turn(g);
 
     /* 6. factions et nouvelles menaces */
     FactionsTurn(g);
