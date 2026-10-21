@@ -172,7 +172,8 @@ belli. Les autres nations y recourent aussi, entre elles comme contre la France.
 
 Les releases GitHub fournissent des paquets prêts à jouer pour **Windows** (x64), **Linux** (x64),
 **macOS** (Apple Silicon) et **Android** (arm64). Ils sont construits par
-`.github/workflows/release.yml` à chaque tag `v*`, avec `tools/release/build.sh`, utilisable aussi
+`.github/workflows/release.yml` quand le fichier `VERSION` change (le tag est alors créé automatiquement)
+ou à chaque tag `v*`, avec `tools/release/build.sh`, utilisable aussi
 en local (`tools/release/build.sh windows ~/raylib` compile la version Windows depuis Linux avec
 MinGW-w64). Pour signer l'APK avec une clé stable, ajoutez les secrets `ANDROID_KEYSTORE_B64` et
 `ANDROID_KEYSTORE_PASS` ; sinon une clé de débogage est générée.

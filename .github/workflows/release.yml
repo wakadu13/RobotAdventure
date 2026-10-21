@@ -1,11 +1,14 @@
 # Construit Bouclier 2050 pour Linux, Windows, macOS (Apple Silicon) et Android.
-# Un tag v* publie une release GitHub avec les quatre paquets ; un lancement manuel
-# produit seulement les artefacts.
+# Une release GitHub est publiee quand le fichier VERSION change (le tag vX.Y.Z est cree
+# par le workflow) ou quand un tag v* est pousse ; un lancement manuel produit seulement
+# les artefacts. Les versions avec un tiret (1.0.0-rc.1) sont des preversions.
 name: Release
 
 on:
   push:
+    branches: ['**']
     tags: ['v*']
+    paths: ['VERSION']
   workflow_dispatch:
 
 permissions:
@@ -27,6 +30,11 @@ jobs:
     steps:
       - uses: actions/checkout@v4
         with: { fetch-depth: 0 }
+      - name: Version
+        shell: bash
+        run: |
+          if [[ "$GITHUB_REF" == refs/tags/v* ]]; then echo "VERSION=$GITHUB_REF_NAME" >> "$GITHUB_ENV"
+          else echo "VERSION=v$(cat VERSION)" >> "$GITHUB_ENV"; fi
       - name: Dépendances
         run: sudo apt-get update && sudo apt-get install -y libx11-dev libxrandr-dev libxinerama-dev libxcursor-dev libxi-dev libgl1-mesa-dev zip
       - run: git clone --depth 1 --branch "$RAYLIB_TAG" https://github.com/raysan5/raylib.git "$RUNNER_TEMP/raylib"
@@ -40,6 +48,11 @@ jobs:
     steps:
       - uses: actions/checkout@v4
         with: { fetch-depth: 0 }
+      - name: Version
+        shell: bash
+        run: |
+          if [[ "$GITHUB_REF" == refs/tags/v* ]]; then echo "VERSION=$GITHUB_REF_NAME" >> "$GITHUB_ENV"
+          else echo "VERSION=v$(cat VERSION)" >> "$GITHUB_ENV"; fi
       - name: MinGW-w64
         run: sudo apt-get update && sudo apt-get install -y mingw-w64 zip
       - run: git clone --depth 1 --branch "$RAYLIB_TAG" https://github.com/raysan5/raylib.git "$RUNNER_TEMP/raylib"
@@ -53,6 +66,11 @@ jobs:
     steps:
       - uses: actions/checkout@v4
         with: { fetch-depth: 0 }
+      - name: Version
+        shell: bash
+        run: |
+          if [[ "$GITHUB_REF" == refs/tags/v* ]]; then echo "VERSION=$GITHUB_REF_NAME" >> "$GITHUB_ENV"
+          else echo "VERSION=v$(cat VERSION)" >> "$GITHUB_ENV"; fi
       - run: git clone --depth 1 --branch "$RAYLIB_TAG" https://github.com/raysan5/raylib.git "$RUNNER_TEMP/raylib"
       - run: tools/release/build.sh macos "$RUNNER_TEMP/raylib"
       - uses: actions/upload-artifact@v4
@@ -64,6 +82,11 @@ jobs:
     steps:
       - uses: actions/checkout@v4
         with: { fetch-depth: 0 }
+      - name: Version
+        shell: bash
+        run: |
+          if [[ "$GITHUB_REF" == refs/tags/v* ]]; then echo "VERSION=$GITHUB_REF_NAME" >> "$GITHUB_ENV"
+          else echo "VERSION=v$(cat VERSION)" >> "$GITHUB_ENV"; fi
       - uses: actions/setup-java@v4
         with: { distribution: temurin, java-version: '17' }
       - run: git clone --depth 1 --branch "$RAYLIB_TAG" https://github.com/raysan5/raylib.git "$RUNNER_TEMP/raylib"
@@ -85,16 +108,25 @@ jobs:
         with: { name: android, path: dist/* }
 
   release:
-    if: startsWith(github.ref, 'refs/tags/v')
+    if: github.event_name == 'push'
     needs: [linux, windows, macos, android]
     runs-on: ubuntu-22.04
     steps:
+      - uses: actions/checkout@v4
+      - name: Version
+        id: version
+        shell: bash
+        run: |
+          if [[ "$GITHUB_REF" == refs/tags/v* ]]; then echo "tag=$GITHUB_REF_NAME" >> "$GITHUB_OUTPUT"
+          else echo "tag=v$(cat VERSION)" >> "$GITHUB_OUTPUT"; fi
       - uses: actions/download-artifact@v4
         with: { path: dist, merge-multiple: true }
       - uses: softprops/action-gh-release@v2
         with:
-          name: Bouclier 2050 ${{ github.ref_name }}
-          prerelease: ${{ contains(github.ref_name, '-') }}
+          tag_name: ${{ steps.version.outputs.tag }}
+          target_commitish: ${{ github.sha }}
+          name: Bouclier 2050 ${{ steps.version.outputs.tag }}
+          prerelease: ${{ contains(steps.version.outputs.tag, '-') }}
           files: dist/*
           generate_release_notes: true
           body: |
