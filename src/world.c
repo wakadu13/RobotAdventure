@@ -220,8 +220,8 @@ const DilemmaDef DYN_DILEMMAS[4] = {
       "Entrer en guerre à ses côtés", "Guerre contre l'agresseur, +5 Influence, relation de l'allié +30",
       "Soutien matériel uniquement", "-6 Budget, -4 Influence" },
     { "Offre de paix",
-      "Épuisé, l'ennemi propose de cesser les hostilités. Les territoires conquis resteraient sous contrôle français.",
-      "Signer la paix", "Fin de la guerre, trêve de 4 ans",
+      "L'ennemi propose de cesser les hostilités. Les conditions du traité, fixées selon le score de guerre, sont détaillées ci-dessus.",
+      "Signer le traité", "Cessions et réparations appliquées, trêve de 4 ans",
       "Poursuivre la guerre", "La guerre continue" },
     { "Les autoritaires gagnent les élections",
       "Portés par la peur et les pénuries, les partisans d'un pouvoir fort remportent le scrutin et exigent les pleins pouvoirs.",
@@ -289,7 +289,7 @@ const char *SPENDING_DESC[SP_COUNT] = {
 const char *DIFFICULTY_NAMES[DIFF_COUNT] = { "Facile", "Normale", "Difficile" };
 
 const char *BUDGET_LINE_NAMES[BL_COUNT] = {
-    "Impôts et réquisitions", "Commerce extérieur", "Droits de douane", "Fonds européens", "Réparations reçues",
+    "Impôts et réquisitions", "Commerce extérieur", "Droits de douane", "Fonds européens", "Réparations, réquisitions",
     "Défense M2MC", "Armée", "Dépenses publiques", "Recherche militaire", "Dissuasion", "Importations", "Réparations versées",
 };
 
