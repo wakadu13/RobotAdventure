@@ -100,13 +100,25 @@ politique, climat, militance, population.
 Le jeu n'utilise que des formes 2D, une texture de carte générée et la police intégrée de raylib :
 aucun fichier externe. La résolution logique est de 1280×720, mise à l'échelle automatiquement.
 
+Avec CMake (télécharge raylib 5.0 s'il n'est pas installé) :
+
 ```sh
 cmake -B build -DCMAKE_BUILD_TYPE=Release && cmake --build build && ./build/bouclier2050
-# ou
-make RAYLIB_PATH=~/raylib/src && make run
 ```
 
-CMake télécharge raylib 5.0 s'il n'est pas installé. Dépendances Linux (Debian/Ubuntu) :
+Ou avec make, soit avec raylib installé (`brew install raylib` sous macOS, trouvé via pkg-config) :
+
+```sh
+make run
+```
+
+soit avec raylib compilé à la main (`make` dans `~/raylib/src` doit avoir produit `libraylib.a`) :
+
+```sh
+make RAYLIB_PATH=$HOME/raylib/src run
+```
+
+Après un échec de configuration CMake, supprimez `build/` avant de relancer. Dépendances Linux (Debian/Ubuntu) :
 `sudo apt install build-essential libx11-dev libxrandr-dev libxinerama-dev libxcursor-dev libxi-dev libgl1-mesa-dev`.
 Sous Windows : [w64devkit](https://github.com/skeeto/w64devkit) puis `make RAYLIB_PATH=C:/raylib/raylib/src`.
 
