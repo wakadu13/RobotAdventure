@@ -94,6 +94,7 @@ jobs:
       - uses: softprops/action-gh-release@v2
         with:
           name: Bouclier 2050 ${{ github.ref_name }}
+          prerelease: ${{ contains(github.ref_name, '-') }}
           files: dist/*
           generate_release_notes: true
           body: |
