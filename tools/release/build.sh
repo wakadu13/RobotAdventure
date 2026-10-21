@@ -119,7 +119,7 @@ android)
         keytool -genkeypair -keystore "$KS" -storepass android -keypass android -alias bouclier -keyalg RSA -keysize 2048 \
             -validity 10000 -dname "CN=Bouclier 2050" >/dev/null 2>&1
     fi
-    "$BT/apksigner" sign --ks "$KS" --ks-pass "pass:${ANDROID_KEYSTORE_PASS:-android}" \
+    "$BT/apksigner" sign --v4-signing-enabled false --ks "$KS" --ks-pass "pass:${ANDROID_KEYSTORE_PASS:-android}" \
         --out "$DIST/bouclier2050-$VERSION-android-arm64.apk" "$WORK/aligned.apk"
     ;;
 *)
