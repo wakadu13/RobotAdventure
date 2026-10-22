@@ -85,6 +85,25 @@ void Game_DateString(int turn, char *buf, int len)
     snprintf(buf, len, Tr("T%d %d"), turn % 4 + 1, START_YEAR + turn / 4);
 }
 
+/* courbes de l'historique (onglets, fenetre des courbes) */
+static void RecordHistory(Game *g, int t)
+{
+    g->histPop[t] = Soc_NationPop(g, N_FRANCE);
+    g->histCohesion[t] = g->res[R_COHESION];
+    g->histTemp[t] = g->temp;
+    g->histScore[t] = (float)Game_Score(g, NULL);
+    g->histInflation[t] = g->inflation;
+    g->histApproval[t] = g->approval;
+    g->histDebt[t] = g->debt;
+    g->histBudget[t] = g->res[R_BUDGET];
+    for (int l = 0; l < LB_COUNT; l++) g->histLobby[l][t] = g->lobby[l];
+    for (int n = 0; n < N_COUNT; n++) {
+        g->histNatPop[n][t] = Soc_NationPop(g, n);
+        g->histNatArmy[n][t] = g->nat[n].army;
+        g->histNatRel[n][t] = g->nat[n].relation;
+    }
+}
+
 /* ------------------------------------------------------------------ */
 /* Initialisation                                                      */
 /* ------------------------------------------------------------------ */
@@ -180,15 +199,7 @@ void Game_Init(Game *g, unsigned seed, int difficulty)
 
     Eco_Turn(g);
     g->res[R_ALIM] = 62; g->res[R_EAU] = 60; g->res[R_ENERGIE] = 60;
-    g->histScore[0] = (float)Game_Score(g, NULL);
-    g->histPop[0] = Soc_NationPop(g, N_FRANCE);
-    g->histCohesion[0] = g->res[R_COHESION];
-    g->histTemp[0] = g->temp;
-    for (int n = 0; n < N_COUNT; n++) {
-        g->histNatPop[n][0] = Soc_NationPop(g, n);
-        g->histNatArmy[n][0] = g->nat[n].army;
-        g->histNatRel[n][0] = g->nat[n].relation;
-    }
+    RecordHistory(g, 0);
 
     Game_Log(g, EV_EVENT, "Janvier 2030. +1,5°C. Le Président vous confie le Conseil de défense et de sécurité.");
     Game_Log(g, EV_INFO, "Gérez la population, protégez les frontières dans tous les milieux et tenez jusqu'en 2060.");
@@ -204,15 +215,7 @@ void Game_Init(Game *g, unsigned seed, int difficulty)
 static void ScenarioFinish(Game *g)
 {
     for (int t = 0; t <= g->turn; t++) {
-        g->histPop[t] = Soc_NationPop(g, N_FRANCE);
-        g->histCohesion[t] = g->res[R_COHESION];
-        g->histTemp[t] = g->temp;
-        g->histScore[t] = (float)Game_Score(g, NULL);
-        for (int n = 0; n < N_COUNT; n++) {
-            g->histNatPop[n][t] = Soc_NationPop(g, n);
-            g->histNatArmy[n][t] = g->nat[n].army;
-            g->histNatRel[n][t] = g->nat[n].relation;
-        }
+        RecordHistory(g, t);
     }
     War_UpdateSupply(g);
     War_UpdateIntel(g);
@@ -1020,17 +1023,7 @@ void Game_EndTurn(Game *g)
     g->turn++;
 
     for (int r = 0; r < R_COUNT; r++) g->lastDelta[r] = g->res[r] - before[r];
-    if (g->turn < HISTORY_LEN) {
-        g->histPop[g->turn] = Soc_NationPop(g, N_FRANCE);
-        g->histCohesion[g->turn] = g->res[R_COHESION];
-        g->histTemp[g->turn] = g->temp;
-        g->histScore[g->turn] = (float)Game_Score(g, NULL);
-        for (int n = 0; n < N_COUNT; n++) {
-            g->histNatPop[n][g->turn] = Soc_NationPop(g, n);
-            g->histNatArmy[n][g->turn] = g->nat[n].army;
-            g->histNatRel[n][g->turn] = g->nat[n].relation;
-        }
-    }
+    if (g->turn < HISTORY_LEN) RecordHistory(g, g->turn);
     g->reportReady = true;
 
     /* 7. fin de partie */

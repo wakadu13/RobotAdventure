@@ -38,6 +38,7 @@ int      logScroll;
 bool     quitRequested;
 bool     inProgress;
 bool     treatyOpen;
+bool     graphsOpen;
 int      selGeneral = -1;
 int      provScroll;
 int      nationView;          /* 0 diplomatie, 1 operations, 2 historique */
@@ -123,6 +124,7 @@ void ResetUi(void)
     selNation = N_ALLEMAGNE;
     selGeneral = -1;
     treatyOpen = false;
+    graphsOpen = false;
     FocusProvince(PV_FR_IDF, 2);
     tab = TAB_PROVINCE;
     logScroll = 0;
@@ -401,11 +403,24 @@ static void ShotEnglish(void)  { hotseatPick[N_ALLEMAGNE] = false; gLang = LANG_
 static void ShotSpanish(void)  { gLang = LANG_ES; screen = SCR_GAME; tab = TAB_ECONOMIE; }
 static void ShotGerman(void)   { gLang = LANG_DE; tab = TAB_ARMEE; }
 static void ShotHelp(void)     { gLang = LANG_FR; screen = SCR_HELP; helpPage = 1; }
+static void ShotGraphs(void)
+{
+    helpPage = 0;
+    screen = SCR_GAME;
+    for (int i = 0; i < 16; i++) {
+        if (game.pendingDilemma >= 0) Do(CMD_DILEMMA, 0, 0, 0, 0);
+        Do(CMD_END_TURN, 0, 0, 0, 0);
+    }
+    game.pendingDilemma = -1;
+    game.reportReady = false;
+    graphsOpen = true;
+}
 
 static const UiShot UI_SHOTS[] = {
     { "01_titre", ShotTitle }, { "02_carte", ShotMap }, { "03_armee", ShotArmy }, { "04_nations", ShotNations },
     { "05_economie", ShotEconomy }, { "06_gouvernement", ShotCabinet }, { "07_evenement", ShotEvent },
     { "08_rapport", ShotReport }, { "09_hotseat", ShotHotseat }, { "10_anglais", ShotEnglish }, { "11_espagnol", ShotSpanish }, { "12_allemand", ShotGerman }, { "13_aide", ShotHelp },
+    { "14_courbes", ShotGraphs },
 };
 #define UI_SHOT_COUNT ((int)(sizeof(UI_SHOTS) / sizeof(UI_SHOTS[0])))
 
@@ -437,7 +452,7 @@ Rectangle CurrentRegion(void)
     if (screen == SCR_HOTSEAT || screen == SCR_NET) return (Rectangle){ 180, 40, 920, 640 };
     if (screen != SCR_GAME) return REGIONS[VR_ALL];
     if (handoffFor >= 0) return REGIONS[VR_MODAL];
-    bool modal = game.pendingDilemma >= 0 || treatyOpen || (game.reportReady && showReports && game.state == GAME_RUNNING);
+    bool modal = game.pendingDilemma >= 0 || treatyOpen || graphsOpen || (game.reportReady && showReports && game.state == GAME_RUNNING);
     return REGIONS[modal ? VR_MODAL : region];
 }
 

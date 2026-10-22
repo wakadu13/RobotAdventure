@@ -565,6 +565,11 @@ typedef struct {
     float histNatPop[N_COUNT][HISTORY_LEN];
     float histNatArmy[N_COUNT][HISTORY_LEN];
     float histNatRel[N_COUNT][HISTORY_LEN];
+    float histInflation[HISTORY_LEN];
+    float histApproval[HISTORY_LEN];
+    float histDebt[HISTORY_LEN];
+    float histBudget[HISTORY_LEN];
+    float histLobby[LB_COUNT][HISTORY_LEN];
 
     LogEntry log[MAX_LOG];
     int logCount;

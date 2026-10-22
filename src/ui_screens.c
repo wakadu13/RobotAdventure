@@ -180,6 +180,106 @@ void DrawReport(void)
         game.reportReady = false;
 }
 
+/* courbe a plusieurs series, echelle automatique ; survol : valeurs du trimestre */
+static void LineChart(Rectangle r, const char *title, const float *const *series, const Color *cols, const char *const *names,
+                      int k, float lo, float hi, const char *fmt)
+{
+    Panel(r, C_BG);
+    Text(title, r.x + 6, r.y + 4, 10, C_ACCENT);
+    int t0 = game.startTurn, n = game.turn + 1 < HISTORY_LEN ? game.turn + 1 : HISTORY_LEN;
+    if (lo >= hi) {   /* echelle tiree des donnees */
+        lo = 1e9f; hi = -1e9f;
+        for (int s = 0; s < k; s++)
+            for (int i = t0; i < n; i++) { lo = fminf(lo, series[s][i]); hi = fmaxf(hi, series[s][i]); }
+        float pad = (hi - lo) * 0.1f + 0.5f;
+        lo -= pad; hi += pad;
+    }
+    float top = k > 1 ? 32 : 20;   /* legende sous le titre */
+    Rectangle plot = { r.x + 44, r.y + top, r.width - 64, r.height - top - 18 };
+    char buf[64];
+    for (int g = 0; g <= 2; g++) {
+        float v = lo + (hi - lo) * g / 2, y = plot.y + plot.height - plot.height * g / 2;
+        DrawLine((int)plot.x, (int)y, (int)(plot.x + plot.width), (int)y, Fade(C_BORDER, 0.6f));
+        snprintf(buf, sizeof(buf), fmt, v);
+        Text(buf, plot.x - 4 - TextW(buf, 10), y - 5, 10, C_DIM);
+    }
+    for (int yr = START_YEAR; yr <= START_YEAR + TOTAL_TURNS / 4; yr += 10) {
+        float x = plot.x + plot.width * (yr - START_YEAR) * 4 / TOTAL_TURNS;
+        snprintf(buf, sizeof(buf), "%d", yr);
+        float tx = x - TextW(buf, 10) / 2;
+        Text(buf, tx < plot.x ? plot.x : tx, plot.y + plot.height + 4, 10, C_DIM);
+    }
+#define CX(i) (plot.x + plot.width * (i) / TOTAL_TURNS)
+#define CY(v) (plot.y + plot.height - plot.height * Clampf2(((v) - lo) / (hi - lo), 0, 1))
+    for (int s = 0; s < k; s++)
+        for (int i = t0 + 1; i < n; i++)
+            DrawLineEx((Vector2){ CX(i - 1), CY(series[s][i - 1]) }, (Vector2){ CX(i), CY(series[s][i]) }, 2, cols[s]);
+    /* legende */
+    float lx = r.x + 6;
+    for (int s = 0; s < k && k > 1; s++) {
+        Text(names[s], lx, r.y + 17, 10, cols[s]);
+        lx += TextW(Tr(names[s]), 10) + 10;
+    }
+    if (Hover(plot) && n > t0) {
+        int i = (int)roundf((mouse.x - plot.x) / plot.width * TOTAL_TURNS);
+        if (i < t0) i = t0;
+        if (i > n - 1) i = n - 1;
+        DrawLine((int)CX(i), (int)plot.y, (int)CX(i), (int)(plot.y + plot.height), C_DIM);
+        char tip[300], date[32];
+        Game_DateString(i, date, sizeof(date));
+        int len = snprintf(tip, sizeof(tip), "%s", date);
+        for (int s = 0; s < k && len < (int)sizeof(tip) - 40; s++) {
+            snprintf(buf, sizeof(buf), fmt, series[s][i]);
+            len += snprintf(tip + len, sizeof(tip) - len, "\n%s : %s", Tr(names[s]), buf);
+        }
+        Tooltip(plot, tip);
+    }
+#undef CX
+#undef CY
+}
+
+/* fenetre des courbes (touche G) */
+void DrawGraphs(void)
+{
+    DrawRectangle(0, 0, VW, VH, Fade(BLACK, 0.55f));
+    Rectangle r = { 90, 60, 1100, 600 };
+    Panel(r, C_PANEL);
+    DrawRectangle((int)r.x, (int)r.y, (int)r.width, 4, C_ACCENT);
+    Text("COURBES DE LA PARTIE", r.x + 20, r.y + 14, 20, C_TEXT);
+    Text("Survolez une courbe pour lire les valeurs d'un trimestre.", r.x + 20, r.y + 38, 10, C_DIM);
+
+    static const Color LOBBY_COLS[LB_COUNT] = { { 200, 160, 90, 255 }, { 92, 200, 120, 255 }, { 120, 150, 200, 255 }, { 232, 84, 72, 255 } };
+    float w = (r.width - 50) / 4, h = (r.height - 120) / 2;
+    float x0 = r.x + 20, y0 = r.y + 60;
+    Rectangle cell[8];
+    for (int i = 0; i < 8; i++) cell[i] = (Rectangle){ x0 + (i % 4) * (w + 3), y0 + (i / 4) * (h + 6), w, h };
+
+    const float *s1[1];
+    const char *n1[1] = { "" };
+    Color c1[1];
+    s1[0] = game.histScore;     c1[0] = C_SEL;     LineChart(cell[0], "Score", s1, c1, n1, 1, 0, 0, "%.0f");
+    s1[0] = game.histPop;       c1[0] = C_ACCENT;  LineChart(cell[1], "Population (M)", s1, c1, n1, 1, 0, 0, "%.1f");
+    s1[0] = game.histTemp;      c1[0] = C_CLIMATE; LineChart(cell[2], "Température (°C)", s1, c1, n1, 1, 0, 0, "%.2f");
+    s1[0] = game.histInflation; c1[0] = C_WARN;    LineChart(cell[3], "Inflation (% par an)", s1, c1, n1, 1, 0, 0, "%.1f");
+    {
+        const float *s[2] = { game.histCohesion, game.histApproval };
+        const Color c[2] = { C_GOOD, C_EVENT };
+        const char *nm[2] = { "Cohésion", "Popularité" };
+        LineChart(cell[4], "Cohésion et popularité", s, c, nm, 2, 0, 100, "%.0f");
+    }
+    {
+        const float *s[LB_COUNT];
+        for (int l = 0; l < LB_COUNT; l++) s[l] = game.histLobby[l];
+        LineChart(cell[5], "Lobbies (satisfaction)", s, LOBBY_COLS, LOBBY_NAMES, LB_COUNT, 0, 100, "%.0f");
+    }
+    s1[0] = game.histDebt;      c1[0] = C_BAD;     LineChart(cell[6], "Dette (Md)", s1, c1, n1, 1, 0, 0, "%.0f");
+    s1[0] = game.histBudget;    c1[0] = C_TEXT;    LineChart(cell[7], "Budget", s1, c1, n1, 1, 0, 0, "%.0f");
+
+    if (Button((Rectangle){ r.x + r.width - 180, r.y + r.height - 44, 160, 32 }, "FERMER", true, 20)
+        || IsKeyPressed(KEY_G) || IsKeyPressed(KEY_ESCAPE))
+        graphsOpen = false;
+}
+
 void DrawTooltip(void)
 {
     if (!tooltip[0]) return;
@@ -474,7 +574,9 @@ void DrawGame(void)
     if (!showReports) game.reportReady = false;
     if (treatyOpen && (!game.treaty.active || game.pendingDilemma >= 0)) treatyOpen = false;
     if (!france) treatyOpen = false;
-    activeLayer = ((france && game.pendingDilemma >= 0) || report || treatyOpen) ? 1 : 0;
+    if (!france || game.pendingDilemma >= 0 || report || treatyOpen) graphsOpen = false;
+    bool graphsWasOpen = graphsOpen;
+    activeLayer = ((france && game.pendingDilemma >= 0) || report || treatyOpen || graphsOpen) ? 1 : 0;
     inputLayer = 0;
 
     DrawMap();
@@ -544,6 +646,7 @@ void DrawGame(void)
         for (int i = 0; i < 9; i++) if (IsKeyPressed(KEY_ONE + i)) tab = (Tab)i;
         if (IsKeyPressed(KEY_ZERO)) tab = TAB_PROJETS;
         if (IsKeyPressed(KEY_M)) mapMode = (MapMode)((mapMode + 1) % MAP_MODE_COUNT);
+        if (IsKeyPressed(KEY_G) && !graphsWasOpen) graphsOpen = true;
         if (IsKeyPressed(KEY_F5)) SaveGame();
         if (IsKeyPressed(KEY_F6))
             Toast(session.count && Replay_Save(&session, "bouclier2050.replay") ? "Rejeu enregistré (bouclier2050.replay)."
@@ -565,6 +668,10 @@ void DrawGame(void)
         tooltip[0] = 0;
         inputLayer = 1;
         DrawReport();
+    } else if (graphsWasOpen) {
+        tooltip[0] = 0;
+        inputLayer = 1;
+        DrawGraphs();
     }
 
     if (game.state != GAME_RUNNING) { screen = SCR_END; inProgress = false; }

@@ -198,6 +198,7 @@ belli. Les autres nations y recourent aussi, entre elles comme contre la France.
 | Fin du tour | `FIN DU TOUR`, `Espace` ou `Entrée` |
 | Onglets | `1` à `9`, `0` |
 | Mode de carte | `M` |
+| Courbes de la partie (score, population, inflation, popularité, lobbies, dette...) | `G` ou clic sur le score |
 | Sauvegarder / charger | `F5` / `F9` |
 | Enregistrer le rejeu de la partie | `F6` |
 | Plein écran / menu | `F11` / `Échap` |

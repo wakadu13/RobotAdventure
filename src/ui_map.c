@@ -673,7 +673,8 @@ void DrawTopBar(void)
     snprintf(buf, sizeof(buf), Tr("Score %d"), Game_Score(&game, NULL));
     Rectangle sr = { 176, 4, 70, 12 };
     Text(buf, sr.x, sr.y, 10, C_SEL);
-    Tooltip(sr, "Score de victoire : détail dans l'onglet POLITIQUE.");
+    Tooltip(sr, "Score de victoire : détail dans l'onglet POLITIQUE.\nClic (ou touche G) : courbes de la partie.");
+    if (Hover(sr) && clicked) { graphsOpen = true; clicked = false; }
 
     float x = 250;
     float w = (VW - x - 10) / R_COUNT;
