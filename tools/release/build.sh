@@ -20,7 +20,7 @@ RL_SRC="rcore rshapes rtextures rtext rmodels raudio utils"
 mkdir -p "$DIST" "$WORK"
 
 sources() {
-    printf '%s ' "$ROOT/src/main.c"
+    printf '%s ' "$ROOT/src/main.c" "$ROOT/src/sound.c"
     for f in $SIM; do printf '%s ' "$ROOT/src/$f.c"; done
 }
 

@@ -13,7 +13,7 @@ CFLAGS  ?= -std=c99 -O2 -Wall -Wextra
 BUILD   := build
 TARGET  := $(BUILD)/bouclier2050
 SIM     := src/game.c src/world.c src/society.c src/war.c src/military.c src/ops.c src/resources.c src/intl.c src/command.c src/economy.c src/politics.c src/nuclear.c src/map_data.c src/save_fields.c src/events.c
-SRC     := src/main.c $(SIM)
+SRC     := src/main.c src/sound.c $(SIM)
 
 ifeq ($(OS),Windows_NT)
     TARGET := $(TARGET).exe
@@ -45,7 +45,7 @@ endif
 
 all: $(TARGET)
 
-$(TARGET): $(SRC) src/game.h src/game_internal.h src/map_data.h | $(BUILD)
+$(TARGET): $(SRC) src/sound.h src/game.h src/game_internal.h src/map_data.h | $(BUILD)
 	$(CC) $(CFLAGS) $(RAYLIB_CFLAGS) $(SRC) -o $@ $(RAYLIB_LIBS) -lm
 
 $(BUILD)/autoplay: $(SIM) src/game.h src/game_internal.h src/map_data.h tools/autoplay.c | $(BUILD)

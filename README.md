@@ -139,6 +139,11 @@ belli. Les autres nations y recourent aussi, entre elles comme contre la France.
   (température, guerre, régime, dette, chômage, factions, voisins...). Ils sont décrits par des données
   dans `src/events.c` : le texte de leurs effets est généré à partir de ce qui est appliqué.
 
+### Son
+- Effets sonores (boutons, fin de tour, alertes, batailles, frappes nucléaires, victoire, défaite) et
+  nappe d'ambiance synthétisés au lancement par `src/sound.c` : aucun fichier audio. Activable ou
+  coupé depuis le menu (réglage conservé).
+
 ### Scénarios
 - **Janvier 2030** : +1,5°C, trente ans à tenir.
 - **La crise de 2040** : +2°C, mer +45 cm, invasion boréale des pays baltes, Libye effondrée, Algérie
@@ -293,6 +298,7 @@ src/command.c       commandes, phases du hot-seat, somme de contrôle et rejeu
 src/save_fields.c/.h registre des champs sauvegardés (généré)
 src/map_data.c/.h   carte générée (grille 0,125°, 130 régions, adjacences, cultures, religions)
 src/main.c          interface raylib
+src/sound.c         sons synthétisés (effets et ambiance)
 tools/gen_save_fields.py générateur du registre de sauvegarde
 tools/gen_map.py    générateur de la carte depuis un GeoJSON des pays
 tools/autoplay.c    banc d'essai d'équilibrage

@@ -7,6 +7,7 @@
  */
 #include "raylib.h"
 #include "game.h"
+#include "sound.h"
 
 #include <math.h>
 #include <stdio.h>
@@ -134,6 +135,8 @@ static bool Do(int type, int a, int b, int c, float f)
     Command cmd = { (unsigned char)type, (signed char)game.activePlayer, (short)a, (short)b, (short)c, f };
     bool ok = Cmd_Apply(&game, &cmd);
     if (ok) Replay_Record(&session, &cmd);
+    if (ok && type == CMD_DECLARE_WAR) Snd_Play(SFX_WAR);
+    if (ok && (type == CMD_STRIKE || type == CMD_TACTICAL)) Snd_Play(SFX_NUKE);
     return ok;
 }
 static char     negoMsg[160];
@@ -204,7 +207,7 @@ static bool Button(Rectangle r, const char *label, bool enabled, int size)
     DrawRectangleLinesEx(r, 1, enabled ? (h ? C_ACCENT : C_BORDER) : (Color){ 45, 52, 62, 255 });
     int tw = TextW(label, size);
     Text(label, r.x + (r.width - tw) / 2, r.y + (r.height - size) / 2, size, enabled ? C_TEXT : C_DIM);
-    if (h && clicked) { clicked = false; return true; }
+    if (h && clicked) { clicked = false; Snd_Play(SFX_CLICK); return true; }
     return false;
 }
 
@@ -230,7 +233,7 @@ static bool Choice(Rectangle r, const char *label, bool sel)
     DrawRectangleRec(r, sel ? (Color){ 40, 62, 92, 255 } : h ? C_PANEL2 : C_PANEL);
     DrawRectangleLinesEx(r, 1, sel ? C_ACCENT : C_BORDER);
     Text(label, r.x + (r.width - TextW(label, 10)) / 2, r.y + (r.height - 10) / 2, 10, sel ? C_TEXT : C_DIM);
-    if (h && clicked) { clicked = false; return true; }
+    if (h && clicked) { clicked = false; Snd_Play(SFX_CLICK); return true; }
     return false;
 }
 
@@ -2649,8 +2652,12 @@ static void LoadSettings(void)
 {
     FILE *f = fopen(SETTINGS_FILE, "r");
     if (!f) return;
-    int big = bigUi, rep = showReports;
-    if (fscanf(f, "grande_interface=%d\nrapports=%d", &big, &rep) >= 1) { bigUi = big != 0; showReports = rep != 0; }
+    int big = bigUi, rep = showReports, snd = 1;
+    if (fscanf(f, "grande_interface=%d\nrapports=%d\nson=%d", &big, &rep, &snd) >= 1) {
+        bigUi = big != 0;
+        showReports = rep != 0;
+        Snd_SetEnabled(snd != 0);
+    }
     fclose(f);
 }
 
@@ -2658,7 +2665,7 @@ static void SaveSettings(void)
 {
     FILE *f = fopen(SETTINGS_FILE, "w");
     if (!f) return;
-    fprintf(f, "grande_interface=%d\nrapports=%d\n", bigUi ? 1 : 0, showReports ? 1 : 0);
+    fprintf(f, "grande_interface=%d\nrapports=%d\nson=%d\n", bigUi ? 1 : 0, showReports ? 1 : 0, Snd_Enabled() ? 1 : 0);
     fclose(f);
 }
 
@@ -2759,9 +2766,12 @@ static void DrawTitle(void)
                 "recettes réduites ; le score est multiplié par 1,3.");
     y += 38;
     snprintf(buf, sizeof(buf), "Scénario : %s", SCENARIO_NAMES[newScenario]);
-    Rectangle scr = { bx, y, 280, 30 };
+    Rectangle scr = { bx, y, 182, 30 };
     if (Button(scr, buf, true, 10)) newScenario = (newScenario + 1) % 2;
     Tooltip(scr, SCENARIO_DESC[newScenario]);
+    Rectangle sor = { bx + 188, y, 92, 30 };
+    if (Button(sor, Snd_Enabled() ? "Son : activé" : "Son : coupé", true, 10)) { Snd_SetEnabled(!Snd_Enabled()); SaveSettings(); }
+    Tooltip(sor, "Effets sonores et nappe d'ambiance, synthétisés par le jeu (aucun fichier audio).");
     y += 38;
     if (Button((Rectangle){ bx, y, 88, 38 }, "AIDE", true, 20)) screen = SCR_HELP;
     Rectangle hr = { bx + 96, y, 88, 38 };
@@ -3057,8 +3067,21 @@ static void DrawGame(void)
     Text(lbl, RP_X + 10, VH - 32, 10, C_ACCENT);
     if (activeLayer == 0 && (IsKeyPressed(KEY_SPACE) || IsKeyPressed(KEY_ENTER))) endTurn = true;
     if (endTurn && activeLayer == 0) {
-        int turnBefore = game.turn;
+        int turnBefore = game.turn, warsBefore = 0, nukesBefore = game.nukesUsed + game.tacticalUsed;
+        int battlesBefore = game.statBattlesWon + game.statBattlesLost;
+        float cohBefore = game.res[R_COHESION];
+        for (int n = 0; n < N_COUNT; n++) warsBefore += game.war[N_FRANCE][n];
         if (Do(CMD_END_TURN, 0, 0, 0, 0) && HotSeat() && game.state == GAME_RUNNING) handoffFor = Me();
+        if (game.turn != turnBefore) {
+            int wars = 0;
+            for (int n = 0; n < N_COUNT; n++) wars += game.war[N_FRANCE][n];
+            if (game.state != GAME_RUNNING) Snd_Play(game.state == GAME_WON ? SFX_VICTORY : SFX_DEFEAT);
+            else if (game.nukesUsed + game.tacticalUsed > nukesBefore) Snd_Play(SFX_NUKE);
+            else if (wars > warsBefore || game.statBattlesWon + game.statBattlesLost > battlesBefore) Snd_Play(SFX_WAR);
+            else if (game.pendingDilemma >= 0) Snd_Play(SFX_ALERT);
+            else if (game.res[R_COHESION] < cohBefore - 3) Snd_Play(SFX_BAD);
+            else Snd_Play(SFX_TURN);
+        }
         logScroll = 0;
         strikeArmed = false;
         for (int i = 0; i < MAX_UNITS; i++) if (!game.units[i].active) uiSel[i] = false;
@@ -3171,6 +3194,7 @@ int main(void)
 #endif
     SetConfigFlags(FLAG_WINDOW_RESIZABLE | FLAG_VSYNC_HINT);
     InitWindow(VW, VH, "Bouclier 2050");
+    Snd_Init();
     SetWindowMinSize(640, 360);
     SetExitKey(KEY_NULL);
     SetTargetFPS(60);
@@ -3198,6 +3222,7 @@ int main(void)
         timeAcc += dt;
         if (toastTime > 0) toastTime -= dt;
         UpdateView();
+        Snd_Update(screen == SCR_GAME);
         tooltip[0] = 0;
         inputLayer = activeLayer = 0;
         if (IsKeyPressed(KEY_F11)) ToggleFullscreen();
@@ -3225,6 +3250,7 @@ int main(void)
     }
     UnloadTexture(mapTex);
     UnloadRenderTexture(target);
+    Snd_Close();
     CloseWindow();
     return 0;
 }
