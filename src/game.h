@@ -321,7 +321,9 @@ typedef struct {
 typedef struct { int state; int turnsLeft; } Project;
 
 typedef struct {
-    char text[LOG_LEN];
+    char text[LOG_LEN];    /* texte en francais */
+    char fmt[LOG_LEN];     /* format francais : l'interface le traduit a l'affichage */
+    char args[LOG_LEN];    /* arguments mis en forme, separes par \x1f */
     int turn;
     LogKind kind;
 } LogEntry;

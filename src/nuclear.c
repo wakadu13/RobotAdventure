@@ -29,7 +29,7 @@ void Nuke_SetPosture(Game *g, int posture)
     if (posture == g->nukePosture || posture < 0 || posture > 2) return;
     g->nukePosture = posture;
     if (posture == 0 && g->umbrella) g->umbrella = false;
-    Game_Log(g, EV_INFO, "Posture de dissuasion : %s.", Tr(NUKE_POSTURES[posture]));
+    Game_Log(g, EV_INFO, "Posture de dissuasion : %s.", (NUKE_POSTURES[posture]));
 }
 
 const char *Nuke_UmbrellaBlocked(const Game *g)
@@ -88,7 +88,7 @@ static void Exchange(Game *g, int n)
     Devastate(g, PV_FR_IDF, 0.5f);
     Devastate(g, PV_FR_ARA, 0.4f);
     Devastate(g, PV_FR_PAC, 0.4f);
-    Game_Log(g, EV_WAR, "%s riposte. Paris, Lyon et Marseille sont frappées.", Tr(NATIONS[n].name));
+    Game_Log(g, EV_WAR, "%s riposte. Paris, Lyon et Marseille sont frappées.", (NATIONS[n].name));
     g->state = GAME_LOST_NUCLEAR;
 }
 
@@ -136,13 +136,13 @@ bool Nuke_Warning(Game *g, int n)
     g->nat[n].warned = true;
     float chance = g->credibility / 100.0f * (Nuke_IsPower(g, n) ? 0.5f : 1.0f);
     if (Randf(g) < chance) {
-        Game_Log(g, EV_WAR, "Ultime avertissement : %s se retire du territoire national et signe la paix.", Tr(NATIONS[n].name));
+        Game_Log(g, EV_WAR, "Ultime avertissement : %s se retire du territoire national et signe la paix.", (NATIONS[n].name));
         War_WhitePeace(g, N_FRANCE, n, false);
         g->credibility = Clampf(g->credibility + 10, 0, 100);
         return true;
     }
     g->credibility = Clampf(g->credibility - 20, 0, 100);
-    Game_Log(g, EV_BAD, "Ultime avertissement ignoré par %s : notre dissuasion perd en crédibilité.", Tr(NATIONS[n].name));
+    Game_Log(g, EV_BAD, "Ultime avertissement ignoré par %s : notre dissuasion perd en crédibilité.", (NATIONS[n].name));
     return false;
 }
 
@@ -176,7 +176,7 @@ bool Nuke_Strike(Game *g, int p)
     g->commandPoints--;
     g->nukesUsed++;
     Devastate(g, p, 0.4f);
-    Game_Log(g, EV_WAR, "Frappe nucléaire sur %s. Le monde retient son souffle.", Tr(PROVINCE_NAMES[p]));
+    Game_Log(g, EV_WAR, "Frappe nucléaire sur %s. Le monde retient son souffle.", (PROVINCE_NAMES[p]));
 
     Pariah(g, 60, 50, 25);
     g->aggressionMemory = 100;
@@ -189,7 +189,7 @@ bool Nuke_Strike(Game *g, int p)
         return true;
     }
     if (g->nat[n].alive) {
-        Game_Log(g, EV_WAR, "%s capitule sans conditions.", Tr(NATIONS[n].name));
+        Game_Log(g, EV_WAR, "%s capitule sans conditions.", (NATIONS[n].name));
         Surrender(g, n);
     }
     return true;
@@ -261,7 +261,7 @@ bool Nuke_Tactical(Game *g, int p)
     g->commandPoints--;
     g->tacticalUsed++;
     TacticalHit(g, N_FRANCE, p);
-    Game_Log(g, EV_WAR, "Frappe nucléaire tactique sur les forces de %s à %s.", Tr(NATIONS[n].name), Tr(PROVINCE_NAMES[p]));
+    Game_Log(g, EV_WAR, "Frappe nucléaire tactique sur les forces de %s à %s.", (NATIONS[n].name), (PROVINCE_NAMES[p]));
     Pariah(g, 25, 20, 8);
     if (g->prov[p].owner == N_FRANCE) AddRes(g, R_COHESION, -10);   /* sur notre propre sol */
     g->credibility = Clampf(g->credibility + 5, 0, 100);
@@ -271,11 +271,11 @@ bool Nuke_Tactical(Game *g, int p)
         int q = FrenchConcentration(g);
         if (q >= 0) {
             TacticalHit(g, n, q);
-            Game_Log(g, EV_WAR, "%s riposte par une frappe tactique sur nos forces à %s.", Tr(NATIONS[n].name), Tr(PROVINCE_NAMES[q]));
+            Game_Log(g, EV_WAR, "%s riposte par une frappe tactique sur nos forces à %s.", (NATIONS[n].name), (PROVINCE_NAMES[q]));
             AddRes(g, R_COHESION, -8);
         }
         if (Randf(g) < 0.15f) {
-            Game_Log(g, EV_WAR, "L'escalade échappe à tout contrôle : échange stratégique avec %s.", Tr(NATIONS[n].name));
+            Game_Log(g, EV_WAR, "L'escalade échappe à tout contrôle : échange stratégique avec %s.", (NATIONS[n].name));
             Exchange(g, n);
         }
     }
@@ -302,7 +302,7 @@ static void AiTactical(Game *g, int n)
     if (best < 0 || bestStr < 2) return;
     if (Randf(g) > 0.06f * (1 - g->credibility / 150.0f)) return;
     TacticalHit(g, n, best);
-    Game_Log(g, EV_WAR, "%s emploie l'arme nucléaire tactique contre nos divisions à %s !", Tr(NATIONS[n].name), Tr(PROVINCE_NAMES[best]));
+    Game_Log(g, EV_WAR, "%s emploie l'arme nucléaire tactique contre nos divisions à %s !", (NATIONS[n].name), (PROVINCE_NAMES[best]));
     AddRes(g, R_COHESION, -6);
     for (int k = 1; k < N_COUNT; k++) if (k != n && g->nat[k].alive) AddAiRel(g, k, n, -30);
 }
@@ -360,9 +360,9 @@ bool Nuke_Counter(Game *g, int n, int kind)
         float chance = 0.35f + g->res[R_INFLUENCE] / 200.0f + (na->trade ? 0.15f : 0) + (na->eu ? 0.2f : 0);
         if (Randf(g) < chance) {
             na->nukeProgress = Clampf(na->nukeProgress - 25, 0, 100);
-            Game_Log(g, EV_GOOD, "Pression diplomatique : %s ralentit son programme nucléaire.", Tr(NATIONS[n].name));
+            Game_Log(g, EV_GOOD, "Pression diplomatique : %s ralentit son programme nucléaire.", (NATIONS[n].name));
         } else {
-            Game_Log(g, EV_BAD, "%s rejette nos pressions sur son programme nucléaire.", Tr(NATIONS[n].name));
+            Game_Log(g, EV_BAD, "%s rejette nos pressions sur son programme nucléaire.", (NATIONS[n].name));
         }
         AddRelation(g, n, -8);
     } else {
@@ -370,11 +370,11 @@ bool Nuke_Counter(Game *g, int n, int kind)
         float chance = 0.45f + g->capacity[D_CYBER] * 0.05f;
         if (Randf(g) < chance) {
             na->nukeProgress = Clampf(na->nukeProgress - 40, 0, 100);
-            Game_Log(g, EV_GOOD, "Sabotage cyber réussi : les centrifugeuses de %s sont détruites.", Tr(NATIONS[n].name));
+            Game_Log(g, EV_GOOD, "Sabotage cyber réussi : les centrifugeuses de %s sont détruites.", (NATIONS[n].name));
         } else {
             AddRelation(g, n, -20);
             AddRes(g, R_INFLUENCE, -5);
-            Game_Log(g, EV_BAD, "Le sabotage du programme de %s est découvert : scandale international.", Tr(NATIONS[n].name));
+            Game_Log(g, EV_BAD, "Le sabotage du programme de %s est découvert : scandale international.", (NATIONS[n].name));
         }
     }
     return true;
@@ -390,7 +390,7 @@ static void Proliferation(Game *g)
             if (g->turn > 6 && motive > 0.3f && Randf(g) < motive * 0.02f) {
                 na->nukeStatus = 1;
                 na->nukeProgress = 0;
-                Game_Log(g, EV_WAR, "Renseignement : %s lance un programme nucléaire militaire.", Tr(NATIONS[n].name));
+                Game_Log(g, EV_WAR, "Renseignement : %s lance un programme nucléaire militaire.", (NATIONS[n].name));
             }
             continue;
         }
@@ -398,14 +398,14 @@ static void Proliferation(Game *g)
         int cap = NukeCapital(g, n);
         if (cap >= 0 && g->prov[cap].ctrl != n) {
             if (na->nukeProgress > 0) Game_Log(g, EV_GOOD, "L'occupation de %s anéantit le programme nucléaire de %s.",
-                                               Tr(PROVINCE_NAMES[cap]), Tr(NATIONS[n].name));
+                                               (PROVINCE_NAMES[cap]), (NATIONS[n].name));
             na->nukeProgress = 0;
             continue;
         }
         if (motive <= 0.05f && Randf(g) < 0.05f) {
             na->nukeStatus = 0;
             na->nukeProgress = 0;
-            Game_Log(g, EV_GOOD, "%s renonce à son programme nucléaire.", Tr(NATIONS[n].name));
+            Game_Log(g, EV_GOOD, "%s renonce à son programme nucléaire.", (NATIONS[n].name));
             continue;
         }
         float rate = 0.6f + na->tech[T_LOG] * 0.15f + (na->treasury > 5 ? 0.4f : 0) + motive * 0.6f;
@@ -413,7 +413,7 @@ static void Proliferation(Game *g)
         if (na->nukeProgress >= 100) {
             na->nukeStatus = 2;
             na->tech[T_NUC] = 3;
-            Game_Log(g, EV_WAR, "%s procède à son premier essai nucléaire. Le club atomique s'agrandit.", Tr(NATIONS[n].name));
+            Game_Log(g, EV_WAR, "%s procède à son premier essai nucléaire. Le club atomique s'agrandit.", (NATIONS[n].name));
             AddRes(g, R_INFLUENCE, -5);
             for (int k = 1; k < N_COUNT; k++)
                 if (k != n && g->nat[k].alive && War_Adjacent(g, n, k)) AddAiRel(g, n, k, -15);
@@ -472,9 +472,9 @@ void Nuke_ResolveBlackmail(Game *g, bool give)
         AddRes(g, R_COHESION, -25);
         AddRes(g, R_SOUVERAINETE, -15);
         for (int k = 1; k < N_COUNT; k++) if (k != n) AddRelation(g, k, 30);
-        Game_Log(g, EV_WAR, "%s a frappé %s. Le monde se range derrière la France.", Tr(NATIONS[n].name), Tr(PROVINCE_NAMES[p]));
+        Game_Log(g, EV_WAR, "%s a frappé %s. Le monde se range derrière la France.", (NATIONS[n].name), (PROVINCE_NAMES[p]));
     } else {
         g->credibility = Clampf(g->credibility + 10, 0, 100);
-        Game_Log(g, EV_GOOD, "Le chantage de %s échoue : notre dissuasion a tenu.", Tr(NATIONS[n].name));
+        Game_Log(g, EV_GOOD, "Le chantage de %s échoue : notre dissuasion a tenu.", (NATIONS[n].name));
     }
 }

@@ -719,7 +719,7 @@ void KillNation(Game *g, int n)
     for (int i = 0; i < MAX_UNITS; i++) if (g->units[i].owner == n) g->units[i].active = false;
     for (int i = 0; i < MAX_GENERALS; i++) if (g->generals[i].owner == n) g->generals[i].active = false;
     for (int p = 0; p < PROV_COUNT; p++) if (g->prov[p].ctrl == n) g->prov[p].ctrl = g->prov[p].owner;
-    Game_Log(g, EV_WAR, "%s a cessé d'exister en tant qu'État.", Tr(NATIONS[n].name));
+    Game_Log(g, EV_WAR, "%s a cessé d'exister en tant qu'État.", (NATIONS[n].name));
 }
 
 void War_Annex(Game *g, int p, int newOwner)
@@ -808,10 +808,10 @@ void Battle(Game *g, int p, int a)
                 u->org = Clampf(u->org - 0.1f, 0, 1);
             }
         }
-        if (a == N_FRANCE) { g->statBattlesWon++; Game_Log(g, EV_WAR, "Bataille de %s : victoire, la province est occupée (rapport %.1f contre 1).", Tr(PROVINCE_NAMES[p]), r); }
-        else if (defender == N_FRANCE) { g->statBattlesLost++; Game_Log(g, EV_WAR, "Bataille de %s : %s perce nos lignes (rapport %.1f contre 1) !", Tr(PROVINCE_NAMES[p]), Tr(NATIONS[a].name), r); }
+        if (a == N_FRANCE) { g->statBattlesWon++; Game_Log(g, EV_WAR, "Bataille de %s : victoire, la province est occupée (rapport %.1f contre 1).", (PROVINCE_NAMES[p]), r); }
+        else if (defender == N_FRANCE) { g->statBattlesLost++; Game_Log(g, EV_WAR, "Bataille de %s : %s perce nos lignes (rapport %.1f contre 1) !", (PROVINCE_NAMES[p]), (NATIONS[a].name), r); }
         else if (IsAlly(g, N_FRANCE, defender) || IsAlly(g, N_FRANCE, a))
-            Game_Log(g, EV_WAR, "%s occupe %s (%s).", Tr(NATIONS[a].name), Tr(PROVINCE_NAMES[p]), Tr(NATIONS[defender].name));
+            Game_Log(g, EV_WAR, "%s occupe %s (%s).", (NATIONS[a].name), (PROVINCE_NAMES[p]), (NATIONS[defender].name));
         War_Occupy(g, p, a);
     } else {
         g->battles[defender][a]++;
@@ -819,11 +819,11 @@ void Battle(Game *g, int p, int a)
             if (IsAttacker(g, &g->units[i], p, a)) g->units[i].target = -1;
         if (a == N_FRANCE) {
             g->statBattlesLost++;
-            if (r > 1) Game_Log(g, EV_WAR, "Bataille de %s : l'ennemi plie mais tient (rapport %.1f contre 1).", Tr(PROVINCE_NAMES[p]), r);
-            else Game_Log(g, EV_WAR, "Bataille de %s : notre offensive est repoussée (rapport %.1f contre 1).", Tr(PROVINCE_NAMES[p]), r);
+            if (r > 1) Game_Log(g, EV_WAR, "Bataille de %s : l'ennemi plie mais tient (rapport %.1f contre 1).", (PROVINCE_NAMES[p]), r);
+            else Game_Log(g, EV_WAR, "Bataille de %s : notre offensive est repoussée (rapport %.1f contre 1).", (PROVINCE_NAMES[p]), r);
         } else if (defender == N_FRANCE) {
             g->statBattlesWon++;
-            Game_Log(g, EV_WAR, "Bataille de %s : l'offensive de %s est repoussée (rapport %.1f contre 1).", Tr(PROVINCE_NAMES[p]), Tr(NATIONS[a].name), r);
+            Game_Log(g, EV_WAR, "Bataille de %s : l'offensive de %s est repoussée (rapport %.1f contre 1).", (PROVINCE_NAMES[p]), (NATIONS[a].name), r);
         }
     }
 }
@@ -862,12 +862,12 @@ void NavalWarfare(Game *g)
                 u->str -= fminf(0.35f, 0.08f * hit);
                 if (u->str < 0.08f) {
                     u->active = false;
-                    if (u->owner == N_FRANCE) Game_Log(g, EV_BAD, "Unité navale perdue : %s.", Tr(UNIT_TYPES[u->type].name));
+                    if (u->owner == N_FRANCE) Game_Log(g, EV_BAD, "Unité navale perdue : %s.", (UNIT_TYPES[u->type].name));
                 }
             }
             if (a == N_FRANCE || b == N_FRANCE) {
                 bool win = (a == N_FRANCE) == (r > 1);
-                Game_Log(g, win ? EV_WAR : EV_BAD, "Bataille navale contre %s : %s.", Tr(NATIONS[a == N_FRANCE ? b : a].name),
+                Game_Log(g, win ? EV_WAR : EV_BAD, "Bataille navale contre %s : %s.", (NATIONS[a == N_FRANCE ? b : a].name),
                          win ? "nos flottes dominent" : "nos flottes sont mises en difficulté");
             }
         }
@@ -1002,7 +1002,7 @@ void Supply(Game *g)
             if (--u->training == 0) {
                 u->org = 1;
                 if (u->owner == N_FRANCE)
-                    Game_Log(g, EV_GOOD, "%s opérationnelle en %s.", Tr(UNIT_TYPES[u->type].name), Tr(PROVINCE_NAMES[u->prov]));
+                    Game_Log(g, EV_GOOD, "%s opérationnelle en %s.", (UNIT_TYPES[u->type].name), (PROVINCE_NAMES[u->prov]));
             }
             continue;
         }
@@ -1044,7 +1044,7 @@ void Supply(Game *g)
         if (PROVINCES[u->prov].aridity >= 1.0f && pr->ctrl != n) u->str -= 0.01f;
         if (u->str < 0.08f) {
             u->active = false;
-            if (n == N_FRANCE) Game_Log(g, EV_BAD, "Une unité %s a été anéantie.", Tr(UNIT_TYPES[u->type].name));
+            if (n == N_FRANCE) Game_Log(g, EV_BAD, "Une unité %s a été anéantie.", (UNIT_TYPES[u->type].name));
         }
     }
 }
@@ -1059,7 +1059,7 @@ void Alliances(Game *g)
                 Clampf(g->airel[a][b] + (AiRelTarget(g, a, b) - g->airel[a][b]) * 0.05f, -100, 100);
             if (g->ally[a][b] && g->airel[a][b] < 10) {
                 g->ally[a][b] = g->ally[b][a] = false;
-                Game_Log(g, EV_INFO, "L'alliance entre %s et %s est rompue.", Tr(NATIONS[a].name), Tr(NATIONS[b].name));
+                Game_Log(g, EV_INFO, "L'alliance entre %s et %s est rompue.", (NATIONS[a].name), (NATIONS[b].name));
             } else if (!g->ally[a][b] && !g->war[a][b] && g->airel[a][b] > 55 && Randf(g) < 0.03f) {
                 /* un ennemi commun rapproche */
                 bool rival = false;
@@ -1067,7 +1067,7 @@ void Alliances(Game *g)
                     if (k != a && k != b && g->nat[k].alive && Relation(g, a, k) < -30 && Relation(g, b, k) < -30) rival = true;
                 if (rival) {
                     g->ally[a][b] = g->ally[b][a] = true;
-                    Game_Log(g, EV_EVENT, "Alliance défensive entre %s et %s.", Tr(NATIONS[a].name), Tr(NATIONS[b].name));
+                    Game_Log(g, EV_EVENT, "Alliance défensive entre %s et %s.", (NATIONS[a].name), (NATIONS[b].name));
                 }
             }
         }
@@ -1076,6 +1076,6 @@ void Alliances(Game *g)
     for (int n = 1; n < N_COUNT; n++)
         if (g->ally[N_FRANCE][n] && g->nat[n].relation < 20) {
             g->ally[N_FRANCE][n] = g->ally[n][N_FRANCE] = false;
-            Game_Log(g, EV_BAD, "%s rompt son alliance avec la France.", Tr(NATIONS[n].name));
+            Game_Log(g, EV_BAD, "%s rompt son alliance avec la France.", (NATIONS[n].name));
         }
 }

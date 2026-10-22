@@ -122,7 +122,7 @@ bool Mil_Promote(Game *g)
     if (i < 0) return false;
     g->res[R_BUDGET] -= 3;
     Game_Log(g, EV_GOOD, "%s est promu (%s, compétence %d). Affectez-le à une province.",
-             g->generals[i].name, Tr(GENERAL_TRAITS[g->generals[i].trait]), g->generals[i].skill);
+             g->generals[i].name, (GENERAL_TRAITS[g->generals[i].trait]), g->generals[i].skill);
     return true;
 }
 
@@ -216,7 +216,7 @@ void Mil_Turn(Game *g)
         if (g->researchProgress >= Mil_TechCost(g, a)) {
             g->researchProgress -= Mil_TechCost(g, a);
             g->nat[N_FRANCE].tech[a]++;
-            Game_Log(g, EV_GOOD, "Percée technologique : %s niveau %d.", Tr(TECHS[a].name), g->nat[N_FRANCE].tech[a]);
+            Game_Log(g, EV_GOOD, "Percée technologique : %s niveau %d.", (TECHS[a].name), g->nat[N_FRANCE].tech[a]);
             if (g->nat[N_FRANCE].tech[a] >= TECH_MAX)
                 for (int t = 0; t < T_COUNT; t++) if (g->nat[N_FRANCE].tech[t] < TECH_MAX) { g->researchArea = t; break; }
         }

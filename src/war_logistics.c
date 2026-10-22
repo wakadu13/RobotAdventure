@@ -71,7 +71,7 @@ bool War_BuildDepot(Game *g, int p)
     g->res[R_BUDGET] -= 4;
     g->prov[p].depot = N_FRANCE + 1;
     War_UpdateSupply(g);
-    Game_Log(g, EV_INFO, "Dépôt logistique établi en %s.", Tr(PROVINCE_NAMES[p]));
+    Game_Log(g, EV_INFO, "Dépôt logistique établi en %s.", (PROVINCE_NAMES[p]));
     return true;
 }
 
@@ -100,7 +100,7 @@ bool War_Fortify(Game *g, int p)
     if (War_FortBlocked(g, p)) return false;
     g->res[R_BUDGET] -= War_FortCost(g, p);
     g->prov[p].fortBuild = 3;
-    Game_Log(g, EV_INFO, "Travaux de fortification en %s (3 tours).", Tr(PROVINCE_NAMES[p]));
+    Game_Log(g, EV_INFO, "Travaux de fortification en %s (3 tours).", (PROVINCE_NAMES[p]));
     return true;
 }
 
@@ -110,7 +110,7 @@ void Works(Game *g)
         Province *pr = &g->prov[p];
         if (pr->fortBuild > 0 && --pr->fortBuild == 0 && pr->fort < 3) {
             pr->fort++;
-            if (pr->ctrl == N_FRANCE) Game_Log(g, EV_GOOD, "Fortifications de %s achevées (niveau %d).", Tr(PROVINCE_NAMES[p]), pr->fort);
+            if (pr->ctrl == N_FRANCE) Game_Log(g, EV_GOOD, "Fortifications de %s achevées (niveau %d).", (PROVINCE_NAMES[p]), pr->fort);
         }
     }
     /* les IA fortifient le point menace et installent un depot pres de leur offensive */
@@ -334,7 +334,7 @@ void NavalMissions(Game *g)
             if (v->active && v->prov == best && War_AtWar(g, u->owner, v->owner)) v->org = Clampf(v->org - hit, 0, 1);
         }
         g->prov[best].damage = Clampf(g->prov[best].damage + 0.02f, 0, 1);
-        if (u->owner == N_FRANCE) Game_Log(g, EV_WAR, "%s : frappes navales sur %s.", Tr(UNIT_TYPES[u->type].name), Tr(PROVINCE_NAMES[best]));
+        if (u->owner == N_FRANCE) Game_Log(g, EV_WAR, "%s : frappes navales sur %s.", (UNIT_TYPES[u->type].name), (PROVINCE_NAMES[best]));
     }
 }
 
@@ -418,7 +418,7 @@ void War_Turn(Game *g)
             na->failed = true;
             na->regime = RG_JUNTE;
             na->eu = false;
-            Game_Log(g, EV_CLIMATE, "Effondrement : %s devient un État failli, une junte prend le pouvoir.", Tr(NATIONS[n].name));
+            Game_Log(g, EV_CLIMATE, "Effondrement : %s devient un État failli, une junte prend le pouvoir.", (NATIONS[n].name));
         }
 
         if (!g->war[N_FRANCE][n]) {
@@ -426,7 +426,7 @@ void War_Turn(Game *g)
             na->relation = Clampf(na->relation, -100, 100);
             if (na->trade && na->relation < 10) {
                 na->trade = false;
-                Game_Log(g, EV_BAD, "%s rompt l'accord commercial.", Tr(NATIONS[n].name));
+                Game_Log(g, EV_BAD, "%s rompt l'accord commercial.", (NATIONS[n].name));
             }
         }
 
@@ -453,10 +453,10 @@ void War_Turn(Game *g)
         } else if (g->truce[N_FRANCE][n] == 0 && !g->ally[N_FRANCE][n] && War_Adjacent(g, n, N_FRANCE)) {
             if (g->aggressionMemory > 35 && na->relation < 0 && Randf(g) < (0.03f + g->aggressionMemory * 0.001f) * deter) {
                 War_StartWar(g, n, N_FRANCE, true);
-                Game_Log(g, EV_WAR, "Face à l'expansionnisme français, %s nous déclare la guerre !", Tr(NATIONS[n].name));
+                Game_Log(g, EV_WAR, "Face à l'expansionnisme français, %s nous déclare la guerre !", (NATIONS[n].name));
             } else if (na->relation < -55 && Coalition(g, n) > Coalition(g, N_FRANCE) * 1.2f && Randf(g) < aggro * 0.15f * deter) {
                 War_StartWar(g, n, N_FRANCE, true);
-                Game_Log(g, EV_WAR, "%s déclare la guerre à la France !", Tr(NATIONS[n].name));
+                Game_Log(g, EV_WAR, "%s déclare la guerre à la France !", (NATIONS[n].name));
             }
         }
 
@@ -482,7 +482,7 @@ void War_Turn(Game *g)
                 if (Coalition(g, t) < bestPow) { bestPow = Coalition(g, t); best = t; }
             }
             if (best >= 0) {
-                Game_Log(g, EV_WAR, "%s envahit %s !", Tr(NATIONS[n].name), Tr(NATIONS[best].name));
+                Game_Log(g, EV_WAR, "%s envahit %s !", (NATIONS[n].name), (NATIONS[best].name));
                 War_StartWar(g, n, best, true);
             }
         }

@@ -214,6 +214,8 @@ const SaveField SAVE_FIELDS[] = {
     { "histNatArmy", offsetof(Game, histNatArmy), sizeof(((Game *)0)->histNatArmy[0]), N_COUNT, 0, sizeof(((Game *)0)->histNatArmy[0]) },
     { "histNatRel", offsetof(Game, histNatRel), sizeof(((Game *)0)->histNatRel[0]), N_COUNT, 0, sizeof(((Game *)0)->histNatRel[0]) },
     { "log.text", offsetof(Game, log), sizeof(LogEntry), MAX_LOG, offsetof(LogEntry, text), sizeof(((LogEntry *)0)->text) },
+    { "log.fmt", offsetof(Game, log), sizeof(LogEntry), MAX_LOG, offsetof(LogEntry, fmt), sizeof(((LogEntry *)0)->fmt) },
+    { "log.args", offsetof(Game, log), sizeof(LogEntry), MAX_LOG, offsetof(LogEntry, args), sizeof(((LogEntry *)0)->args) },
     { "log.turn", offsetof(Game, log), sizeof(LogEntry), MAX_LOG, offsetof(LogEntry, turn), sizeof(((LogEntry *)0)->turn) },
     { "log.kind", offsetof(Game, log), sizeof(LogEntry), MAX_LOG, offsetof(LogEntry, kind), sizeof(((LogEntry *)0)->kind) },
     { "logCount", offsetof(Game, logCount), sizeof(((Game *)0)->logCount), 1, 0, sizeof(((Game *)0)->logCount) },

@@ -83,7 +83,7 @@ bool Cab_Appoint(Game *g, int post, int cand)
     AddRes(g, R_COHESION, -1);
     g->lobby[g->minister[post].lobby] = Clampf(g->lobby[g->minister[post].lobby] + 8, 0, 100);
     g->lobby[old.lobby] = Clampf(g->lobby[old.lobby] - 5, 0, 100);
-    Game_Log(g, EV_INFO, "Remaniement : %s devient ministre (%s).", Cab_Name(&g->minister[post]), Tr(MINISTER_POSTS[post]));
+    Game_Log(g, EV_INFO, "Remaniement : %s devient ministre (%s).", Cab_Name(&g->minister[post]), (MINISTER_POSTS[post]));
     return true;
 }
 

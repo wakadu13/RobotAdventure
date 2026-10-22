@@ -219,6 +219,7 @@ Rectangle CurrentRegion(void);
 void UpdateView(void);
 void DrawNavBar(void);
 
+const char *LogText(const LogEntry *e);
 extern const char *uiTestDir;   /* mode test d'interface : dossier des captures (NULL sinon) */
 
 #endif

@@ -36,7 +36,7 @@ void War_StartWar(Game *g, int a, int b, bool callAllies)
         if (Randf(g) < 0.8f) {
             War_StartWar(g, k, a, false);
             if (a == N_FRANCE || IsAlly(g, N_FRANCE, b))
-                Game_Log(g, EV_WAR, "%s honore son alliance avec %s et entre en guerre contre %s.", Tr(NATIONS[k].name), Tr(NATIONS[b].name), Tr(NATIONS[a].name));
+                Game_Log(g, EV_WAR, "%s honore son alliance avec %s et entre en guerre contre %s.", (NATIONS[k].name), (NATIONS[b].name), (NATIONS[a].name));
         }
     }
     /* solidarite europeenne face a un agresseur exterieur */
@@ -72,7 +72,7 @@ bool War_Declare(Game *g, int n)
     g->aggressionMemory = Clampf(g->aggressionMemory + 25, 0, 100);
     AddRes(g, R_COHESION, -REGIMES[fr->regime].aggressionCost);
     AddRes(g, R_INFLUENCE, -8);
-    Game_Log(g, EV_WAR, "La France déclare la guerre à %s !", Tr(NATIONS[n].name));
+    Game_Log(g, EV_WAR, "La France déclare la guerre à %s !", (NATIONS[n].name));
     War_StartWar(g, N_FRANCE, n, true);
     g->nat[n].relation = -80;
 
@@ -86,7 +86,7 @@ bool War_Declare(Game *g, int n)
             AddRelation(g, k, -30);
             if (!g->war[k][N_FRANCE] && o->army >= 2 && War_Adjacent(g, N_FRANCE, k) && Randf(g) < 0.3f) {
                 War_StartWar(g, k, N_FRANCE, false);
-                Game_Log(g, EV_WAR, "%s rejoint la coalition contre la France !", Tr(NATIONS[k].name));
+                Game_Log(g, EV_WAR, "%s rejoint la coalition contre la France !", (NATIONS[k].name));
             }
         }
     }
@@ -123,13 +123,13 @@ bool War_Diplomacy(Game *g, int n, int action)
     if (action == 0) {
         AddRes(g, R_INFLUENCE, -5);
         AddRelation(g, n, 12);
-        Game_Log(g, EV_GOOD, "Rapprochement diplomatique avec %s.", Tr(NATIONS[n].name));
+        Game_Log(g, EV_GOOD, "Rapprochement diplomatique avec %s.", (NATIONS[n].name));
     } else if (action == 1) {
         na->trade = true;
-        Game_Log(g, EV_GOOD, "Accord commercial signé avec %s : la France est servie en priorité sur leurs excédents.", Tr(NATIONS[n].name));
+        Game_Log(g, EV_GOOD, "Accord commercial signé avec %s : la France est servie en priorité sur leurs excédents.", (NATIONS[n].name));
     } else {
         g->ally[N_FRANCE][n] = g->ally[n][N_FRANCE] = true;
-        Game_Log(g, EV_GOOD, "Alliance défensive conclue avec %s.", Tr(NATIONS[n].name));
+        Game_Log(g, EV_GOOD, "Alliance défensive conclue avec %s.", (NATIONS[n].name));
     }
     return true;
 }
@@ -158,7 +158,7 @@ bool War_Ultimatum(Game *g, int p)
     if (g->nukePosture == 2 && !Nuke_IsPower(g, n)) ours *= 1 + g->credibility / 200.0f;
     g->aggressionMemory = Clampf(g->aggressionMemory + 12, 0, 100);
     if (ours > theirs * 2.5f) {
-        Game_Log(g, EV_WAR, "Ultimatum : %s cède %s sans combat.", Tr(NATIONS[n].name), Tr(PROVINCE_NAMES[p]));
+        Game_Log(g, EV_WAR, "Ultimatum : %s cède %s sans combat.", (NATIONS[n].name), (PROVINCE_NAMES[p]));
         AddRelation(g, n, -40);
         AddRes(g, R_COHESION, -REGIMES[g->nat[N_FRANCE].regime].aggressionCost * 0.3f);
         War_Annex(g, p, N_FRANCE);
@@ -167,7 +167,7 @@ bool War_Ultimatum(Game *g, int p)
     }
     AddRelation(g, n, -25);
     AddRes(g, R_INFLUENCE, -5);
-    Game_Log(g, EV_BAD, "Ultimatum rejeté par %s. Notre crédibilité en souffre.", Tr(NATIONS[n].name));
+    Game_Log(g, EV_BAD, "Ultimatum rejeté par %s. Notre crédibilité en souffre.", (NATIONS[n].name));
     return false;
 }
 
@@ -279,7 +279,7 @@ void War_WhitePeace(Game *g, int a, int b, bool log)
     int o = a == N_FRANCE ? b : b == N_FRANCE ? a : -1;
     if (o >= 0) { g->nat[o].peaceRefusals = 0; g->nat[o].peaceCooldown = 0; }
     g->aggressor[a][b] = g->aggressor[b][a] = false;
-    if (log) Game_Log(g, EV_WAR, "Paix signée entre %s et %s. Trêve de 4 ans.", Tr(NATIONS[a].name), Tr(NATIONS[b].name));
+    if (log) Game_Log(g, EV_WAR, "Paix signée entre %s et %s. Trêve de 4 ans.", (NATIONS[a].name), (NATIONS[b].name));
 }
 
 void War_SignTreaty(Game *g, const Treaty *t)
@@ -298,8 +298,8 @@ void War_SignTreaty(Game *g, const Treaty *t)
         o->reparationTurns = t->reparationTurns;
     }
     if (g->nat[other].alive) War_WhitePeace(g, N_FRANCE, other, false);
-    Game_Log(g, EV_WAR, "Traité de paix avec %s : %d province(s) cédée(s) à %s%s.", Tr(NATIONS[other].name), ceded,
-             Tr(NATIONS[t->winner].name), t->reparations > 0 ? ", réparations" : "");
+    Game_Log(g, EV_WAR, "Traité de paix avec %s : %d province(s) cédée(s) à %s%s.", (NATIONS[other].name), ceded,
+             (NATIONS[t->winner].name), t->reparations > 0 ? ", réparations" : "");
     g->treaty.active = false;
 }
 
@@ -386,7 +386,7 @@ int War_Negotiate(Game *g)
     Nation *na = &g->nat[n];
     if (na->negoTurn != g->turn) { na->negoTurn = g->turn; na->negoRounds = 0; }
     if (na->negoRounds >= 3) {
-        Game_Log(g, EV_BAD, "%s quitte la table des négociations pour ce trimestre.", Tr(NATIONS[n].name));
+        Game_Log(g, EV_BAD, "%s quitte la table des négociations pour ce trimestre.", (NATIONS[n].name));
         return 0;
     }
     if (na->negoRounds == 0) g->commandPoints--;
@@ -410,7 +410,7 @@ int War_Negotiate(Game *g)
             if (g->prov[p].owner == N_FRANCE && !t->cede[p] && TouchesNation(g, p, n)) t->cede[p] = true;
     }
     t->countered = true;
-    Game_Log(g, EV_WAR, "%s fait une contre-proposition (lassitude %.0f).", Tr(NATIONS[n].name), ex);
+    Game_Log(g, EV_WAR, "%s fait une contre-proposition (lassitude %.0f).", (NATIONS[n].name), ex);
     return 2;
 }
 
@@ -437,9 +437,9 @@ void AiPeace(Game *g, int a, int b)
     }
     if (g->nat[a].alive && g->nat[b].alive) War_WhitePeace(g, a, b, false);
     bool show = IsAlly(g, N_FRANCE, a) || IsAlly(g, N_FRANCE, b) || ceded >= 2;
-    if (ceded) Game_Log(g, show ? EV_WAR : EV_INFO, "Paix entre %s et %s : %s annexe %d province(s).", Tr(NATIONS[a].name), Tr(NATIONS[b].name),
-                        Tr(NATIONS[winner].name), ceded);
-    else Game_Log(g, EV_INFO, "Paix blanche entre %s et %s.", Tr(NATIONS[a].name), Tr(NATIONS[b].name));
+    if (ceded) Game_Log(g, show ? EV_WAR : EV_INFO, "Paix entre %s et %s : %s annexe %d province(s).", (NATIONS[a].name), (NATIONS[b].name),
+                        (NATIONS[winner].name), ceded);
+    else Game_Log(g, EV_INFO, "Paix blanche entre %s et %s.", (NATIONS[a].name), (NATIONS[b].name));
 }
 
 /* l'IA propose (ou impose) un traite a la France */
@@ -486,7 +486,7 @@ void Capitulations(Game *g)
         bool holds = false;
         for (int p = 0; p < PROV_COUNT && !holds; p++) if (g->prov[p].owner == n && g->prov[p].ctrl == n) holds = true;
         if (holds) continue;
-        Game_Log(g, EV_WAR, "%s capitule.", Tr(NATIONS[n].name));
+        Game_Log(g, EV_WAR, "%s capitule.", (NATIONS[n].name));
         for (int p = 0; p < PROV_COUNT; p++) {
             int c = g->prov[p].ctrl;
             if (g->prov[p].owner == n && c != n && g->nat[n].alive) War_Annex(g, p, c);
@@ -614,7 +614,7 @@ bool Cmdr_Declare(Game *g, int n, int t)
 {
     if (Cmdr_DeclareBlocked(g, n, t)) return false;
     g->nat[n].actedThisTurn = true;
-    Game_Log(g, EV_WAR, "%s déclare la guerre à %s !", Tr(NATIONS[n].name), t == N_FRANCE ? "la France" : Tr(NATIONS[t].name));
+    Game_Log(g, EV_WAR, "%s déclare la guerre à %s !", (NATIONS[n].name), t == N_FRANCE ? "la France" : (NATIONS[t].name));
     War_StartWar(g, n, t, true);
     if (t == N_FRANCE) g->nat[n].relation = -80;
     return true;
@@ -647,7 +647,7 @@ bool Cmdr_Peace(Game *g, int n, int t)
     }
     float s = War_Score(g, n, t);
     if (s >= 10 || ExhaustionVs(g, t, n) > 15 || (War_Turns(g, n, t) >= 8 && s > -15)) AiPeace(g, n, t);
-    else Game_Log(g, EV_INFO, "%s refuse la paix proposée par %s.", Tr(NATIONS[t].name), Tr(NATIONS[n].name));
+    else Game_Log(g, EV_INFO, "%s refuse la paix proposée par %s.", (NATIONS[t].name), (NATIONS[n].name));
     return true;
 }
 
@@ -667,6 +667,6 @@ bool Cmdr_Ally(Game *g, int n, int t)
     if (Cmdr_AllyBlocked(g, n, t)) return false;
     g->nat[n].actedThisTurn = true;
     g->ally[n][t] = g->ally[t][n] = true;
-    Game_Log(g, EV_INFO, "Alliance entre %s et %s.", Tr(NATIONS[n].name), Tr(NATIONS[t].name));
+    Game_Log(g, EV_INFO, "Alliance entre %s et %s.", (NATIONS[n].name), (NATIONS[t].name));
     return true;
 }

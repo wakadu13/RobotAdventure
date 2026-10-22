@@ -44,7 +44,7 @@ static void Sanction(Game *g, int n)
     g->nat[n].sanctions = 16;
     g->nat[n].trade = false;
     for (int k = 0; k < N_COUNT; k++) if (k != n && g->nat[k].alive && !IsAlly(g, k, n)) AddAiRel(g, k, n, -10);
-    Game_Log(g, EV_WAR, "Conseil de sécurité : sanctions internationales contre %s (4 ans).", Tr(NATIONS[n].name));
+    Game_Log(g, EV_WAR, "Conseil de sécurité : sanctions internationales contre %s (4 ans).", (NATIONS[n].name));
 }
 
 /* vote d'une resolution condamnant n ; renvoie true si elle passe */
@@ -59,7 +59,7 @@ static bool Vote(Game *g, int n, bool frenchProposal)
     int v = ForeignVeto(g, n);
     if (v != -1) {
         Game_Log(g, frenchProposal ? EV_BAD : EV_INFO, "Conseil de sécurité : %s oppose son veto à la résolution contre %s.",
-                 VetoName(v), Tr(NATIONS[n].name));
+                 VetoName(v), (NATIONS[n].name));
         return false;
     }
     if (!frenchProposal && (g->ally[N_FRANCE][n] || g->nat[n].relation > 60) && g->pendingDilemma < 0) {
@@ -77,7 +77,7 @@ void Intl_ResolveVeto(Game *g, bool veto)
     if (veto) {
         AddRes(g, R_INFLUENCE, -6);
         AddRelation(g, n, 15);
-        Game_Log(g, EV_INFO, "La France oppose son veto pour protéger %s.", Tr(NATIONS[n].name));
+        Game_Log(g, EV_INFO, "La France oppose son veto pour protéger %s.", (NATIONS[n].name));
     } else {
         AddRelation(g, n, -20);
         Sanction(g, n);
@@ -104,7 +104,7 @@ bool Intl_ProposeResolution(Game *g, int n)
     g->commandPoints--;
     AddRes(g, R_INFLUENCE, -10);
     g->unCooldown = 4;
-    Game_Log(g, EV_INFO, "La France saisit le Conseil de sécurité contre %s.", Tr(NATIONS[n].name));
+    Game_Log(g, EV_INFO, "La France saisit le Conseil de sécurité contre %s.", (NATIONS[n].name));
     bool ok = Vote(g, n, true);
     if (ok) AddRes(g, R_INFLUENCE, 5);
     AddRelation(g, n, -15);
@@ -150,7 +150,7 @@ void Intl_OnWar(Game *g, int a, int b)
     g->aggressor[a][b] = true;
     if (g->nat[a].nato && g->nat[b].nato) {
         g->natoCohesion = Clampf(g->natoCohesion - 20, 0, 100);
-        Game_Log(g, EV_WAR, "Crise de l'OTAN : %s attaque %s, un autre membre de l'Alliance.", Tr(NATIONS[a].name), Tr(NATIONS[b].name));
+        Game_Log(g, EV_WAR, "Crise de l'OTAN : %s attaque %s, un autre membre de l'Alliance.", (NATIONS[a].name), (NATIONS[b].name));
     } else if (g->nat[b].nato) {
         /* article 5 */
         int joined = 0;
@@ -167,7 +167,7 @@ void Intl_OnWar(Game *g, int a, int b)
         }
         if (joined || b == N_FRANCE || IsAlly(g, N_FRANCE, b))
             Game_Log(g, EV_WAR, "Article 5 : %d membre(s) de l'OTAN entrent en guerre contre %s pour défendre %s.", joined,
-                     Tr(NATIONS[a].name), b == N_FRANCE ? "la France" : Tr(NATIONS[b].name));
+                     (NATIONS[a].name), b == N_FRANCE ? "la France" : (NATIONS[b].name));
     }
     /* le Conseil de securite se saisit d'une agression sur deux */
     if (Randf(g) < 0.5f && g->unCooldown == 0) {
@@ -182,7 +182,7 @@ void Intl_Turn(Game *g)
     for (int n = 0; n < N_COUNT; n++) {
         Nation *na = &g->nat[n];
         if (na->sanctions <= 0) continue;
-        if (--na->sanctions == 0) Game_Log(g, EV_INFO, "Levée des sanctions contre %s.", Tr(NATIONS[n].name));
+        if (--na->sanctions == 0) Game_Log(g, EV_INFO, "Levée des sanctions contre %s.", (NATIONS[n].name));
         else if (n == N_FRANCE) AddRes(g, R_INFLUENCE, -0.5f);
     }
     /* cohesion de l'Alliance */
@@ -199,6 +199,6 @@ void Intl_Turn(Game *g)
         for (int b = a + 1; b < N_COUNT; b++)
             if (g->war[a][b] && War_Turns(g, a, b) > 12 && Randf(g) < 0.04f) {
                 War_WhitePeace(g, a, b, false);
-                Game_Log(g, EV_INFO, "Cessez-le-feu de l'ONU entre %s et %s : déploiement de casques bleus.", Tr(NATIONS[a].name), Tr(NATIONS[b].name));
+                Game_Log(g, EV_INFO, "Cessez-le-feu de l'ONU entre %s et %s : déploiement de casques bleus.", (NATIONS[a].name), (NATIONS[b].name));
             }
 }

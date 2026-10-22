@@ -192,6 +192,10 @@ int main(void){ int fails=0; Game g;
  { Game_Init(&g, 81, 1); Minister c=g.candidates[MIN_ECONOMIE][0]; Command m={ CMD_MINISTER, N_FRANCE, MIN_ECONOMIE, 0,0,0 };
    int cp=g.commandPoints; CHECK(Cmd_Apply(&g,&m) && g.minister[MIN_ECONOMIE].name==c.name && g.commandPoints==cp-1);
    g.taxRate[S_TRAVAILLEURS]=0.7f; g.inflation=20; for(int k=0;k<10;k++) Cab_Turn(&g); CHECK(g.lobby[LB_SYNDICATS]<30 && g.approval<50); }
+ /* journal : format et arguments conserves pour l'affichage dans une autre langue */
+ { Game_Init(&g, 91, 1); Game_Log(&g, EV_INFO, "Test %s : %d unite(s), %.1f M", "Allemagne", 3, 2.5);
+   const LogEntry *e=&g.log[g.logCount-1]; CHECK(strcmp(e->text,"Test Allemagne : 3 unite(s), 2.5 M")==0);
+   CHECK(strcmp(e->fmt,"Test %s : %d unite(s), %.1f M")==0 && strcmp(e->args,"Allemagne\x1f" "3\x1f" "2.5\x1f")==0); }
  /* sauvegarde */
  Game_Init(&g, 47, 1); for(int i=0;i<6;i++){ g.pendingDilemma=-1; Game_EndTurn(&g);} 
  { static Game h; CHECK(Game_Save(&g, "build/test.sav")); CHECK(Game_Load(&h, "build/test.sav")); CHECK(memcmp(&g,&h,sizeof g)==0);

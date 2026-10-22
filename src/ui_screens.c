@@ -7,6 +7,35 @@
 /* ------------------------------------------------------------------ */
 /* Journal, modales, infobulles                                        */
 /* ------------------------------------------------------------------ */
+/* message du journal dans la langue d'affichage : format traduit, arguments textuels traduits */
+const char *LogText(const LogEntry *e)
+{
+    static char out[2 * LOG_LEN];
+    if (gLang == LANG_FR || !e->fmt[0]) return e->text;
+    const char *f = Tr(e->fmt);
+    if (f == e->fmt) return e->text;
+    const char *a = e->args;
+    int o = 0;
+    for (const char *p = f; *p && o < (int)sizeof(out) - 1; p++) {
+        if (*p != '%') { out[o++] = *p; continue; }
+        if (p[1] == '%') { out[o++] = '%'; p++; continue; }
+        p++;
+        while (*p && strchr("-+ #0123456789.lhz", *p)) p++;
+        if (!*p) break;
+        char piece[LOG_LEN];
+        int k = 0;
+        while (*a && *a != '\x1f' && k < LOG_LEN - 1) piece[k++] = *a++;
+        piece[k] = 0;
+        if (*a == '\x1f') a++;
+        const char *t = *p == 's' ? Tr(piece) : piece;
+        o += snprintf(out + o, sizeof(out) - o, "%s", t);
+        if (o >= (int)sizeof(out)) o = (int)sizeof(out) - 1;
+    }
+    out[o] = 0;
+    return out;
+}
+
+/* ------------------------------------------------------------------ */
 Color LogColor(LogKind k)
 {
     switch (k) {
@@ -37,7 +66,7 @@ void DrawLog(void)
         const LogEntry *e = &game.log[idx];
         Color c = LogColor(e->kind);
         if (e->turn < game.turn - 1) c = Fade(c, 0.55f);
-        Text(e->text, 8, r.y + 5 + i * 13, 10, c);
+        Text(LogText(e), 8, r.y + 5 + i * 13, 10, c);
     }
 }
 
@@ -134,7 +163,7 @@ void DrawReport(void)
     for (int i = game.reportLogStart; i < game.logCount && shown < 30; i++) {
         const LogEntry *e = &game.log[i];
         if (e->kind == EV_INFO) continue;
-        ey += TextWrap(e->text, ex, ey, r.width - 270, 10, LogColor(e->kind));
+        ey += TextWrap(LogText(e), ex, ey, r.width - 270, 10, LogColor(e->kind));
         shown++;
         if (ey > r.y + r.height - 60) break;
     }

@@ -527,11 +527,11 @@ Promouvoir un général (3 Md)	Promote a general (3 bn)
 Nomme un nouveau général (compétence 1 ou 2, trait aléatoire). 8 au maximum.	Appoints a new general (skill 1 or 2, random trait). 8 at most.
 xp %.0f	xp %.0f
 en réserve	in reserve
-+12% en attaque.	+12% extra attack.
++12% en attaque.	+12% attack.
 +12% en défense.	+12% extra defense.
 Organisation récupérée +20% dans sa province.	+20% division organization recovery in its province.
-+15% pour les blindés et mécanisées.	+15% punch for armored and mechanized.
-+15% en collines et en montagne.	+15% edge in hills and mountains.
++15% pour les blindés et mécanisées.	+15% for armored and mechanized units.
++15% en collines et en montagne.	+15% in hills and mountains.
 %s : compétence %d (+%d%% au combat), %s\nIl gagne de l'expérience dans les batailles de sa province et des provinces voisines. Clic : sélectionner, puis affecter.	%s: skill %d (+%d%% in combat), %s\nGains experience in battles in his province and neighboring ones. Click: select, then assign.
 Aucun général.	No generals.
 Affecter à %s	Assign to %s
@@ -722,7 +722,7 @@ Stock	Stock
 Couvert	Covered
 local	local
 Industrie : %.0f usines. Chômage %.0f%%. Blocus de nos côtes : %.0f%%. Embargos : %d.	Industry: %.0f factories. Unemployment %.0f%%. Coastal blockade: %.0f%%. Embargoes: %d.
-Prix en % de 2030 : ils montent quand le monde manque d'un bien. Les excédents s'exportent, la moitié du reste est stockée (jusqu'à deux tours de besoins) et les stocks comblent les pénuries. On n'achète pas à un ennemi ni sous embargo ; un blocus naval coupe jusqu'à 70% des échanges. Une usine demande des travailleurs : le chômage alimente la militance et l'émigration.	Prices in % denote 2030 = 100: they rise when the world lacks a good. Surpluses are exported, half the rest is stocked (up to two turns of needs) and stocks fill shortages. No buying from an enemy or under embargo; trade falls up to 70% during a naval blockade. A factory needs workers: unemployment feeds militancy and emigration.
+Prix en % de 2030 : ils montent quand le monde manque d'un bien. Les excédents s'exportent, la moitié du reste est stockée (jusqu'à deux tours de besoins) et les stocks comblent les pénuries. On n'achète pas à un ennemi ni sous embargo ; un blocus naval coupe jusqu'à 70% des échanges. Une usine demande des travailleurs : le chômage alimente la militance et l'émigration.	Prices as % of 2030 levels: they rise when the world lacks a good. Surpluses are exported, half the rest is stocked (up to two turns of needs) and stocks fill shortages. No buying from an enemy or under embargo; trade falls up to 70% during a naval blockade. A factory needs workers: unemployment feeds militancy and emigration.
 RESSOURCES STRATÉGIQUES	STRATEGIC RESOURCES
 Ressource	Resource
  CRISE	 CRISIS
@@ -1377,7 +1377,7 @@ Bouclier cyber civil	Civil cyber shield
 Durcit hôpitaux et réseaux : effets des cyberattaques -35%.	Hardens hospitals and networks: cyberattack effects -35%.
 Résilience de l'opinion : effets informationnels -35%, militance -0,03/tour.	Opinion resilience: information effects -35%, militancy -0.03/turn.
 Constellation souveraine	Sovereign constellation
-Satellites nationaux : +15% détection, défense orbitale, +5% puissance militaire.	National satellites: +15% detection, orbital defense, +5% power for the military.
+Satellites nationaux : +15% détection, défense orbitale, +5% puissance militaire.	National satellites: +15% detection, orbital defense, +5% military strength.
 Plan Adaptation Climat	Climate Adaptation Plan
 Digues, forêts, réseaux de froid : catastrophes -45%, aridité des provinces -20%.	Dikes, forests, cooling networks: disasters -45%, province aridity -20%.
 Négociations secrètes : réduit l'hostilité (succès selon l'influence).	Secret negotiations: reduces hostility (success based on influence).
@@ -1403,7 +1403,7 @@ Exécutif fort, libertés restreintes. Mobilisation et ordre accrus, isolement d
 Élections suspendues. Les libertés sont restreintes : la répression masque le mécontentement sans l'effacer.	Elections suspended. Freedoms are restricted: repression masks discontent without erasing it.
 Junte militaire	Military junta
 L'armée gouverne. Puissance militaire maximale, économie et diplomatie sacrifiées.	The army governs. Maximum military power, economy and diplomacy sacrificed.
-L'armée gouverne : recrutement 25% moins cher, organisation des troupes restaurée plus vite.	The army governs: 25% markdown on recruitment, troop organization restored faster.
+L'armée gouverne : recrutement 25% moins cher, organisation des troupes restaurée plus vite.	The army governs: recruitment 25% cheaper, troop organization recovers faster.
 État totalitaire	Totalitarian state
 Contrôle total de la société, terreur et propagande. Mobilisation de masse, répression écrasante, paria international.	Total control of society, terror and propaganda. Mass mobilization, crushing repression, international pariah.
 Propagande et police politique : cohésion forcée, mais la conscience des populations accumule une pression explosive.	Propaganda and political police: forced cohesion, but popular consciousness builds explosive pressure.
@@ -1810,7 +1810,7 @@ Conscience -2 et militance -2 partout, population -0,2%.	Consciousness -2 and mi
 Propagande totale	Total propaganda
 Pendant 12 tours : cohésion soutenue, courants autoritaires renforcés. Influence -6.	For 12 turns: cohesion sustained, authoritarian currents stronger. Influence -6.
 Frappe sur le réseau électrique	Power grid strike
-Cyberattaque contre le réseau : -40% d'énergie pendant 3 tours, usines et armée ralenties.	Cyberattack on the grid: energy down 40% during 3 turns, factories and army slowed.
+Cyberattaque contre le réseau : -40% d'énergie pendant 3 tours, usines et armée ralenties.	Cyberattack on the grid: -40% energy for 3 turns, factories and army slowed.
 Vol de technologies	Technology theft
 Intrusion dans les laboratoires de défense : accélère notre recherche, surtout si la cible est en avance.	Breach of defense labs: speeds our research, especially if the target is ahead.
 Paralysie logistique	Logistics paralysis
@@ -1822,7 +1822,7 @@ Attise les colères sociales et les minorités : militance en forte hausse, risq
 Reconnaissance satellitaire	Satellite reconnaissance
 Surveillance de ses forces pendant 6 tours : +15% à nos attaques et +10% à nos défenses face à elle, programme nucléaire suivi.	Watch its forces for 6 turns: vs. it, our attacks +15%, defense +10%, nuclear program tracked.
 Brouillage électromagnétique	Electromagnetic jamming
-Brouillage GNSS et des liaisons de données : son aviation et ses drones perdent 30 à 40% d'efficacité pendant 3 tours.	GNSS and data-link jamming: its air and drone efficiency falls 30 to 40% during 3 turns.
+Brouillage GNSS et des liaisons de données : son aviation et ses drones perdent 30 à 40% d'efficacité pendant 3 tours.	GNSS and data-link jamming: its aircraft and drones lose 30 to 40% efficiency for 3 turns.
 Tir antisatellite	Antisatellite shot
 Détruit ses satellites militaires pendant 10 tours (qualité de l'armée -10%). Les débris menacent aussi nos satellites et le monde condamne.	Destroys its military satellites for 10 turns (army quality -10%). Debris also threatens our satellites and the world condemns.
 Terres rares	Rare earths
