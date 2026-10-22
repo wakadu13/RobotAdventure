@@ -1327,18 +1327,22 @@ static void DrawArmyTab(void)
         if (u->group) { snprintf(buf, sizeof(buf), Tr("G%d"), u->group); Text(buf, row.x + 166, row.y + 3, 10, C_SEL); }
         Bar((Rectangle){ row.x + 190, row.y + 4, 70, 7 }, u->str, 1, C_GOOD);
         Bar((Rectangle){ row.x + 266, row.y + 4, 70, 7 }, u->org, 1, C_ACCENT);
-        if (UNIT_TYPES[u->type].domain == DOM_SEA && !u->training) {
+        bool air = UNIT_TYPES[u->type].domain == DOM_AIR;
+        if ((UNIT_TYPES[u->type].domain == DOM_SEA || air) && !u->training) {
             Rectangle mb = { row.x + 344, row.y + 1, 150, 15 };
             bool mh = Hover(mb);
+            int count = air ? AM_COUNT : NM_COUNT, ms = u->mission % count;
+            const char *mname = air ? AIR_MISSION_NAMES[ms] : NAVAL_MISSION_NAMES[ms];
+            const char *mdesc = air ? AIR_MISSION_DESC[ms] : NAVAL_MISSION_DESC[ms];
             DrawRectangleRec(mb, mh ? (Color){ 52, 82, 120, 255 } : C_PANEL2);
-            Text(Tr(NAVAL_MISSION_NAMES[u->mission]), mb.x + 4, mb.y + 2, 10, C_ACCENT);
-            char tip[300];
-            snprintf(tip, sizeof(tip), Tr("Mission : %s\n%s\nClic : mission suivante."), Tr(NAVAL_MISSION_NAMES[u->mission]), Tr(NAVAL_MISSION_DESC[u->mission]));
+            Text(Tr(mname), mb.x + 4, mb.y + 2, 10, C_ACCENT);
+            char tip[400];
+            snprintf(tip, sizeof(tip), Tr("Mission : %s\n%s\nClic : mission suivante."), Tr(mname), Tr(mdesc));
             Tooltip(mb, tip);
             if (mh && clicked) {
                 clicked = false;
-                for (int k = 1; k <= NM_COUNT; k++)
-                    if (Do(CMD_MISSION, i, (u->mission + k) % NM_COUNT, 0, 0)) break;
+                for (int k = 1; k <= count; k++)
+                    if (Do(CMD_MISSION, i, (ms + k) % count, 0, 0)) break;
             }
             y += 18;
             shown++;

@@ -505,6 +505,12 @@ const float PROVINCE_SEA_EXPOSURE[PROV_COUNT] = {
 };
 
 const char *GROUP_MODE_NAMES[GM_COUNT] = { "Libre", "Tenir le front", "Offensive" };
+const char *AIR_MISSION_NAMES[AM_COUNT] = { "Appui au sol", "Supériorité aérienne", "Bombardement stratégique" };
+const char *AIR_MISSION_DESC[AM_COUNT] = {
+    "Appuie les batailles terrestres à portée : plein effet au sol.",
+    "Chasse l'aviation ennemie à portée : réduit son appui au sol et protège nos bombardiers, mais appui au sol réduit de moitié.",
+    "Frappe l'industrie et les infrastructures ennemies à portée, chaque tour de guerre ; pas d'appui au sol, pertes face à la DCA et aux chasseurs.",
+};
 const char *NAVAL_MISSION_NAMES[NM_COUNT] = { "Patrouille", "Frappe à terre", "Guerre au commerce", "Escorte" };
 const char *NAVAL_MISSION_DESC[NM_COUNT] = {
     "Contrôle des eaux côtières : combat naval et blocus des côtes ennemies voisines.",

@@ -74,6 +74,7 @@ typedef enum { DOM_LAND, DOM_AIR, DOM_SEA } UnitDomain;
 typedef enum { SR_TERRES_RARES, SR_URANIUM, SR_PUCES, SR_COUNT } StratRes;
 typedef enum { GM_NONE, GM_HOLD, GM_ATTACK, GM_COUNT } GroupMode;
 typedef enum { NM_PATROL, NM_STRIKE, NM_RAID, NM_ESCORT, NM_COUNT } NavalMission;
+typedef enum { AM_SUPPORT, AM_SUPERIORITY, AM_BOMBING, AM_COUNT } AirMission;
 typedef enum {
     OP_RESEAU, OP_VOL_TECH, OP_LOGISTIQUE, OP_INGERENCE, OP_DESTAB, OP_RECON, OP_BROUILLAGE, OP_ASAT, OP_COUNT
 } OpType;
@@ -250,6 +251,8 @@ extern const float       PROVINCE_SEA_EXPOSURE[PROV_COUNT];
 extern const char       *GROUP_MODE_NAMES[GM_COUNT];
 extern const char       *NAVAL_MISSION_NAMES[NM_COUNT];
 extern const char       *NAVAL_MISSION_DESC[NM_COUNT];
+extern const char       *AIR_MISSION_NAMES[AM_COUNT];
+extern const char       *AIR_MISSION_DESC[AM_COUNT];
 extern const char       *RATING_NAMES[RATING_COUNT];
 extern const float       RATING_RATE[RATING_COUNT];
 extern const char       *GENERAL_TRAITS[GT_COUNT];

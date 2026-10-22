@@ -486,9 +486,26 @@ static float AirPower(const Game *g, int side, int enemy, int p)
         if (u->owner != side && !(IsAlly(g, side, u->owner) && War_AtWar(g, u->owner, enemy))) continue;
         const UnitDef *d = &UNIT_TYPES[u->type];
         if (d->domain != DOM_AIR && u->type != U_PA) continue;
+        if (d->domain == DOM_AIR && u->mission == AM_BOMBING) continue;
         int r = Distance(u->prov, p, d->range, false);
         if (r < 0) continue;
-        a += d->atk * Readiness(u) * Mil_TechBonus(g, u->owner, u->type) * (g->nat[u->owner].jammed > 0 ? 0.6f : 1.0f);
+        float m = d->domain == DOM_AIR && u->mission == AM_SUPERIORITY ? 0.5f : 1.0f;
+        a += m * d->atk * Readiness(u) * Mil_TechBonus(g, u->owner, u->type) * (g->nat[u->owner].jammed > 0 ? 0.6f : 1.0f);
+    }
+    return a;
+}
+
+/* chasseurs en mission de superiorite aerienne a portee de p */
+static float AirSuperiority(const Game *g, int side, int enemy, int p)
+{
+    float a = 0;
+    for (int i = 0; i < MAX_UNITS; i++) {
+        const Unit *u = &g->units[i];
+        if (!u->active || u->training || u->mission != AM_SUPERIORITY) continue;
+        if (u->owner != side && !(IsAlly(g, side, u->owner) && War_AtWar(g, u->owner, enemy))) continue;
+        const UnitDef *d = &UNIT_TYPES[u->type];
+        if (d->domain != DOM_AIR || Distance(u->prov, p, d->range, false) < 0) continue;
+        a += d->atk * Readiness(u) * Mil_TechBonus(g, u->owner, u->type) * War_VetBonus(u);
     }
     return a;
 }
@@ -624,6 +641,9 @@ static void AirFactors(const Game *g, int p, int a, float *fa, float *fd)
     int defender = g->prov[p].ctrl;
     float airA = AirPower(g, a, defender, p) * (1 - Clampf(g->nat[defender].tech[T_GE] * 0.05f, 0, 0.3f));
     float airD = AirPower(g, defender, a, p) * (1 - Clampf(g->nat[a].tech[T_GE] * 0.05f, 0, 0.3f));
+    float supA = AirSuperiority(g, a, defender, p), supD = AirSuperiority(g, defender, a, p);
+    airA *= 1 - 0.5f * supD / (supA + supD + 2);
+    airD *= 1 - 0.5f * supA / (supA + supD + 2);
     float effA = fmaxf(0, airA - 0.5f * AntiAir(g, defender, p));
     float effD = fmaxf(0, airD - 0.5f * AntiAir(g, a, p));
     *fa = 1 + 0.35f * effA / (effA + effD + 3);
@@ -2080,6 +2100,11 @@ static void FrenchGroups(Game *g)
 const char *War_MissionBlocked(const Game *g, int i, int m)
 {
     const Unit *u = &g->units[i];
+    if (u->active && u->owner == N_FRANCE && UNIT_TYPES[u->type].domain == DOM_AIR) {
+        if (m < 0 || m >= AM_COUNT) return "Mission inconnue";
+        if (m == AM_SUPERIORITY && u->type == U_MALE) return "Les drones ne mènent pas de combat aérien";
+        return NULL;
+    }
     if (!u->active || u->owner != N_FRANCE || UNIT_TYPES[u->type].domain != DOM_SEA) return "Unité navale requise";
     (void)g;
     switch (m) {
@@ -2116,7 +2141,7 @@ static void NavalMissions(Game *g)
         na->raid = Clampf(0.5f * r / (r + e + 4), 0, 0.5f);
         for (int i = 0; i < MAX_UNITS; i++) {
             Unit *u = &g->units[i];
-            if (u->active && u->mission == NM_RAID && War_AtWar(g, u->owner, n)) u->str -= 0.02f * e / (r + e + 1);
+            if (u->active && UNIT_TYPES[u->type].domain == DOM_SEA && u->mission == NM_RAID && War_AtWar(g, u->owner, n)) u->str -= 0.02f * e / (r + e + 1);
         }
         if (n == N_FRANCE && na->raid > 0.1f)
             Game_Log(g, EV_BAD, "Guerre au commerce : nos convois sont attaqués (-%.0f%% d'échanges).", na->raid * 100);
@@ -2145,13 +2170,54 @@ static void NavalMissions(Game *g)
 }
 
 /* missions navales choisies par l'IA */
+/* bombardement strategique : chaque escadre frappe la province ennemie la plus industrielle a sa portee */
+static void StrategicBombing(Game *g)
+{
+    int frRaids = 0, onFrance = 0;
+    for (int i = 0; i < MAX_UNITS; i++) {
+        Unit *u = &g->units[i];
+        const UnitDef *d = &UNIT_TYPES[u->type];
+        if (!u->active || u->training || d->domain != DOM_AIR || u->mission != AM_BOMBING || !War_AtWarAny(g, u->owner)) continue;
+        int best = -1;
+        float bestV = 0;
+        for (int p = 0; p < PROV_COUNT; p++) {
+            const Province *pr = &g->prov[p];
+            if (!War_AtWar(g, u->owner, pr->ctrl) || Distance(u->prov, p, d->range, false) < 0) continue;
+            float v = pr->industry * pr->prosperity + pr->pop * 0.1f;
+            if (v > bestV) { bestV = v; best = p; }
+        }
+        if (best < 0) continue;
+        int e = g->prov[best].ctrl;
+        float aa = AntiAir(g, e, best), sup = AirSuperiority(g, e, u->owner, best);
+        float hit = d->atk * Readiness(u) * Mil_TechBonus(g, u->owner, u->type) / (1 + 0.15f * aa + 0.3f * sup);
+        Province *pr = &g->prov[best];
+        pr->prosperity = Clampf(pr->prosperity - 0.012f * hit, 0.4f, 2.5f);
+        pr->damage = Clampf(pr->damage + 0.008f * hit, 0, 1);
+        if (e == N_FRANCE) { AddRes(g, R_COHESION, -0.15f * hit); onFrance++; }
+        u->str = Clampf(u->str - 0.02f - 0.03f * (aa / (aa + 6) + sup / (sup + 3)), 0, 1);
+        u->org = Clampf(u->org - 0.1f, 0, 1);
+        if (u->owner == N_FRANCE) frRaids++;
+    }
+    if (frRaids) Game_Log(g, EV_WAR, "Bombardements stratégiques : %d raid(s) de nos escadres sur l'industrie ennemie.", frRaids);
+    if (onFrance) Game_Log(g, EV_BAD, "Bombardements ennemis sur notre territoire : %d raid(s).", onFrance);
+}
+
 static void AiMissions(Game *g, int n)
 {
     const Nation *na = &g->nat[n];
     bool war = War_AtWarAny(g, n);
     for (int i = 0; i < MAX_UNITS; i++) {
         Unit *u = &g->units[i];
-        if (!u->active || u->owner != n || UNIT_TYPES[u->type].domain != DOM_SEA) continue;
+        if (!u->active || u->owner != n) continue;
+        if (UNIT_TYPES[u->type].domain == DOM_AIR) {
+            /* en guerre, une escadre sur trois prend l'air pour la superiorite, une sur quatre bombarde si l'IA est forte */
+            int m = AM_SUPPORT;
+            if (war && u->type == U_CHASSE && i % 3 == 0) m = AM_SUPERIORITY;
+            else if (war && na->army > 8 && i % 4 == 1) m = AM_BOMBING;
+            u->mission = (unsigned char)m;
+            continue;
+        }
+        if (UNIT_TYPES[u->type].domain != DOM_SEA) continue;
         int m = NM_PATROL;
         if (war) {
             if (u->type == U_SNA || u->type == U_USV) m = NM_RAID;
@@ -2264,6 +2330,7 @@ void War_Turn(Game *g)
     War_UpdateSupply(g);
     NavalWarfare(g);
     NavalMissions(g);
+    StrategicBombing(g);
     Battles(g);
     Supply(g);
     Works(g);

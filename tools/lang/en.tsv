@@ -1879,3 +1879,13 @@ Payer le tribut	Pay the tribute
 -12 Budget, -3 Cohésion, -8 crédibilité, relation +15	-12 Budget, -3 Cohesion, -8 credibility, relation +15
 Refuser le chantage	Refuse the blackmail
 Relation -15 ; si notre dissuasion manque de crédibilité, elle peut nous déclarer la guerre	Relation -15; if our deterrent lacks credibility, it may declare war on us
+Mission inconnue	Unknown mission
+Les drones ne mènent pas de combat aérien	Drones do not fight air-to-air
+Bombardements stratégiques : %d raid(s) de nos escadres sur l'industrie ennemie.	Strategic bombing: %d raid(s) by our wings on enemy industry.
+Bombardements ennemis sur notre territoire : %d raid(s).	Enemy bombing on our territory: %d raid(s).
+Appui au sol	Ground support
+Supériorité aérienne	Air superiority
+Bombardement stratégique	Strategic bombing
+Appuie les batailles terrestres à portée : plein effet au sol.	Supports land battles in range: full effect on the ground.
+Chasse l'aviation ennemie à portée : réduit son appui au sol et protège nos bombardiers, mais appui au sol réduit de moitié.	Hunts enemy aircraft in range: cuts their ground support and shields our bombers, but our own ground support is halved.
+Frappe l'industrie et les infrastructures ennemies à portée, chaque tour de guerre ; pas d'appui au sol, pertes face à la DCA et aux chasseurs.	Strikes enemy industry and infrastructure in range every turn of war; no ground support, losses to air defense and fighters.

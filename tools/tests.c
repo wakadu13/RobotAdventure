@@ -172,6 +172,16 @@ int main(void){ int fails=0; Game g;
    int seen=0; for(int s=0;s<10 && !seen;s++){ Game_Init(&g, 600+s, 1); for(int t=0;t<40;t++){ g.pendingDilemma=-1; Game_EndTurn(&g);
      if(g.pendingDilemma==DLM_AI_ALLIANCE||g.pendingDilemma==DLM_AI_TRADE||g.pendingDilemma==DLM_PEACE_BLACKMAIL) seen=1; } }
    CHECK(seen); }
+ /* missions aeriennes : le bombardement strategique frappe l'industrie ennemie */
+ { Game_Init(&g, 51, 1); int f=-1; for(int i=0;i<MAX_UNITS;i++) if(g.units[i].active && g.units[i].owner==N_FRANCE && g.units[i].type==U_CHASSE) f=i;
+   CHECK(f>=0); Command m={ CMD_MISSION, N_FRANCE, (short)f, AM_BOMBING,0,0 }; CHECK(Cmd_Apply(&g,&m) && g.units[f].mission==AM_BOMBING);
+   War_StartWar(&g, N_FRANCE, N_ALLEMAGNE, false); float before=0, after=0;
+   for(int p=0;p<PROV_COUNT;p++) if(g.prov[p].owner==N_ALLEMAGNE) before+=g.prov[p].prosperity;
+   g.pendingDilemma=-1; Game_EndTurn(&g);
+   for(int p=0;p<PROV_COUNT;p++) if(g.prov[p].owner==N_ALLEMAGNE) after+=g.prov[p].prosperity;
+   CHECK(after<before);
+   int dr=-1; for(int i=0;i<MAX_UNITS;i++) if(g.units[i].active && g.units[i].owner==N_FRANCE && g.units[i].type==U_MALE) dr=i;
+   if(dr>=0){ Command m2={ CMD_MISSION, N_FRANCE, (short)dr, AM_SUPERIORITY,0,0 }; CHECK(!Cmd_Apply(&g,&m2)); } }
  /* sauvegarde */
  Game_Init(&g, 47, 1); for(int i=0;i<6;i++){ g.pendingDilemma=-1; Game_EndTurn(&g);} 
  { static Game h; CHECK(Game_Save(&g, "build/test.sav")); CHECK(Game_Load(&h, "build/test.sav")); CHECK(memcmp(&g,&h,sizeof g)==0);
