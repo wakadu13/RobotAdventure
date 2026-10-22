@@ -148,6 +148,10 @@ belli. Les autres nations y recourent aussi, entre elles comme contre la France.
 - Huit modes de carte : politique, climat, militance, population, cultures, relations, logistique,
   ressources ; historique de chaque nation (population, armée, relation).
 - Écrans tactiles : pincer pour zoomer, bouton ORDRE pour envoyer les unités.
+- **Grande interface** (par défaut sur Android, `F2` ou menu ailleurs) : une partie de l'écran à la fois
+  (carte, panneau, bas du panneau, journal, barre des ressources), agrandie à toute la taille de
+  l'écran ; une barre de navigation en bas passe de l'une à l'autre. Les fenêtres (dilemmes, rapports,
+  négociations) s'affichent automatiquement en grand.
 - Rapport de fin de tour, désactivable.
 - Trois niveaux de difficulté.
 - Sauvegarde manuelle (`F5`, menu) et automatique tous les 4 tours ; chargement par `F9` ou par le
@@ -167,6 +171,7 @@ belli. Les autres nations y recourent aussi, entre elles comme contre la France.
 | Sauvegarder / charger | `F5` / `F9` |
 | Enregistrer le rejeu de la partie | `F6` |
 | Plein écran / menu | `F11` / `Échap` |
+| Grande interface | `F2` |
 
 ## Téléchargement
 

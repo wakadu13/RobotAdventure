@@ -101,6 +101,20 @@ static int      tutorial = -1;       /* etape du tutoriel (-1 : aucun) */
 static int      tutoUnits, tutoTurn, tutoProv;
 static Replay   session;             /* commandes de la partie : rejeu et futur multijoueur */
 
+/* grande interface (telephones) : une region de l'ecran logique agrandie a toute la taille de l'ecran */
+typedef enum { VR_ALL, VR_MAP, VR_PANEL, VR_LOWER, VR_LOG, VR_TOPBAR, VR_MODAL, VR_COUNT } ViewRegion;
+static const Rectangle REGIONS[VR_COUNT] = {
+    { 0, 0, VW, VH }, { 0, 44, 712, 546 }, { 704, 44, 576, 346 }, { 704, 368, 576, 352 },
+    { 0, 584, 712, 136 }, { 0, 0, 1280, 46 }, { 180, 60, 920, 600 },
+};
+static const char *REGION_NAMES[VR_COUNT] = { "Tout", "Carte", "Panneau", "Bas", "Journal", "Barre", "Fenêtre" };
+static bool       bigUi;
+static ViewRegion region = VR_MAP;
+static Rectangle  viewSrc = { 0, 0, VW, VH };
+static float      navH;
+static void LoadSettings(void);
+static void SaveSettings(void);
+
 /* toute action du joueur passe par une commande, enregistree pour le rejeu */
 static bool Do(int type, int a, int b, int c, float f)
 {
@@ -2462,7 +2476,7 @@ static void DrawReport(void)
     DrawRectangleLinesEx(cb, 1, C_TEXT);
     if (showReports) DrawRectangle((int)cb.x + 4, (int)cb.y + 4, 8, 8, C_ACCENT);
     Text("Afficher ce rapport à chaque tour", cb.x + 24, cb.y + 3, 10, C_DIM);
-    if (Hover((Rectangle){ cb.x, cb.y, 220, 16 }) && clicked) { showReports = !showReports; clicked = false; }
+    if (Hover((Rectangle){ cb.x, cb.y, 220, 16 }) && clicked) { showReports = !showReports; clicked = false; SaveSettings(); }
 
     if (Button((Rectangle){ r.x + r.width - 180, r.y + r.height - 44, 160, 32 }, "CONTINUER", true, 20)
         || IsKeyPressed(KEY_SPACE) || IsKeyPressed(KEY_ENTER) || IsKeyPressed(KEY_ESCAPE))
@@ -2594,6 +2608,25 @@ static void DrawTutorial(void)
 /* ------------------------------------------------------------------ */
 /* Ecrans                                                              */
 /* ------------------------------------------------------------------ */
+/* reglages de l'interface conserves d'une session a l'autre */
+#define SETTINGS_FILE "bouclier2050.cfg"
+static void LoadSettings(void)
+{
+    FILE *f = fopen(SETTINGS_FILE, "r");
+    if (!f) return;
+    int big = bigUi, rep = showReports;
+    if (fscanf(f, "grande_interface=%d\nrapports=%d", &big, &rep) >= 1) { bigUi = big != 0; showReports = rep != 0; }
+    fclose(f);
+}
+
+static void SaveSettings(void)
+{
+    FILE *f = fopen(SETTINGS_FILE, "w");
+    if (!f) return;
+    fprintf(f, "grande_interface=%d\nrapports=%d\n", bigUi ? 1 : 0, showReports ? 1 : 0);
+    fclose(f);
+}
+
 static void ResetUi(void)
 {
     selProvince = PV_FR_IDF;
@@ -2678,8 +2711,12 @@ static void DrawTitle(void)
     y += 46;
     char buf[64];
     snprintf(buf, sizeof(buf), "Difficulté : %s", DIFFICULTY_NAMES[newDifficulty]);
-    Rectangle dr = { bx, y, 280, 30 };
+    Rectangle dr = { bx, y, 182, 30 };
     if (Button(dr, buf, true, 10)) newDifficulty = (newDifficulty + 1) % DIFF_COUNT;
+    Rectangle ur = { bx + 188, y, 92, 30 };
+    if (Button(ur, bigUi ? "Interface : grande" : "Interface : normale", true, 10)) { bigUi = !bigUi; SaveSettings(); }
+    Tooltip(ur, "Grande interface (téléphones, petits écrans) : une partie de l'écran à la fois, agrandie ; une barre de "
+                "navigation en bas de l'écran passe de la carte au panneau, au journal ou à la barre des ressources. F2 pour basculer.");
     Tooltip(dr, "Facile : menaces et climat atténués, recettes accrues.\nDifficile : menaces, climat et IA plus agressifs, "
                 "recettes réduites ; le score est multiplié par 1,3.");
     y += 38;
@@ -2870,20 +2907,62 @@ static void DrawGame(void)
 /* ------------------------------------------------------------------ */
 /* Boucle principale                                                   */
 /* ------------------------------------------------------------------ */
+/* region affichee : toute la scene, ou en grande interface la partie choisie (les fenetres modales d'abord) */
+static Rectangle CurrentRegion(void)
+{
+    if (!bigUi) return REGIONS[VR_ALL];
+    if (screen == SCR_TITLE) return (Rectangle){ 320, 40, 640, 660 };
+    if (screen != SCR_GAME) return REGIONS[VR_ALL];
+    bool modal = game.pendingDilemma >= 0 || treatyOpen || (game.reportReady && showReports && game.state == GAME_RUNNING);
+    return REGIONS[modal ? VR_MODAL : region];
+}
+
 static void UpdateView(void)
 {
     float sw = (float)GetScreenWidth(), sh = (float)GetScreenHeight();
-    float s = fminf(sw / VW, sh / VH);
+    navH = bigUi ? fmaxf(56, sh * 0.1f) : 0;
+    viewSrc = CurrentRegion();
+    float s = fminf(sw / viewSrc.width, (sh - navH) / viewSrc.height);
     if (s != viewScale) {
         bool integer = fabsf(s - roundf(s)) < 0.01f;
         SetTextureFilter(target.texture, integer ? TEXTURE_FILTER_POINT : TEXTURE_FILTER_BILINEAR);
     }
     viewScale = s;
-    viewOffset = (Vector2){ (sw - VW * s) / 2, (sh - VH * s) / 2 };
+    viewOffset = (Vector2){ (sw - viewSrc.width * s) / 2, (sh - navH - viewSrc.height * s) / 2 };
     Vector2 m = GetMousePosition();
-    mouse = (Vector2){ (m.x - viewOffset.x) / s, (m.y - viewOffset.y) / s };
+    mouse = (Vector2){ viewSrc.x + (m.x - viewOffset.x) / s, viewSrc.y + (m.y - viewOffset.y) / s };
     clicked = IsMouseButtonPressed(MOUSE_BUTTON_LEFT);
     rclicked = IsMouseButtonPressed(MOUSE_BUTTON_RIGHT);
+    /* un toucher sur la barre de navigation ne traverse pas jusqu'au jeu */
+    if (bigUi && m.y >= sh - navH) { clicked = rclicked = false; mouse = (Vector2){ -1000, -1000 }; }
+}
+
+/* barre de navigation de la grande interface, en pixels d'ecran */
+static void DrawNavBar(void)
+{
+    if (!bigUi) return;
+    float sw = (float)GetScreenWidth(), sh = (float)GetScreenHeight();
+    DrawRectangle(0, (int)(sh - navH), (int)sw, (int)navH, C_PANEL);
+    DrawLine(0, (int)(sh - navH), (int)sw, (int)(sh - navH), C_BORDER);
+    static const ViewRegion order[] = { VR_MAP, VR_PANEL, VR_LOWER, VR_LOG, VR_TOPBAR, VR_ALL };
+    int count = screen == SCR_GAME ? 6 : 0;
+    float bw = sw / (count + 1);
+    int fs = (int)(navH * 0.32f);
+    Vector2 m = GetMousePosition();
+    bool press = IsMouseButtonPressed(MOUSE_BUTTON_LEFT) && m.y >= sh - navH;
+    for (int i = 0; i <= count; i++) {
+        Rectangle r = { i * bw + 4, sh - navH + 6, bw - 8, navH - 12 };
+        const char *label = i < count ? REGION_NAMES[order[i]] : "Normal";
+        bool sel = i < count && region == order[i];
+        DrawRectangleRec(r, sel ? (Color){ 44, 66, 96, 255 } : C_PANEL2);
+        DrawRectangleLinesEx(r, 2, sel ? C_ACCENT : C_BORDER);
+        int tw = MeasureText(label, fs);
+        DrawText(label, (int)(r.x + (r.width - tw) / 2), (int)(r.y + (r.height - fs) / 2), fs, sel ? C_TEXT : C_DIM);
+        if (press && CheckCollisionPointRec(m, r)) {
+            if (i < count) region = order[i];
+            else bigUi = false;
+        }
+    }
 }
 
 #if defined(PLATFORM_ANDROID)
@@ -2912,6 +2991,10 @@ int main(void)
     }
 
     target = LoadRenderTexture(VW, VH);
+#if defined(PLATFORM_ANDROID)
+    bigUi = true;   /* sur telephone, la grande interface par defaut */
+#endif
+    LoadSettings();
     viewScale = 0;
     Image img = GenImageColor(MAP_VW, MAP_VH, C_SEA);
     mapTex = LoadTextureFromImage(img);
@@ -2926,6 +3009,7 @@ int main(void)
         tooltip[0] = 0;
         inputLayer = activeLayer = 0;
         if (IsKeyPressed(KEY_F11)) ToggleFullscreen();
+        if (IsKeyPressed(KEY_F2)) { bigUi = !bigUi; SaveSettings(); }
 
         BeginTextureMode(target);
         switch (screen) {
@@ -2939,9 +3023,11 @@ int main(void)
 
         BeginDrawing();
         ClearBackground(BLACK);
-        DrawTexturePro(target.texture, (Rectangle){ 0, 0, VW, -VH },
-                       (Rectangle){ viewOffset.x, viewOffset.y, VW * viewScale, VH * viewScale },
+        /* la texture de rendu est inversee verticalement */
+        DrawTexturePro(target.texture, (Rectangle){ viewSrc.x, VH - viewSrc.y - viewSrc.height, viewSrc.width, -viewSrc.height },
+                       (Rectangle){ viewOffset.x, viewOffset.y, viewSrc.width * viewScale, viewSrc.height * viewScale },
                        (Vector2){ 0, 0 }, 0, WHITE);
+        DrawNavBar();
         EndDrawing();
     }
     UnloadTexture(mapTex);
