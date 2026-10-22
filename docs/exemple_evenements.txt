@@ -1,0 +1,29 @@
+# BOUCLIER 2050 - exemple de mod d'evenements.
+# Copiez ce fichier en mods/evenements.txt a cote du jeu pour l'activer.
+# Format : voir docs/MODS.md. Les lignes commencant par # sont ignorees.
+
+[evenement]
+titre = Crue centennale de la Seine
+texte = La Seine atteint 8,6 m a Paris. Le metro est inonde, les ministeres evacues.
+tour_min = 6
+poids = 2
+condition = temp_sup 17
+option_a = Plan de protection exceptionnel
+effet_a = ressource budget -10
+effet_a = ressource cohesion 3
+option_b = Laisser les collectivites gerer
+effet_b = ressource cohesion -5
+effet_b = militance moyennes 8
+suite_b = La Seine apres la crue
+delai = 3
+
+[evenement]
+titre = La Seine apres la crue
+texte = Les degats de la crue se revelent plus lourds que prevu : les assureurs se retirent de l'Ile-de-France.
+poids = 0
+option_a = Fonds public d'indemnisation
+effet_a = ressource budget -8
+effet_a = militance moyennes -6
+option_b = Laisser les sinistres a leur sort
+effet_b = ressource cohesion -4
+effet_b = prosperite -2

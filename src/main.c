@@ -524,6 +524,7 @@ int main(int argc, char **argv)
     Image img = GenImageColor(MAP_VW, MAP_VH, C_SEA);
     mapTex = LoadTextureFromImage(img);
     UnloadImage(img);
+    Ev_LoadMods("mods/" "evenements.txt");   /* evenements supplementaires, s'il y en a (docs/MODS.md) */
     Game_Init(&game, (unsigned)time(NULL), DIFF_NORMAL);
 
     while (!WindowShouldClose() && !quitRequested) {

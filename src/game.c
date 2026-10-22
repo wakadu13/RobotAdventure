@@ -93,6 +93,7 @@ void Game_Init(Game *g, unsigned seed, int difficulty)
 {
     memset(g, 0, sizeof(*g));
     Map_Init();
+    Ev_Init();
     g->rng = seed ? seed : 12345u;
     g->difficulty = difficulty < 0 || difficulty >= DIFF_COUNT ? DIFF_NORMAL : difficulty;
     g->temp = 1.5f;
@@ -980,7 +981,8 @@ void Game_EndTurn(Game *g)
     Game_Log(g, EV_INFO, "--- %s : %d menaces actives, +%.2f°C, %.1f M d'habitants ---",
              date, Game_ActiveThreats(g), g->temp, Soc_NationPop(g, N_FRANCE));
 
-    /* 8. dilemme aleatoire (si aucun dilemme dynamique n'est deja en attente) */
+    /* 8. suite d'un evenement arrivee a echeance, puis dilemme aleatoire */
+    Ev_TriggerDue(g);
     if (g->pendingDilemma < 0 && g->turn >= 3 && Randf(g) < 0.13f) {
         int avail[32], n = 0;
         for (int d = 0; d < DILEMMA_COUNT; d++) {

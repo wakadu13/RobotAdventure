@@ -212,6 +212,14 @@ int main(void){ int fails=0; Game g;
    War_TreatyDraft(&g, N_ALLEMAGNE); CHECK(War_Negotiate(&g)==3 && g.treaty.pendingHuman);
    g.pendingDilemma=-1; Command end={ CMD_END_TURN, N_FRANCE, 0,0,0,0 }; CHECK(Cmd_Apply(&g,&end) && g.activePlayer==N_ALLEMAGNE);
    Command yes={ CMD_CMDR_TREATY, N_ALLEMAGNE, 1,0,0,0 }; CHECK(Cmd_Apply(&g,&yes) && !g.war[N_FRANCE][N_ALLEMAGNE]); }
+ /* evenements en chaine : la suite arrive apres le delai */
+ { Game_Init(&g, 111, 1); int k=-1; for(int i=0;i<EVENT_COUNT;i++){ const DilemmaDef *d=Ev_Dilemma(i); if(d && strcmp(d->title,"Sécheresse historique")==0) k=i; }
+   CHECK(k>=0); g.pendingDilemma=DLM_EVENT+k; Game_ResolveDilemma(&g, 1); CHECK(g.eventQueue[0]>0);
+   int seen=0; for(int t=0;t<8 && !seen;t++){ g.pendingDilemma=-1; Game_EndTurn(&g); if(g.pendingDilemma>=DLM_EVENT && strcmp(Game_CurrentDilemma(&g)->title,"Les nappes profondes épuisées")==0) seen=1; }
+   CHECK(seen); }
+ /* mods : evenements charges depuis un fichier texte */
+ { int before=EVENT_COUNT; int n=Ev_LoadMods("docs/exemple_evenements.txt"); CHECK(n==2 && EVENT_COUNT==before+2);
+   const DilemmaDef *d=Ev_Dilemma(before); CHECK(d && strcmp(d->title,"Crue centennale de la Seine")==0 && strstr(d->effA,"Budget")!=NULL); }
  /* sauvegarde */
  Game_Init(&g, 47, 1); for(int i=0;i<6;i++){ g.pendingDilemma=-1; Game_EndTurn(&g);} 
  { static Game h; CHECK(Game_Save(&g, "build/test.sav")); CHECK(Game_Load(&h, "build/test.sav")); CHECK(memcmp(&g,&h,sizeof g)==0);

@@ -202,6 +202,8 @@ const SaveField SAVE_FIELDS[] = {
     { "dilemmaParam2", offsetof(Game, dilemmaParam2), sizeof(((Game *)0)->dilemmaParam2), 1, 0, sizeof(((Game *)0)->dilemmaParam2) },
     { "dilemmaUsed", offsetof(Game, dilemmaUsed), sizeof(((Game *)0)->dilemmaUsed[0]), 32, 0, sizeof(((Game *)0)->dilemmaUsed[0]) },
     { "eventUsed", offsetof(Game, eventUsed), sizeof(((Game *)0)->eventUsed[0]), EVENT_MAX, 0, sizeof(((Game *)0)->eventUsed[0]) },
+    { "eventQueue", offsetof(Game, eventQueue), sizeof(((Game *)0)->eventQueue[0]), EVENT_QUEUE, 0, sizeof(((Game *)0)->eventQueue[0]) },
+    { "eventDue", offsetof(Game, eventDue), sizeof(((Game *)0)->eventDue[0]), EVENT_QUEUE, 0, sizeof(((Game *)0)->eventDue[0]) },
     { "reportReady", offsetof(Game, reportReady), sizeof(((Game *)0)->reportReady), 1, 0, sizeof(((Game *)0)->reportReady) },
     { "reportLogStart", offsetof(Game, reportLogStart), sizeof(((Game *)0)->reportLogStart), 1, 0, sizeof(((Game *)0)->reportLogStart) },
     { "reportRes", offsetof(Game, reportRes), sizeof(((Game *)0)->reportRes[0]), R_COUNT, 0, sizeof(((Game *)0)->reportRes[0]) },

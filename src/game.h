@@ -296,7 +296,8 @@ extern const char       *ALERT_DESC[3];
 #define DLM_AI_TRADE       107   /* une IA propose un accord commercial */
 #define DLM_PEACE_BLACKMAIL 108  /* chantage nucleaire en temps de paix */
 #define DLM_EVENT          200   /* evenements contextuels : DLM_EVENT + indice */
-#define EVENT_MAX          96
+#define EVENT_MAX          160
+#define EVENT_QUEUE        8
 
 /* ---- etat dynamique ---- */
 typedef struct {
@@ -547,6 +548,8 @@ typedef struct {
     int dilemmaParam2;
     bool dilemmaUsed[32];
     bool eventUsed[EVENT_MAX];
+    short eventQueue[EVENT_QUEUE];   /* suites differees : indice + 1 */
+    short eventDue[EVENT_QUEUE];
 
     bool reportReady;
     int reportLogStart;
@@ -618,10 +621,13 @@ float       Cab_LobbyTarget(const Game *g, int l);
 float       Cab_ApprovalTarget(const Game *g);
 
 /* events.c : evenements contextuels decrits par des donnees */
-extern const int  EVENT_COUNT;
+extern int        EVENT_COUNT;
+void        Ev_Init(void);
+int         Ev_LoadMods(const char *path);   /* evenements supplementaires decrits dans un fichier texte */
 const DilemmaDef *Ev_Dilemma(int k);
 void        Ev_Apply(Game *g, int k, int choice);
 bool        Ev_Trigger(Game *g);
+bool        Ev_TriggerDue(Game *g);
 bool        Ev_Eligible(const Game *g, int k);
 
 /* economy.c */
