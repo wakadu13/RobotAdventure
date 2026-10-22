@@ -165,6 +165,13 @@ int main(void){ int fails=0; Game g;
    g.res[R_BUDGET]=200; CHECK(War_Recruit(&g, U_INF, PV_FR_IDF) || War_Recruit(&g, U_INF, PV_FR_NAQ)); CHECK(g.nat[N_FRANCE].manpower < m0);
    g.nat[N_FRANCE].manpower=0; CHECK(War_RecruitBlocked(&g, U_INF, PV_FR_NAQ)!=NULL);
    Unit u={0}; u.xp=0; CHECK(War_VetBonus(&u)==1.0f); u.xp=100; CHECK(War_VetBonus(&u)>1.19f && War_VetRank(&u)==3); }
+ /* propositions de l'IA : alliance, accord commercial, chantage nucleaire */
+ { Game_Init(&g, 41, 1); g.pendingDilemma=DLM_AI_ALLIANCE; g.dilemmaParam=N_BENELUX; CHECK(Game_CurrentDilemma(&g)!=NULL);
+   Command a={ CMD_DILEMMA, N_FRANCE, 0,0,0,0 }; CHECK(Cmd_Apply(&g,&a) && g.ally[N_FRANCE][N_BENELUX]);
+   g.pendingDilemma=DLM_PEACE_BLACKMAIL; g.dilemmaParam=N_BOREALE; float b=g.res[R_BUDGET]; CHECK(Cmd_Apply(&g,&a) && g.res[R_BUDGET]<b);
+   int seen=0; for(int s=0;s<10 && !seen;s++){ Game_Init(&g, 600+s, 1); for(int t=0;t<40;t++){ g.pendingDilemma=-1; Game_EndTurn(&g);
+     if(g.pendingDilemma==DLM_AI_ALLIANCE||g.pendingDilemma==DLM_AI_TRADE||g.pendingDilemma==DLM_PEACE_BLACKMAIL) seen=1; } }
+   CHECK(seen); }
  /* sauvegarde */
  Game_Init(&g, 47, 1); for(int i=0;i<6;i++){ g.pendingDilemma=-1; Game_EndTurn(&g);} 
  { static Game h; CHECK(Game_Save(&g, "build/test.sav")); CHECK(Game_Load(&h, "build/test.sav")); CHECK(memcmp(&g,&h,sizeof g)==0);

@@ -1586,6 +1586,26 @@ static void AiPeaceOfferToFrance(Game *g, int n)
     g->dilemmaParam = n;
 }
 
+/* l'IA prend l'initiative envers la France : alliance, accord commercial, chantage nucleaire */
+static void AiProposals(Game *g, int n)
+{
+    Nation *na = &g->nat[n];
+    if (g->pendingDilemma >= 0 || na->offerCooldown > 0 || g->war[N_FRANCE][n] || g->turn < 4) return;
+    int kind = -1;
+    if (!g->ally[N_FRANCE][n] && na->relation > 65 && IsDemocratic(na->regime) == IsDemocratic(g->nat[N_FRANCE].regime)
+        && Randf(g) < 0.04f)
+        kind = DLM_AI_ALLIANCE;
+    else if (!na->trade && !na->embargo && !na->embargoFrance && na->relation > 30 && Eco_TradeAllowed(g, n) && Randf(g) < 0.04f)
+        kind = DLM_AI_TRADE;
+    else if (Nuke_IsPower(g, n) && na->relation < -40 && War_Adjacent(g, n, N_FRANCE)
+             && g->turn > 12 && Randf(g) < 0.012f * (1.5f - g->credibility / 100.0f))
+        kind = DLM_PEACE_BLACKMAIL;
+    if (kind < 0) return;
+    g->pendingDilemma = kind;
+    g->dilemmaParam = n;
+    na->offerCooldown = 12;
+}
+
 /* une nation qui ne tient plus aucune de ses provinces capitule */
 static void Capitulations(Game *g)
 {
@@ -2179,6 +2199,8 @@ void War_Turn(Game *g)
         float deter = 1 - g->credibility / 100.0f * (Nuke_IsPower(g, n) ? 0.4f : 0.8f);
 
         bool human = g->human[n];
+        if (na->offerCooldown > 0) na->offerCooldown--;
+        if (!human) AiProposals(g, n);
         if (human && g->war[N_FRANCE][n] && na->peaceAsk == N_FRANCE + 1 && g->pendingDilemma < 0) AiPeaceOfferToFrance(g, n);
         if (human) na->peaceAsk = 0;
 

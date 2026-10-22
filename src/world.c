@@ -214,7 +214,7 @@ const DilemmaDef DILEMMAS[] = {
 };
 const int DILEMMA_COUNT = (int)(sizeof(DILEMMAS) / sizeof(DILEMMAS[0]));
 
-const DilemmaDef DYN_DILEMMAS[6] = {
+const DilemmaDef DYN_DILEMMAS[9] = {
     { "Article 42.7 : un allié est attaqué",
       "Un État membre de l'Union européenne est envahi et invoque la clause d'assistance mutuelle. Les capitales regardent Paris.",
       "Entrer en guerre à ses côtés", "Guerre contre l'agresseur, +5 Influence, relation de l'allié +30",
@@ -239,6 +239,18 @@ const DilemmaDef DYN_DILEMMAS[6] = {
       "Une résolution de l'ONU condamne un de nos alliés et prévoit des sanctions internationales. La France peut opposer son veto.",
       "Opposer notre veto", "Résolution bloquée, -6 Influence, relation de l'allié +15",
       "Laisser voter", "Sanctions contre notre allié, relation -20" },
+    { "Proposition d'alliance",
+      "Inquiète des menaces qui pèsent sur la région, une nation amie propose une alliance défensive : chacun viendra au secours de l'autre.",
+      "Signer l'alliance", "Alliance défensive, relation +10, +2 Influence",
+      "Décliner poliment", "Relation -8" },
+    { "Proposition d'accord commercial",
+      "Une nation propose un accord commercial : accès prioritaire à ses excédents et débouchés pour nos industries.",
+      "Signer l'accord", "Accord commercial, relation +5",
+      "Refuser", "Relation -4" },
+    { "Chantage nucléaire",
+      "Une puissance nucléaire hostile exige un tribut et menace à mots couverts d'employer l'arme atomique contre nos intérêts.",
+      "Payer le tribut", "-12 Budget, -3 Cohésion, -8 crédibilité, relation +15",
+      "Refuser le chantage", "Relation -15 ; si notre dissuasion manque de crédibilité, elle peut nous déclarer la guerre" },
 };
 
 const char *MIGRATION_DOCTRINES[3] = { "Accueil organisé", "Contrôle équilibré", "Fermeture stricte" };

@@ -2445,7 +2445,8 @@ static void DrawDilemma(void)
     Text(Tr(d->title), r.x + 20, r.y + 32, 20, C_TEXT);
     float ty = r.y + 62;
     int dp = game.pendingDilemma, n = game.dilemmaParam;
-    if (dp == DLM_ALLY_CALL || dp == DLM_PEACE_OFFER || dp == DLM_NUKE_BLACKMAIL) {
+    if (dp == DLM_ALLY_CALL || dp == DLM_PEACE_OFFER || dp == DLM_NUKE_BLACKMAIL || dp == DLM_AI_ALLIANCE || dp == DLM_AI_TRADE
+        || dp == DLM_PEACE_BLACKMAIL) {
         char buf[200];
         if (dp == DLM_ALLY_CALL) snprintf(buf, sizeof(buf), Tr("%s envahit %s."), Tr(NATIONS[n].name), Tr(NATIONS[game.dilemmaParam2].name));
         else if (dp == DLM_PEACE_OFFER) {
@@ -2459,6 +2460,10 @@ static void DrawDilemma(void)
                 snprintf(buf, sizeof(buf), Tr("%s exige %d province(s)%s. Score de guerre %+.0f."), Tr(NATIONS[n].name), ceded,
                          t->reparations > 0 ? " et des réparations" : "", War_Score(&game, N_FRANCE, n));
         }
+        else if (dp == DLM_AI_ALLIANCE || dp == DLM_AI_TRADE)
+            snprintf(buf, sizeof(buf), Tr("Proposition de %s (relation %+.0f)."), Tr(NATIONS[n].name), game.nat[n].relation);
+        else if (dp == DLM_PEACE_BLACKMAIL)
+            snprintf(buf, sizeof(buf), Tr("%s menace. Crédibilité de notre dissuasion : %.0f/100."), Tr(NATIONS[n].name), game.credibility);
         else snprintf(buf, sizeof(buf), Tr("Crédibilité de notre dissuasion : %.0f/100."), game.credibility);
         Text(buf, r.x + 20, ty, 10, C_WAR);
         ty += 16;

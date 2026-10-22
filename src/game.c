@@ -554,6 +554,41 @@ void Game_ResolveDilemma(Game *g, int c)
     case DLM_UN_VETO:
         Intl_ResolveVeto(g, A);
         break;
+    case DLM_AI_ALLIANCE:
+        if (!g->nat[prm].alive || War_AtWar(g, N_FRANCE, prm)) break;
+        if (A) {
+            g->ally[N_FRANCE][prm] = g->ally[prm][N_FRANCE] = true;
+            AddRelation(g, prm, 10);
+            AddRes(g, R_INFLUENCE, 2);
+            Game_Log(g, EV_GOOD, "Alliance défensive conclue avec %s.", Tr(NATIONS[prm].name));
+        } else AddRelation(g, prm, -8);
+        break;
+    case DLM_AI_TRADE:
+        if (!g->nat[prm].alive || War_AtWar(g, N_FRANCE, prm)) break;
+        if (A) {
+            g->nat[prm].trade = true;
+            AddRelation(g, prm, 5);
+            Game_Log(g, EV_GOOD, "Accord commercial signé avec %s : la France est servie en priorité sur leurs excédents.", Tr(NATIONS[prm].name));
+        } else AddRelation(g, prm, -4);
+        break;
+    case DLM_PEACE_BLACKMAIL:
+        if (!g->nat[prm].alive) break;
+        if (A) {
+            AddRes(g, R_BUDGET, -12);
+            AddRes(g, R_COHESION, -3);
+            g->credibility = Clampf(g->credibility - 8, 0, 100);
+            AddRelation(g, prm, 15);
+        } else {
+            AddRelation(g, prm, -15);
+            if (!War_AtWar(g, N_FRANCE, prm) && Randf(g) > g->credibility / 100.0f + 0.3f) {
+                War_StartWar(g, prm, N_FRANCE, true);
+                Game_Log(g, EV_WAR, "%s met ses menaces à exécution et déclare la guerre à la France !", Tr(NATIONS[prm].name));
+            } else {
+                g->credibility = Clampf(g->credibility + 4, 0, 100);
+                Game_Log(g, EV_GOOD, "La France ne cède pas au chantage de %s.", Tr(NATIONS[prm].name));
+            }
+        }
+        break;
     default:
         if (d >= DLM_EVENT) Ev_Apply(g, d - DLM_EVENT, c);
         break;

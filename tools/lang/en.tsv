@@ -1860,3 +1860,22 @@ Vétérans	Veterans
 l'Union européenne	the European Union
 le Maghreb et l'Égypte	the Maghreb and Egypt
 l'OTAN	NATO
+%s met ses menaces à exécution et déclare la guerre à la France !	%s carries out its threats and declares war on France!
+La France ne cède pas au chantage de %s.	France does not yield to %s's blackmail.
+Proposition de %s (relation %+.0f).	Proposal from %s (relation %+.0f).
+%s menace. Crédibilité de notre dissuasion : %.0f/100.	%s threatens. Credibility of our deterrent: %.0f/100.
+Proposition d'alliance	Alliance proposal
+Inquiète des menaces qui pèsent sur la région, une nation amie propose une alliance défensive : chacun viendra au secours de l'autre.	Worried by threats to the region, a friendly nation proposes a defensive alliance: each will come to the other's aid.
+Signer l'alliance	Sign the alliance
+Alliance défensive, relation +10, +2 Influence	Defensive alliance, relation +10, +2 Influence
+Décliner poliment	Politely decline
+Relation -8	Relation -8
+Proposition d'accord commercial	Trade agreement proposal
+Une nation propose un accord commercial : accès prioritaire à ses excédents et débouchés pour nos industries.	A nation proposes a trade agreement: priority access to its surpluses and markets for our industries.
+Accord commercial, relation +5	Trade agreement, relation +5
+Relation -4	Relation -4
+Une puissance nucléaire hostile exige un tribut et menace à mots couverts d'employer l'arme atomique contre nos intérêts.	A hostile nuclear power demands tribute and makes veiled threats to use the bomb against our interests.
+Payer le tribut	Pay the tribute
+-12 Budget, -3 Cohésion, -8 crédibilité, relation +15	-12 Budget, -3 Cohesion, -8 credibility, relation +15
+Refuser le chantage	Refuse the blackmail
+Relation -15 ; si notre dissuasion manque de crédibilité, elle peut nous déclarer la guerre	Relation -15; if our deterrent lacks credibility, it may declare war on us

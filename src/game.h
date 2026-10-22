@@ -263,7 +263,7 @@ extern const ProjectDef  PROJECTS[P_COUNT];
 extern const ActionDef   ACTIONS[A_COUNT];
 extern const DilemmaDef  DILEMMAS[];
 extern const int         DILEMMA_COUNT;
-extern const DilemmaDef  DYN_DILEMMAS[6];
+extern const DilemmaDef  DYN_DILEMMAS[9];
 extern const char       *SCENARIO_NAMES[2];
 extern const char       *VET_RANKS[4];
 extern const char       *SCENARIO_DESC[2];
@@ -286,6 +286,9 @@ extern const char       *ALERT_DESC[3];
 #define DLM_NUKE_BLACKMAIL 103
 #define DLM_BAILOUT        104
 #define DLM_UN_VETO        105
+#define DLM_AI_ALLIANCE    106   /* une IA propose une alliance */
+#define DLM_AI_TRADE       107   /* une IA propose un accord commercial */
+#define DLM_PEACE_BLACKMAIL 108  /* chantage nucleaire en temps de paix */
 #define DLM_EVENT          200   /* evenements contextuels : DLM_EVENT + indice */
 #define EVENT_MAX          96
 
@@ -419,6 +422,7 @@ typedef struct {
     float raid;                /* pertes commerciales dues a la guerre au commerce */
     short peaceAsk;            /* commandant humain : demande de paix a la nation (indice + 1) */
     float manpower;            /* reserve de main-d'oeuvre (en points de mobilisation) */
+    short offerCooldown;       /* delai avant une nouvelle proposition a la France */
 } Nation;
 
 typedef struct {
