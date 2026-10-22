@@ -234,7 +234,7 @@ void DrawTitle(void)
     if (toastTime > 0) Text(toast, VW / 2 - TextW(toast, 10) / 2, 640, 10, C_SEL);
 }
 
-static int helpPage;
+static int helpPage;   /* page de l aide (0 ou 1) */
 
 void DrawHelp(void)
 {
@@ -246,7 +246,7 @@ void DrawHelp(void)
         "HOT-SEAT : jusqu'à trois autres joueurs dirigent chacun une nation (armée, guerre, paix, alliances) sur le même appareil. Chaque trimestre, la France joue, puis chaque commandant (FIN DE PHASE), puis le tour se résout ; un écran de passage cache la carte.",
         "GOUVERNEMENT (POLIT., vue Gouvernement et opinion) : quatre ministres, chacun avec sa compétence et son lobby ; un remaniement coûte 1 PC. Industriels, écologistes, militaires et syndicats jugent votre politique, récompensent ou sanctionnent. La popularité tire la cohésion vers le haut ou vers le bas.",
         "INFLATION ET DETTE : le déficit, les pénuries et la cherté des marchés font monter l'inflation, qui érode la dette mais relève les taux et attise la militance. ROUTES COMMERCIALES : on ne reçoit les excédents d'une nation que par une route terrestre ou maritime ouverte (onglet NATIONS).",
-        "ARMÉE : chaque nation puise ses recrues et ses renforts dans une réserve de main-d'œuvre tirée de sa population. Les unités gagnent de l'expérience au combat (recrues, aguerris, vétérans, élite : jusqu'à +20 %). Missions aériennes (onglet ARMÉE) : appui au sol, supériorité aérienne, bombardement stratégique de l'industrie ennemie.",
+        "ARMÉE : chaque nation puise ses recrues et ses renforts dans une réserve de main-d'oeuvre tirée de sa population. Les unités gagnent de l'expérience au combat (recrues, aguerris, vétérans, élite : jusqu'à +20 %). Missions aériennes (onglet ARMÉE) : appui au sol, supériorité aérienne, bombardement stratégique de l'industrie ennemie.",
         "DIPLOMATIE DE L'IA : les nations amies proposent d'elles-mêmes alliances et accords commerciaux ; une puissance nucléaire hostile peut exiger un tribut, même en temps de paix. L'IA mène ses offensives sur plusieurs fronts à la fois.",
         "ÉVÉNEMENTS : plus de soixante événements ne surviennent que lorsque leurs conditions sont réunies (climat, guerre, régime, dette, factions...) ; chaque option affiche ses effets exacts.",
         "RÉGLAGES (menu) : langue (français, anglais), son, grande interface pour téléphones (F2 : une partie de l'écran à la fois, barre de navigation en bas), rapport de fin de tour.",
@@ -388,11 +388,12 @@ static void ShotEvent(void)    { polView = 0; game.pendingDilemma = DLM_EVENT; }
 static void ShotReport(void)   { game.pendingDilemma = -1; game.reportReady = true; }
 static void ShotHotseat(void)  { game.reportReady = false; hotseatPick[N_ALLEMAGNE] = true; screen = SCR_HOTSEAT; }
 static void ShotEnglish(void)  { hotseatPick[N_ALLEMAGNE] = false; gLang = LANG_EN; screen = SCR_GAME; tab = TAB_DEFENSE; }
+static void ShotHelp(void)     { gLang = LANG_FR; screen = SCR_HELP; helpPage = 1; }
 
 static const UiShot UI_SHOTS[] = {
     { "01_titre", ShotTitle }, { "02_carte", ShotMap }, { "03_armee", ShotArmy }, { "04_nations", ShotNations },
     { "05_economie", ShotEconomy }, { "06_gouvernement", ShotCabinet }, { "07_evenement", ShotEvent },
-    { "08_rapport", ShotReport }, { "09_hotseat", ShotHotseat }, { "10_anglais", ShotEnglish },
+    { "08_rapport", ShotReport }, { "09_hotseat", ShotHotseat }, { "10_anglais", ShotEnglish }, { "11_aide", ShotHelp },
 };
 #define UI_SHOT_COUNT ((int)(sizeof(UI_SHOTS) / sizeof(UI_SHOTS[0])))
 

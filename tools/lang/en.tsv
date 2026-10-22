@@ -1449,7 +1449,7 @@ Europe centrale	Central Europe
 Gén. Novák	Gen. Novák
 Gén. Szabó	Gen. Szabó
 Balkans	Balkans
-Gén. Petrović	Gen. Petrović
+Gén. Petrovic	Gen. Petrovic
 Gén. Hoxha	Gen. Hoxha
 Roumanie	Romania
 Gén. Popescu	Gen. Popescu
@@ -1461,7 +1461,7 @@ Grèce	Greece
 Gén. Papadakis	Gen. Papadakis
 Gén. Nikolaou	Gen. Nikolaou
 Turquie	Turkey
-Gén. Yılmaz	Gen. Yılmaz
+Gén. Yilmaz	Gen. Yilmaz
 Gén. Demir	Gen. Demir
 Ukraine	Ukraine
 Gén. Kovalenko	Gen. Kovalenko
@@ -1848,11 +1848,11 @@ AA	AA
 BBB	BBB
 BB	BB
 CCC	CCC
-Réserve de main-d'œuvre : %.0f 000 hommes sur %.0f 000 (+%.0f 000 par tour)	Manpower reserve: %.0f,000 men of %.0f,000 (+%.0f,000 per turn)
+Réserve de main-d'oeuvre : %.0f 000 hommes sur %.0f 000 (+%.0f 000 par tour)	Manpower reserve: %.0f,000 men of %.0f,000 (+%.0f,000 per turn)
 Les recrues viennent de la population : chaque division consomme la réserve à sa création, et les renforts qui comblent les pertes y puisent aussi. La réserve se reconstitue chaque tour, plus vite en guerre. Les unités gagnent en expérience au combat (jusqu'à +20 %) ; les renforts la diluent.	Recruits come from the population: each new division draws on the reserve, and so do the reinforcements that make up losses. The reserve refills every turn, faster in wartime. Units gain experience in combat (up to +20%); reinforcements dilute it.
 Language: English	Language: English
 Langue : français	Langue : français
-Réserve de main-d'œuvre épuisée	Manpower reserve exhausted
+Réserve de main-d'oeuvre épuisée	Manpower reserve exhausted
 Recrues	Recruits
 Aguerris	Seasoned
 Vétérans	Veterans
@@ -1956,7 +1956,7 @@ SCÉNARIOS : Janvier 2030 (trente ans à tenir) ou La crise de 2040 (+2°C, inva
 HOT-SEAT : jusqu'à trois autres joueurs dirigent chacun une nation (armée, guerre, paix, alliances) sur le même appareil. Chaque trimestre, la France joue, puis chaque commandant (FIN DE PHASE), puis le tour se résout ; un écran de passage cache la carte.	HOT-SEAT: up to three other players each lead a nation (army, war, peace, alliances) on the same device. Each quarter France plays, then each commander (END PHASE), then the turn resolves; a handoff screen hides the map.
 GOUVERNEMENT (POLIT., vue Gouvernement et opinion) : quatre ministres, chacun avec sa compétence et son lobby ; un remaniement coûte 1 PC. Industriels, écologistes, militaires et syndicats jugent votre politique, récompensent ou sanctionnent. La popularité tire la cohésion vers le haut ou vers le bas.	GOVERNMENT (POLIT., Government and opinion view): four ministers, each with a skill and a lobby; a reshuffle costs 1 CP. Industrialists, greens, military and unions judge your policies and reward or punish them. Approval pulls cohesion up or down.
 INFLATION ET DETTE : le déficit, les pénuries et la cherté des marchés font monter l'inflation, qui érode la dette mais relève les taux et attise la militance. ROUTES COMMERCIALES : on ne reçoit les excédents d'une nation que par une route terrestre ou maritime ouverte (onglet NATIONS).	INFLATION AND DEBT: deficits, shortages and high world prices drive inflation, which erodes debt but raises interest rates and stokes militancy. TRADE ROUTES: a nation's surpluses only reach us along an open land or sea route (NATIONS tab).
-ARMÉE : chaque nation puise ses recrues et ses renforts dans une réserve de main-d'œuvre tirée de sa population. Les unités gagnent de l'expérience au combat (recrues, aguerris, vétérans, élite : jusqu'à +20 %). Missions aériennes (onglet ARMÉE) : appui au sol, supériorité aérienne, bombardement stratégique de l'industrie ennemie.	ARMY: each nation draws recruits and reinforcements from a manpower reserve based on its population. Units gain combat experience (recruits, seasoned, veterans, elite: up to +20%). Air missions (ARMY tab): ground support, air superiority, strategic bombing of enemy industry.
+ARMÉE : chaque nation puise ses recrues et ses renforts dans une réserve de main-d'oeuvre tirée de sa population. Les unités gagnent de l'expérience au combat (recrues, aguerris, vétérans, élite : jusqu'à +20 %). Missions aériennes (onglet ARMÉE) : appui au sol, supériorité aérienne, bombardement stratégique de l'industrie ennemie.	ARMY: each nation draws recruits and reinforcements from a manpower reserve based on its population. Units gain combat experience (recruits, seasoned, veterans, elite: up to +20%). Air missions (ARMY tab): ground support, air superiority, strategic bombing of enemy industry.
 DIPLOMATIE DE L'IA : les nations amies proposent d'elles-mêmes alliances et accords commerciaux ; une puissance nucléaire hostile peut exiger un tribut, même en temps de paix. L'IA mène ses offensives sur plusieurs fronts à la fois.	AI DIPLOMACY: friendly nations offer alliances and trade agreements on their own; a hostile nuclear power may demand tribute, even in peacetime. The AI wages offensives on several fronts at once.
 ÉVÉNEMENTS : plus de soixante événements ne surviennent que lorsque leurs conditions sont réunies (climat, guerre, régime, dette, factions...) ; chaque option affiche ses effets exacts.	EVENTS: over sixty events occur only when their conditions are met (climate, war, regime, debt, factions...); each option shows its exact effects.
 RÉGLAGES (menu) : langue (français, anglais), son, grande interface pour téléphones (F2 : une partie de l'écran à la fois, barre de navigation en bas), rapport de fin de tour.	SETTINGS (menu): language (French, English), sound, large interface for phones (F2: one part of the screen at a time, navigation bar at the bottom), end-of-turn report.

@@ -277,7 +277,7 @@ void DrawArmyTab(void)
     y += 14;
     {
         const Nation *fr = &game.nat[N_FRANCE];
-        snprintf(buf, sizeof(buf), Tr("Réserve de main-d'œuvre : %.0f 000 hommes sur %.0f 000 (+%.0f 000 par tour)"),
+        snprintf(buf, sizeof(buf), Tr("Réserve de main-d'oeuvre : %.0f 000 hommes sur %.0f 000 (+%.0f 000 par tour)"),
                  fr->manpower * MEN_PER_POINT / 1000, War_ManpowerMax(&game, N_FRANCE) * MEN_PER_POINT / 1000,
                  War_ManpowerGain(&game, N_FRANCE) * MEN_PER_POINT / 1000);
         Rectangle mr = { x, y, RP_W - 20, 12 };

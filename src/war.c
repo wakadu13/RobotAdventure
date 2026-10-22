@@ -359,7 +359,7 @@ const char *War_RecruitBlocked(const Game *g, int type, int p)
     if (d->domain == DOM_SEA && War_PortFlooded(g, p)) return "Port submergé par la montée des eaux";
     if (War_StackCount(g, N_FRANCE, p, d->domain) >= StackLimit(d->domain)) return "Province saturée (limite d'empilement)";
     if (War_UnitLoad(g, N_FRANCE) + d->capWeight > War_ArmyMax(g, N_FRANCE) + 0.01f) return "Plafond de mobilisation atteint";
-    if (g->nat[N_FRANCE].manpower < d->capWeight) return "Réserve de main-d'œuvre épuisée";
+    if (g->nat[N_FRANCE].manpower < d->capWeight) return "Réserve de main-d'oeuvre épuisée";
     if (g->res[R_BUDGET] < War_RecruitCost(g, type)) return "Budget insuffisant";
     return Strat_RecruitBlocked(g, N_FRANCE, type);
 }

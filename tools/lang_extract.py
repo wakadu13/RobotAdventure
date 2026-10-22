@@ -59,6 +59,9 @@ if __name__ == "__main__":
     os.makedirs(os.path.join(ROOT, "tools", "lang"), exist_ok=True)
     open(os.path.join(ROOT, "tools", "lang", "strings.txt"), "w", encoding="utf-8").write("\n".join(strings) + "\n")
     tr = load_tsv(os.path.join(ROOT, "tools", "lang", "en.tsv"))
+    bad = [s for s in strings if any(ord(ch) > 255 for ch in s)] + [v for v in tr.values() if any(ord(ch) > 255 for ch in v)]
+    if bad:
+        sys.exit("caracteres absents de la police (hors Latin-1) : " + " | ".join(bad[:5]))
     missing = [s for s in strings if s not in tr]
     print("%d chaines, %d traduites, %d manquantes" % (len(strings), len(strings) - len(missing), len(missing)))
     if len(sys.argv) > 2 and sys.argv[1] == "--todo":
