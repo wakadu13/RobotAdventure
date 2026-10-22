@@ -196,6 +196,10 @@ int main(void){ int fails=0; Game g;
  { Game_Init(&g, 91, 1); Game_Log(&g, EV_INFO, "Test %s : %d unite(s), %.1f M", "Allemagne", 3, 2.5);
    const LogEntry *e=&g.log[g.logCount-1]; CHECK(strcmp(e->text,"Test Allemagne : 3 unite(s), 2.5 M")==0);
    CHECK(strcmp(e->fmt,"Test %s : %d unite(s), %.1f M")==0 && strcmp(e->args,"Allemagne\x1f" "3\x1f" "2.5\x1f")==0); }
+ /* inflation des nations de l'IA : guerre et blocus la font monter */
+ { Game_Init(&g, 95, 1); War_StartWar(&g, N_ITALIE, N_ESPAGNE, false); g.nat[N_ITALIE].blockade=0.8f;
+   for(int k=0;k<6;k++){ g.pendingDilemma=-1; Game_EndTurn(&g); g.nat[N_ITALIE].blockade=0.8f; }
+   CHECK(g.nat[N_ITALIE].inflation > 4 || !g.nat[N_ITALIE].alive); }
  /* sauvegarde */
  Game_Init(&g, 47, 1); for(int i=0;i<6;i++){ g.pendingDilemma=-1; Game_EndTurn(&g);} 
  { static Game h; CHECK(Game_Save(&g, "build/test.sav")); CHECK(Game_Load(&h, "build/test.sav")); CHECK(memcmp(&g,&h,sizeof g)==0);

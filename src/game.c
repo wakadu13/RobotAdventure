@@ -125,6 +125,7 @@ void Game_Init(Game *g, unsigned seed, int difficulty)
         na->nextElection = IsDemocratic(na->regime) ? 4 + (int)(Rand(g) % 16) : -1;
         na->nukeStatus = NATIONS[n].nuclear ? 2 : 0;
         na->treasury = 5;
+        na->inflation = 2;
     }
     for (int p = 0; p < PROV_COUNT; p++) {
         Province *pr = &g->prov[p];

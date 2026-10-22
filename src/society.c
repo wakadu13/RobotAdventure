@@ -450,6 +450,7 @@ static void AiPopulation(Game *g, int p)
         up += fmaxf(0, pr->unemployment - 0.07f) * JOBLESS[s];
         if (na->failed) up += 0.15f;
         if (pr->hab < 45) up += (45 - pr->hab) / 100.0f;
+        if (s != S_ELITES && na->inflation > 5) up += (na->inflation - 5) * 0.01f;
         float sup = Pol_StrataSupport(g, p, s);
         if (sup < 0.45f) up += (0.45f - sup) * 0.3f;
         if (support < 0.45f) up += (0.45f - support) * 0.15f;

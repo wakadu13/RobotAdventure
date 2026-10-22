@@ -431,6 +431,7 @@ typedef struct {
     short peaceAsk;            /* commandant humain : demande de paix a la nation (indice + 1) */
     float manpower;            /* reserve de main-d'oeuvre (en points de mobilisation) */
     short offerCooldown;       /* delai avant une nouvelle proposition a la France */
+    float inflation;           /* inflation annuelle (%) des nations de l'IA */
 } Nation;
 
 typedef struct {

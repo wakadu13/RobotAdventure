@@ -547,6 +547,12 @@ static void AiEconomy(Game *g)
         if (na->failed) na->treasury = fminf(na->treasury, 4);
         na->treasury = Clampf(na->treasury, -20, 60);
 
+        /* inflation : tresor a sec, guerre, blocus, sanctions et penurie alimentaire ; elle ronge les recettes */
+        float target = 2 + (na->treasury < 0 ? -na->treasury * 0.3f : 0) + (War_AtWarAny(g, n) ? 3 : 0) + na->blockade * 6
+                     + (na->sanctions > 0 ? 3 : 0) + (g->eco[n].sat[G_FOOD] < 0.9f ? 3 : 0) + (na->failed ? 8 : 0);
+        na->inflation = Clampf(na->inflation + (target - na->inflation) * 0.25f, -2, 60);
+        na->treasury -= fmaxf(0, na->inflation - 3) * 0.03f;
+
         /* investissements : eau et alimentation d'abord, puis industrie */
         const NationEconomy *ne = &g->eco[n];
         if (na->treasury > 6 && ne->sat[G_WATER] < 0.95f) {

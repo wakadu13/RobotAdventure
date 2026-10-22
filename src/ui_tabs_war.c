@@ -677,6 +677,8 @@ void DrawNationsTab(void)
     Text(buf, dx, dy, 10, C_TEXT); dy += 13;
     snprintf(buf, sizeof(buf), Tr("Armée %.1f (%d unités), trésor %.0f"), na->army, War_UnitCount(&game, n), na->treasury);
     Text(buf, dx, dy, 10, C_TEXT); dy += 13;
+    snprintf(buf, sizeof(buf), Tr("Inflation : %.1f %%/an"), na->inflation);
+    Text(buf, dx, dy, 10, na->inflation > 8 ? C_BAD : na->inflation > 4 ? C_WARN : C_DIM); dy += 13;
     if (na->blockade > 0.05f) { snprintf(buf, sizeof(buf), Tr("Côtes sous blocus : %.0f%%"), na->blockade * 100); Text(buf, dx, dy, 10, C_WARN); dy += 13; }
     {
         static const char *ROUTES[3] = { "Route commerciale coupée", "Route commerciale terrestre", "Route commerciale maritime : %.0f%%" };

@@ -1854,6 +1854,8 @@ const LangPair LANG_TABLE_EN[] = {
       "Infantry in armored vehicles: versatile, advances 2 provinces." },
     { "Infanterie, montagne, forces spéciales, robots (niveau 2). +6% par niveau.",
       "Infantry, mountain, special forces, robots (level 2). +6% per level." },
+    { "Inflation : %.1f %%/an",
+      "Inflation: %.1f%%/yr" },
     { "Inflation : %.1f %%/an - indice des prix %.0f (2030 = 100)",
       "Inflation: %.1f%%/yr - price index %.0f (2030 = 100)" },
     { "Inflation alimentaire",
@@ -3931,4 +3933,4 @@ const LangPair LANG_TABLE_EN[] = {
     { "élites",
       "elites" },
 };
-const int LANG_TABLE_EN_COUNT = 1964;
+const int LANG_TABLE_EN_COUNT = 1965;
