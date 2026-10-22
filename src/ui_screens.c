@@ -237,6 +237,8 @@ const TutoStep TUTO[] = {
       "Ouvrez l'onglet ÉCO. : impôts par groupe social, dépenses, budget, marché mondial, ressources stratégiques et dette publique." },
     { "Le monde",
       "Ouvrez l'onglet NATIONS : diplomatie, alliances, opérations ciblées, Conseil de sécurité, OTAN et traités de paix." },
+    { "Le gouvernement",
+      "Ouvrez l'onglet POLIT., vue « Gouvernement et opinion » : popularité, lobbies à ménager et ministres à remanier." },
     { "Fin du tour",
       "Cliquez sur FIN DU TOUR (ou Espace). Le trimestre se résout : batailles, économie, climat, menaces. Un rapport s'affiche." },
     { "À vous de jouer",
@@ -272,7 +274,8 @@ bool TutoDone(int step)
     case 6: return tab == TAB_DEFENSE;
     case 7: return tab == TAB_ECONOMIE;
     case 8: return tab == TAB_NATIONS;
-    case 9: return game.turn > tutoTurn;
+    case 9: return tab == TAB_POLITIQUE && polView == 1;
+    case 10: return game.turn > tutoTurn;
     default: return false;
     }
 }

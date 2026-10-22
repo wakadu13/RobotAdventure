@@ -234,11 +234,31 @@ void DrawTitle(void)
     if (toastTime > 0) Text(toast, VW / 2 - TextW(toast, 10) / 2, 640, 10, C_SEL);
 }
 
+static int helpPage;
+
 void DrawHelp(void)
 {
     DrawBackdrop();
     Panel((Rectangle){ 90, 20, 1100, 680 }, C_PANEL);
-    Text("COMMENT JOUER", 110, 32, 20, C_ACCENT);
+    Text(helpPage ? "COMMENT JOUER (2/2)" : "COMMENT JOUER (1/2)", 110, 32, 20, C_ACCENT);
+    static const char *help2[] = {
+        "SCÉNARIOS : Janvier 2030 (trente ans à tenir) ou La crise de 2040 (+2°C, invasion boréale des pays baltes, Libye effondrée, dette record, vingt ans à tenir). Choix dans le menu.",
+        "HOT-SEAT : jusqu'à trois autres joueurs dirigent chacun une nation (armée, guerre, paix, alliances) sur le même appareil. Chaque trimestre, la France joue, puis chaque commandant (FIN DE PHASE), puis le tour se résout ; un écran de passage cache la carte.",
+        "GOUVERNEMENT (POLIT., vue Gouvernement et opinion) : quatre ministres, chacun avec sa compétence et son lobby ; un remaniement coûte 1 PC. Industriels, écologistes, militaires et syndicats jugent votre politique, récompensent ou sanctionnent. La popularité tire la cohésion vers le haut ou vers le bas.",
+        "INFLATION ET DETTE : le déficit, les pénuries et la cherté des marchés font monter l'inflation, qui érode la dette mais relève les taux et attise la militance. ROUTES COMMERCIALES : on ne reçoit les excédents d'une nation que par une route terrestre ou maritime ouverte (onglet NATIONS).",
+        "ARMÉE : chaque nation puise ses recrues et ses renforts dans une réserve de main-d'œuvre tirée de sa population. Les unités gagnent de l'expérience au combat (recrues, aguerris, vétérans, élite : jusqu'à +20 %). Missions aériennes (onglet ARMÉE) : appui au sol, supériorité aérienne, bombardement stratégique de l'industrie ennemie.",
+        "DIPLOMATIE DE L'IA : les nations amies proposent d'elles-mêmes alliances et accords commerciaux ; une puissance nucléaire hostile peut exiger un tribut, même en temps de paix. L'IA mène ses offensives sur plusieurs fronts à la fois.",
+        "ÉVÉNEMENTS : plus de soixante événements ne surviennent que lorsque leurs conditions sont réunies (climat, guerre, régime, dette, factions...) ; chaque option affiche ses effets exacts.",
+        "RÉGLAGES (menu) : langue (français, anglais), son, grande interface pour téléphones (F2 : une partie de l'écran à la fois, barre de navigation en bas), rapport de fin de tour.",
+    };
+    if (helpPage == 1) {
+        float y = 62;
+        for (int i = 0; i < (int)(sizeof(help2) / sizeof(help2[0])); i++)
+            y += TextWrap(help2[i], 110, y, 1060, 10, i % 2 ? C_TEXT : (Color){ 200, 210, 220, 255 }) + 8;
+        if (Button((Rectangle){ VW / 2 - 210, 648, 200, 38 }, "< PAGE 1", true, 20)) helpPage = 0;
+        if (Button((Rectangle){ VW / 2 + 10, 648, 200, 38 }, "RETOUR", true, 20) || IsKeyPressed(KEY_ESCAPE)) { helpPage = 0; screen = SCR_TITLE; }
+        return;
+    }
     static const char *help[] = {
         "OBJECTIF : tenir 120 trimestres (2030-2060) et maximiser le score. Défaite si la Cohésion ou la Souveraineté tombe à 0, en cas de défaut sur la dette, si Paris est occupée ou en cas d'échange nucléaire. Victoires spéciales : Transition, Hégémonie, Utopie, Ordre nouveau.",
         "CARTE : 130 régions (les 13 régions françaises, les Länder, les régions italiennes et espagnoles...). Molette ou +/- pour zoomer, glisser pour déplacer, flèches pour défiler, F pour revenir sur la France. Les noms des régions apparaissent à partir du zoom x2. Rayures : territoire occupé.",
@@ -259,8 +279,9 @@ void DrawHelp(void)
     float y = 62;
     for (int i = 0; i < (int)(sizeof(help) / sizeof(help[0])); i++)
         y += TextWrap(help[i], 110, y, 1060, 10, i % 2 ? C_TEXT : (Color){ 200, 210, 220, 255 }) + 6;
-    if (Button((Rectangle){ VW / 2 - 100, 648, 200, 38 }, "RETOUR", true, 20) || IsKeyPressed(KEY_ESCAPE))
+    if (Button((Rectangle){ VW / 2 - 210, 648, 200, 38 }, "RETOUR", true, 20) || IsKeyPressed(KEY_ESCAPE))
         screen = SCR_TITLE;
+    if (Button((Rectangle){ VW / 2 + 10, 648, 200, 38 }, "PAGE 2 >", true, 20)) helpPage = 1;
 }
 
 void DrawEnd(void)
