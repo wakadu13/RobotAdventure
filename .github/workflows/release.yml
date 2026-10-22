@@ -129,9 +129,4 @@ jobs:
           prerelease: ${{ contains(steps.version.outputs.tag, '-') }}
           files: dist/*
           generate_release_notes: true
-          body: |
-            Paquets :
-            - **Windows** : décompressez le zip et lancez `bouclier2050.exe` (SmartScreen : « Informations complémentaires » puis « Exécuter quand même »).
-            - **Linux** : `tar xzf` puis `./bouclier2050/bouclier2050` (X11, OpenGL 3.3).
-            - **macOS Apple Silicon** : décompressez, puis clic droit sur « Bouclier 2050 » > Ouvrir (application non notarisée).
-            - **Android** (arm64, Android 10+) : installez l'APK en autorisant les sources inconnues. Pincez pour zoomer, bouton ORDRE pour déplacer les unités.
+          body_path: docs/NOTES_DE_VERSION.md
