@@ -1898,3 +1898,54 @@ Hyperinflation menaçante : %.0f %% par an.	Hyperinflation looms: %.0f%% a year.
 L'inflation est maîtrisée.	Inflation is under control.
 Inflation : %.1f %%/an - indice des prix %.0f (2030 = 100)	Inflation: %.1f%%/yr - price index %.0f (2030 = 100)
 L'inflation monte avec le déficit, les pénuries d'énergie et d'alimentation, la cherté des marchés mondiaux et l'excès de dette ; l'austérité la freine. Elle érode la dette, mais renchérit les taux d'intérêt et attise la militance des travailleurs et des classes moyennes ; au-delà de 10 %, la cohésion s'effrite.	Inflation rises with the deficit, energy and food shortages, high world prices and excessive debt; austerity curbs it. It erodes the debt but raises interest rates and stokes militancy among workers and the middle classes; above 10%, cohesion crumbles.
+Défense	Defense
+Économie	Economy
+Intérieur	Interior
+Affaires étrangères	Foreign Affairs
+Qualité de l'armée +2 % par niveau de compétence.	Army quality +2% per skill level.
++0,4 Md par tour et inflation freinée, par niveau de compétence.	+0.4 bn per turn and lower inflation, per skill level.
+Militance de toutes les strates en baisse chaque tour, selon la compétence.	Militancy of all strata falls each turn, by skill.
+Influence en hausse chaque tour, selon la compétence.	Influence rises each turn, by skill.
+Industriels	Industrialists
+Militaires	Military
+Syndicats	Unions
+Aiment les impôts modérés sur les élites, une inflation contenue et des droits de douane bas. Satisfaits : +1 Md par tour ; mécontents : fuite des capitaux, -1 Md par tour.	Like moderate taxes on elites, contained inflation and low tariffs. Satisfied: +1 bn per turn; unhappy: capital flight, -1 bn per turn.
+Aiment la lutte contre le réchauffement, les projets d'énergies renouvelables et d'adaptation, un gouvernement écologiste ; détestent l'arme nucléaire. Satisfaits : +Influence ; mécontents : -Cohésion.	Like climate action, renewable energy and adaptation projects, a green government; hate nuclear weapons. Satisfied: +Influence; unhappy: -Cohesion.
+Aiment une armée nombreuse, une dissuasion crédible, la recherche militaire et la guerre ; détestent l'austérité. Satisfaits : crédibilité en hausse ; mécontents : crédibilité en baisse.	Like a large army, a credible deterrent, military research and war; hate austerity. Satisfied: credibility rises; unhappy: credibility falls.
+Aiment les impôts modérés sur les travailleurs, les dépenses sociales, le plein emploi et des prix stables. Satisfaits : militance des travailleurs en baisse ; mécontents : en hausse.	Like moderate taxes on workers, social spending, full employment and stable prices. Satisfied: worker militancy falls; unhappy: it rises.
+Hélène Marchetti	Hélène Marchetti
+Paul Delacroix	Paul Delacroix
+Inès Benali	Inès Benali
+Marc Lefèvre-Roy	Marc Lefèvre-Roy
+Sophie Garnier	Sophie Garnier
+Karim Aït-Saïd	Karim Aït-Saïd
+Claire Vasseur	Claire Vasseur
+Julien Morvan	Julien Morvan
+Nadia Ferrand	Nadia Ferrand
+Thomas Kerboul	Thomas Kerboul
+Élise Duval	Élise Duval
+Antoine Rocher	Antoine Rocher
+Leïla Haddad	Leïla Haddad
+Bruno Castel	Bruno Castel
+Camille Joubert	Camille Joubert
+Yann Le Goff	Yann Le Goff
+Mathilde Saunier	Mathilde Saunier
+Hugo Barral	Hugo Barral
+Aïcha Diallo	Aïcha Diallo
+Pierre-Louis Vigier	Pierre-Louis Vigier
+Margaux Tessier	Margaux Tessier
+Samuel Ohana	Samuel Ohana
+Chloé Bertin	Chloé Bertin
+Victor Arnaud	Victor Arnaud
+Choix invalide	Invalid choice
+Remaniement : %s devient ministre (%s).	Reshuffle: %s becomes minister (%s).
+POPULARITÉ DU GOUVERNEMENT : %.0f %%	GOVERNMENT APPROVAL: %.0f%%
+La popularité suit la cohésion, l'inflation, le chômage, la satisfaction des lobbies et la guerre. Elle tire la cohésion vers le haut au-dessus de 50 %, vers le bas en dessous.	Approval follows cohesion, inflation, unemployment, lobby satisfaction and war. Above 50% it lifts cohesion; below, it drags it down.
+LOBBIES	LOBBIES
+%.0f (tendance %+.0f)	%.0f (trend %+.0f)
+GOUVERNEMENT	GOVERNMENT
+%s : %s - compétence %d/3 - proche des %s	%s: %s - skill %d/3 - close to the %s
+Nommer %s (%d/3)	Appoint %s (%d/3)
+Proche des %s. Remaniement : 1 PC, -1 Cohésion ; son lobby est flatté, celui du sortant vexé. De nouveaux candidats se présentent chaque année.	Close to the %s. Reshuffle: 1 CP, -1 Cohesion; their lobby is pleased, the outgoing minister's is offended. New candidates come forward every year.
+Régime et doctrines	Regime and doctrines
+Gouvernement et opinion	Government and opinion

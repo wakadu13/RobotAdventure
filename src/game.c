@@ -130,6 +130,7 @@ void Game_Init(Game *g, unsigned seed, int difficulty)
     g->inflation = 2;
     g->priceLevel = 1;
     Intl_Init(g);
+    Cab_Init(g);
     Strat_Init(g);
     Mil_Init(g);
     War_InitUnits(g);
@@ -849,6 +850,7 @@ void Game_EndTurn(Game *g)
     float net = Eco_Net(g);
     g->res[R_BUDGET] += net;
     Eco_Inflation(g, net);
+    Cab_Turn(g);
     /* un deficit de tresorerie se finance par l'emprunt, tant que les marches suivent */
     if (g->res[R_BUDGET] < 0) {
         if (Eco_Rating(g) < RATING_COUNT - 1) {

@@ -188,6 +188,7 @@ float War_Quality(const Game *g, int n)
         q *= 1 + 0.015f * (g->capacity[D_AIR] + g->capacity[D_ESPACE] + g->capacity[D_EM] + g->capacity[D_CYBER]);
         if (g->proj[P_CONSTELL].state == 2) q *= 1.05f;
         if (g->aiDefense) q *= 1.05f;
+        q *= 1 + 0.02f * Cab_Skill(g, MIN_DEFENSE);
     } else {
         q *= Clampf(0.7f + AvgWealth(g, n) * 0.8f, 0.7f, 1.2f);
     }

@@ -2315,11 +2315,65 @@ static void DrawEconomyTab(void)
         Do(CMD_REPAY, 0, 0, 0, 0);
 }
 
+static int polView;   /* 0 regime et doctrines, 1 gouvernement et opinion */
+
+static void DrawCabinet(float x, float y)
+{
+    char buf[260];
+    float w = RP_W - 20;
+    snprintf(buf, sizeof(buf), Tr("POPULARITÉ DU GOUVERNEMENT : %.0f %%"), game.approval);
+    Text(buf, x, y, 10, C_ACCENT);
+    y += 14;
+    Bar((Rectangle){ x, y, w, 8 }, game.approval, 100, game.approval < 35 ? C_BAD : game.approval < 50 ? C_WARN : C_GOOD);
+    Tooltip((Rectangle){ x, y - 14, w, 22 }, "La popularité suit la cohésion, l'inflation, le chômage, la satisfaction des lobbies et la "
+                                            "guerre. Elle tire la cohésion vers le haut au-dessus de 50 %, vers le bas en dessous.");
+    y += 18;
+    Text("LOBBIES", x, y, 10, C_ACCENT);
+    y += 14;
+    for (int l = 0; l < LB_COUNT; l++) {
+        Rectangle row = { x, y, w, 18 };
+        Text(Tr(LOBBY_NAMES[l]), x, y + 3, 10, C_TEXT);
+        float v = game.lobby[l];
+        Bar((Rectangle){ x + 110, y + 5, 300, 8 }, v, 100, v < 30 ? C_BAD : v > 70 ? C_GOOD : C_ACCENT);
+        snprintf(buf, sizeof(buf), Tr("%.0f (tendance %+.0f)"), v, Cab_LobbyTarget(&game, l) - v);
+        Text(buf, x + 420, y + 3, 10, v < 30 ? C_BAD : v > 70 ? C_GOOD : C_DIM);
+        Tooltip(row, Tr(LOBBY_DESC[l]));
+        y += 20;
+    }
+    y += 8;
+    Text("GOUVERNEMENT", x, y, 10, C_ACCENT);
+    y += 14;
+    for (int p = 0; p < MIN_COUNT; p++) {
+        const Minister *m = &game.minister[p];
+        Rectangle row = { RP_X + 6, y, RP_W - 12, 64 };
+        DrawRectangleRec(row, C_PANEL2);
+        snprintf(buf, sizeof(buf), Tr("%s : %s - compétence %d/3 - proche des %s"), Tr(MINISTER_POSTS[p]), Cab_Name(m), m->skill,
+                 Tr(LOBBY_NAMES[m->lobby]));
+        Text(buf, row.x + 6, y + 4, 10, C_TEXT);
+        Text(Tr(MINISTER_EFFECTS[p]), row.x + 6, y + 18, 10, C_DIM);
+        for (int c = 0; c < 3; c++) {
+            const Minister *k = &game.candidates[p][c];
+            snprintf(buf, sizeof(buf), Tr("Nommer %s (%d/3)"), Cab_Name(k), k->skill);
+            char tip[300];
+            snprintf(tip, sizeof(tip), Tr("Proche des %s. Remaniement : 1 PC, -1 Cohésion ; son lobby est flatté, celui du sortant vexé. "
+                                          "De nouveaux candidats se présentent chaque année."), Tr(LOBBY_NAMES[k->lobby]));
+            if (ActionButton((Rectangle){ row.x + 6 + c * 180, y + 36, 174, 22 }, buf, Cab_AppointBlocked(&game, p, c), tip))
+                Do(CMD_MINISTER, p, c, 0, 0);
+        }
+        y += 70;
+    }
+}
+
 static void DrawPolitiqueTab(void)
 {
     char buf[220];
     float x = RP_X + 10, y = RP_Y + 4;
     Regime cur = game.nat[N_FRANCE].regime;
+    static const char *views[2] = { "Régime et doctrines", "Gouvernement et opinion" };
+    for (int v = 0; v < 2; v++)
+        if (Choice((Rectangle){ x + v * 200, y, 194, 18 }, views[v], polView == v)) polView = v;
+    y += 24;
+    if (polView == 1) { DrawCabinet(x, y); return; }
     Text("RÉGIME", x, y, 10, C_ACCENT);
     if (game.regimeCooldown > 0) {
         snprintf(buf, sizeof(buf), Tr("prochain changement dans %d tours"), game.regimeCooldown);

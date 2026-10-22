@@ -372,7 +372,8 @@ void Eco_Inflation(Game *g, float net)
         if (k != G_WATER) { world += g->price[k] / GOOD_BASE_PRICE[k]; k2++; }
     world = k2 ? world / k2 : 1;
     float target = 2 + fmaxf(0, -net) * 0.25f + fmaxf(0, 45 - g->res[R_ENERGIE]) * 0.12f + fmaxf(0, 45 - g->res[R_ALIM]) * 0.12f
-                 + (world - 1) * 6 + fmaxf(0, Eco_DebtRatio(g) - 1.2f) * 3 - (g->austerityTurns > 0 ? 2 : 0);
+                 + (world - 1) * 6 + fmaxf(0, Eco_DebtRatio(g) - 1.2f) * 3 - (g->austerityTurns > 0 ? 2 : 0)
+                 - 0.4f * Cab_Skill(g, MIN_ECONOMIE);
     float before = g->inflation;
     g->inflation = Clampf(g->inflation + (target - g->inflation) * 0.25f, -3, 60);
     g->priceLevel *= 1 + g->inflation / 400;

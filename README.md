@@ -289,6 +289,7 @@ c'est la base d'un futur jeu en réseau. Voir [docs/MULTIJOUEUR.md](docs/MULTIJO
 src/game.h          types et API de la simulation
 src/game_internal.h outils partagés entre modules
 src/world.c         données : nations, provinces, régimes, unités, idéologies, décrets, dilemmes, scénarios
+src/cabinet.c       ministres, lobbies et popularité du gouvernement
 src/events.c        événements contextuels (conditions et effets décrits par des données)
 src/game.c          tour de jeu, guerre hybride M2MC, projets, dilemmes, score, sauvegarde
 src/society.c       climat, montée des eaux, population, strates, cultures, migrations, révoltes, régimes

@@ -75,6 +75,9 @@ typedef enum { SR_TERRES_RARES, SR_URANIUM, SR_PUCES, SR_COUNT } StratRes;
 typedef enum { GM_NONE, GM_HOLD, GM_ATTACK, GM_COUNT } GroupMode;
 typedef enum { NM_PATROL, NM_STRIKE, NM_RAID, NM_ESCORT, NM_COUNT } NavalMission;
 typedef enum { AM_SUPPORT, AM_SUPERIORITY, AM_BOMBING, AM_COUNT } AirMission;
+typedef enum { MIN_DEFENSE, MIN_ECONOMIE, MIN_INTERIEUR, MIN_ETRANGERES, MIN_COUNT } MinisterPost;
+typedef enum { LB_INDUSTRIE, LB_ECOLOGISTES, LB_MILITAIRES, LB_SYNDICATS, LB_COUNT } Lobby;
+typedef struct { unsigned char name, skill, lobby; } Minister;
 typedef enum {
     OP_RESEAU, OP_VOL_TECH, OP_LOGISTIQUE, OP_INGERENCE, OP_DESTAB, OP_RECON, OP_BROUILLAGE, OP_ASAT, OP_COUNT
 } OpType;
@@ -525,6 +528,11 @@ typedef struct {
     bool human[N_COUNT];
     int activePlayer;
     int scenario;              /* 0 : janvier 2030 ; 1 : crise de 2040 */
+    /* gouvernement, lobbies et opinion */
+    Minister minister[MIN_COUNT];
+    Minister candidates[MIN_COUNT][3];
+    float lobby[LB_COUNT];
+    float approval;
     int startTurn;
     float climateMitigation;
     float importBonus;
@@ -589,6 +597,20 @@ void        Game_DateString(int turn, char *buf, int len);
 int         Game_Score(const Game *g, int parts[SC_COUNT]);
 VictoryType Game_Victory(const Game *g);
 void        Game_Log(Game *g, LogKind kind, const char *fmt, ...);
+
+/* cabinet.c : ministres, lobbies et opinion */
+extern const char *MINISTER_POSTS[MIN_COUNT];
+extern const char *MINISTER_EFFECTS[MIN_COUNT];
+extern const char *LOBBY_NAMES[LB_COUNT];
+extern const char *LOBBY_DESC[LB_COUNT];
+void        Cab_Init(Game *g);
+void        Cab_Turn(Game *g);
+const char *Cab_Name(const Minister *m);
+int         Cab_Skill(const Game *g, int post);
+const char *Cab_AppointBlocked(const Game *g, int post, int cand);
+bool        Cab_Appoint(Game *g, int post, int cand);
+float       Cab_LobbyTarget(const Game *g, int l);
+float       Cab_ApprovalTarget(const Game *g);
 
 /* events.c : evenements contextuels decrits par des donnees */
 extern const int  EVENT_COUNT;
@@ -793,7 +815,7 @@ typedef enum {
     CMD_FAB, CMD_MINE, CMD_STRIKE, CMD_TACTICAL, CMD_ULTIMATUM, CMD_NUKE_POSTURE, CMD_UMBRELLA, CMD_PROMOTE,
     CMD_ASSIGN, CMD_RESEARCH_BUDGET, CMD_TREATY_DRAFT, CMD_TREATY_CEDE, CMD_TREATY_REPARATIONS, CMD_NEGOTIATE,
     CMD_NATO, CMD_EMBARGO, CMD_COUNTER, CMD_WARNING, CMD_CULTURE, CMD_TARIFF, CMD_STRAT_BUY, CMD_REGIME,
-    CMD_DECREE, CMD_MIGRATION, CMD_ALERT, CMD_ADD_PLAYER, CMD_PEACE, CMD_SCENARIO,
+    CMD_DECREE, CMD_MIGRATION, CMD_ALERT, CMD_ADD_PLAYER, CMD_PEACE, CMD_SCENARIO, CMD_MINISTER,
     CMD_COUNT
 } CmdType;
 

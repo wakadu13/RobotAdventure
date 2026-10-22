@@ -18,7 +18,7 @@ if (NOT raylib_FOUND)
     FetchContent_MakeAvailable(raylib)
 endif()
 
-set(SIM_SOURCES src/game.c src/world.c src/society.c src/war.c src/military.c src/ops.c src/resources.c src/intl.c src/command.c src/economy.c src/politics.c src/nuclear.c src/map_data.c src/save_fields.c src/events.c src/lang.c src/lang_en.c)
+set(SIM_SOURCES src/game.c src/world.c src/society.c src/war.c src/military.c src/ops.c src/resources.c src/intl.c src/command.c src/economy.c src/politics.c src/nuclear.c src/map_data.c src/save_fields.c src/events.c src/cabinet.c src/lang.c src/lang_en.c)
 add_executable(bouclier2050 src/main.c src/sound.c ${SIM_SOURCES})
 target_link_libraries(bouclier2050 raylib)
 if (NOT MSVC)

@@ -83,6 +83,7 @@ bool Cmd_Apply(Game *g, const Command *c)
     if (c->player != N_FRANCE) return CommanderApply(g, c);
     switch (c->type) {
     case CMD_SCENARIO:        return Game_ApplyScenario(g, c->a);
+    case CMD_MINISTER:        return Cab_Appoint(g, c->a, c->b);
     case CMD_ADD_PLAYER:
         if (g->turn != g->startTurn || c->a <= 0 || c->a >= N_COUNT || !g->nat[c->a].alive) return false;
         g->human[c->a] = !g->human[c->a];
