@@ -155,7 +155,10 @@ belli. Les autres nations y recourent aussi, entre elles comme contre la France.
 - Rapport de fin de tour, désactivable.
 - Trois niveaux de difficulté.
 - Sauvegarde manuelle (`F5`, menu) et automatique tous les 4 tours ; chargement par `F9` ou par le
-  menu.
+  menu. Le format est enregistré champ par champ (nom, taille, données) : une sauvegarde reste
+  lisible après une mise à jour du jeu, les champs nouveaux prenant leur valeur par défaut. Après
+  toute modification de la structure `Game`, régénérer le registre : `python3 tools/gen_save_fields.py`
+  (la CI vérifie qu'il est à jour). Les sauvegardes de la version 1.0.0 ne sont plus lisibles.
 
 ### Commandes
 
@@ -265,8 +268,10 @@ src/resources.c     ressources stratégiques (terres rares, uranium, semi-conduc
 src/nuclear.c       dissuasion, prolifération, armes tactiques
 src/intl.c          ONU, OTAN, sanctions
 src/command.c       commandes, somme de contrôle et rejeu (base du multijoueur)
+src/save_fields.c/.h registre des champs sauvegardés (généré)
 src/map_data.c/.h   carte générée (grille 0,125°, 130 régions, adjacences, cultures, religions)
 src/main.c          interface raylib
+tools/gen_save_fields.py générateur du registre de sauvegarde
 tools/gen_map.py    générateur de la carte depuis un GeoJSON des pays
 tools/autoplay.c    banc d'essai d'équilibrage
 tools/tests.c       tests des mécaniques

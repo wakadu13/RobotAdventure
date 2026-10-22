@@ -123,6 +123,13 @@ int main(void){ int fails=0; Game g;
    Replay_Run(&rp, &h); CHECK(Game_Checksum(&g)==Game_Checksum(&h)); CHECK(g.turn==h.turn && g.turn>=2); }
  /* sauvegarde */
  Game_Init(&g, 47, 1); for(int i=0;i<6;i++){ g.pendingDilemma=-1; Game_EndTurn(&g);} 
- { static Game h; CHECK(Game_Save(&g, "build/test.sav")); CHECK(Game_Load(&h, "build/test.sav")); CHECK(memcmp(&g,&h,sizeof g)==0); }
+ { static Game h; CHECK(Game_Save(&g, "build/test.sav")); CHECK(Game_Load(&h, "build/test.sav")); CHECK(memcmp(&g,&h,sizeof g)==0);
+   CHECK(Game_Checksum(&g)==Game_Checksum(&h)); }
+ /* chargement tolerant : champ inconnu ignore, champ absent = valeur par defaut */
+ { static Game h; FILE *f=fopen("build/test2.sav","wb"); CHECK(f!=NULL);
+   unsigned hd[4]={2,SAVE_VERSION,2,2}; fwrite("B2050SV",8,1,f); fwrite(hd,4,4,f);
+   unsigned n1[3]={7,1,4}; fwrite(&n1[0],4,1,f); fwrite("inconnu",7,1,f); fwrite(&n1[1],4,2,f); fwrite("abcd",4,1,f);
+   int turn=17; unsigned n2[3]={4,1,sizeof(int)}; fwrite(&n2[0],4,1,f); fwrite("turn",4,1,f); fwrite(&n2[1],4,2,f); fwrite(&turn,sizeof turn,1,f);
+   fclose(f); CHECK(Game_Load(&h, "build/test2.sav")); CHECK(h.turn==17 && h.difficulty==2 && h.state==GAME_RUNNING && h.nat[N_FRANCE].alive); }
  printf("%s (%d echec(s))\n", fails?"TESTS EN ECHEC":"TOUS LES TESTS PASSENT", fails); return fails!=0;
 }

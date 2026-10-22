@@ -3,6 +3,7 @@
  * (theatres M2MC, menaces, factions), projets, dilemmes, enchainement du tour.
  */
 #include "game_internal.h"
+#include "save_fields.h"
 
 #include <stdarg.h>
 #include <stdio.h>
@@ -926,26 +927,80 @@ int Game_Score(const Game *g, int parts[SC_COUNT])
 /* Sauvegarde                                                          */
 /* ------------------------------------------------------------------ */
 
-typedef struct { char magic[8]; int version; unsigned size; } SaveHeader;
+/*
+ * Format champ par champ : en-tete, puis un enregistrement par entree de
+ * SAVE_FIELDS (nom, nombre d'elements, taille d'un element, donnees). Au
+ * chargement, l'etat part des valeurs par defaut de Game_Init ; un champ
+ * inconnu ou dont la taille a change est ignore, un champ absent garde sa
+ * valeur par defaut. Les sauvegardes restent ainsi lisibles d'une version a
+ * l'autre tant qu'un champ garde son nom et son type.
+ */
+#define SAVE_FORMAT 2
+
+static bool PutU32(FILE *f, unsigned v)
+{
+    unsigned char b[4] = { (unsigned char)v, (unsigned char)(v >> 8), (unsigned char)(v >> 16), (unsigned char)(v >> 24) };
+    return fwrite(b, 4, 1, f) == 1;
+}
+
+static bool GetU32(FILE *f, unsigned *v)
+{
+    unsigned char b[4];
+    if (fread(b, 4, 1, f) != 1) return false;
+    *v = (unsigned)b[0] | (unsigned)b[1] << 8 | (unsigned)b[2] << 16 | (unsigned)b[3] << 24;
+    return true;
+}
 
 bool Game_Save(const Game *g, const char *path)
 {
     FILE *f = fopen(path, "wb");
     if (!f) return false;
-    SaveHeader h = { SAVE_MAGIC, SAVE_VERSION, (unsigned)sizeof(Game) };
-    bool ok = fwrite(&h, sizeof(h), 1, f) == 1 && fwrite(g, sizeof(Game), 1, f) == 1;
+    bool ok = fwrite(SAVE_MAGIC, 8, 1, f) == 1 && PutU32(f, SAVE_FORMAT) && PutU32(f, SAVE_VERSION)
+           && PutU32(f, (unsigned)g->difficulty) && PutU32(f, (unsigned)SAVE_FIELD_COUNT);
+    const unsigned char *base = (const unsigned char *)g;
+    for (int i = 0; i < SAVE_FIELD_COUNT && ok; i++) {
+        const SaveField *sf = &SAVE_FIELDS[i];
+        unsigned len = (unsigned)strlen(sf->name);
+        ok = PutU32(f, len) && fwrite(sf->name, len, 1, f) == 1 && PutU32(f, (unsigned)sf->count) && PutU32(f, (unsigned)sf->size);
+        for (size_t k = 0; k < sf->count && ok; k++)
+            ok = fwrite(base + sf->base + k * sf->stride + sf->offset, sf->size, 1, f) == 1;
+    }
     fclose(f);
     return ok;
+}
+
+static const SaveField *FindField(const char *name)
+{
+    for (int i = 0; i < SAVE_FIELD_COUNT; i++) if (strcmp(SAVE_FIELDS[i].name, name) == 0) return &SAVE_FIELDS[i];
+    return NULL;
 }
 
 bool Game_Load(Game *g, const char *path)
 {
     FILE *f = fopen(path, "rb");
     if (!f) return false;
-    SaveHeader h;
     static Game tmp;
-    bool ok = fread(&h, sizeof(h), 1, f) == 1 && memcmp(h.magic, SAVE_MAGIC, 8) == 0
-           && h.version == SAVE_VERSION && h.size == sizeof(Game) && fread(&tmp, sizeof(Game), 1, f) == 1;
+    char magic[8];
+    unsigned format = 0, version = 0, difficulty = 0, fields = 0;
+    bool ok = fread(magic, 8, 1, f) == 1 && memcmp(magic, SAVE_MAGIC, 8) == 0 && GetU32(f, &format) && format == SAVE_FORMAT
+           && GetU32(f, &version) && GetU32(f, &difficulty) && GetU32(f, &fields) && difficulty < DIFF_COUNT;
+    if (ok) Game_Init(&tmp, 1, (int)difficulty);
+    unsigned char *base = (unsigned char *)&tmp;
+    unsigned char buf[4096];
+    for (unsigned i = 0; i < fields && ok; i++) {
+        unsigned len, count, size;
+        char name[64];
+        ok = GetU32(f, &len) && len < sizeof(name) && fread(name, len, 1, f) == 1 && GetU32(f, &count) && GetU32(f, &size)
+          && size <= sizeof(buf);
+        if (!ok) break;
+        name[len] = 0;
+        const SaveField *sf = FindField(name);
+        bool use = sf && sf->size == size;
+        for (unsigned k = 0; k < count && ok; k++) {
+            ok = fread(buf, size, 1, f) == 1;
+            if (ok && use && k < sf->count) memcpy(base + sf->base + k * sf->stride + sf->offset, buf, size);
+        }
+    }
     fclose(f);
     if (ok) {
         *g = tmp;

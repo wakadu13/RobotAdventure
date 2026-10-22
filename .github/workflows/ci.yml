@@ -16,6 +16,8 @@ jobs:
     runs-on: ubuntu-22.04
     steps:
       - uses: actions/checkout@v4
+      - name: Registre de sauvegarde a jour
+        run: python3 tools/gen_save_fields.py && git diff --exit-code src/save_fields.c
       - name: Tests
         run: make test
       - name: Tests avec AddressSanitizer et UBSan
