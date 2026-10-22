@@ -119,7 +119,7 @@ float Cab_ApprovalTarget(const Game *g)
     float lob = 0;
     for (int l = 0; l < LB_COUNT; l++) lob += g->lobby[l];
     lob /= LB_COUNT;
-    float t = 50 + (g->res[R_COHESION] - 50) * 0.4f - fmaxf(0, g->inflation - 3) * 1.5f - Eco_NationUnemployment(g, N_FRANCE) * 100
+    float t = 50 + (g->res[R_COHESION] - 50) * 0.25f - fmaxf(0, g->inflation - 3) * 1.5f - Eco_NationUnemployment(g, N_FRANCE) * 100
             + (lob - 50) * 0.3f - (War_AtWarAny(g, N_FRANCE) ? 5 : 0);
     return Clampf(t, 0, 100);
 }
@@ -146,5 +146,6 @@ void Cab_Turn(Game *g)
 
     /* opinion */
     g->approval += (Cab_ApprovalTarget(g) - g->approval) * 0.3f;
-    AddRes(g, R_COHESION, (g->approval - 50) * 0.006f);
+    /* un regime repressif se soucie moins de l'opinion ; l'effet reste modere pour ne pas entrainer de spirale */
+    AddRes(g, R_COHESION, (g->approval - 50) * 0.004f * (1 - REGIMES[g->nat[N_FRANCE].regime].repression));
 }

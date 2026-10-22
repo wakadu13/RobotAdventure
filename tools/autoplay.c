@@ -1,6 +1,6 @@
 /*
  * Banc d'essai d'equilibrage : joue des parties automatiques sans interface.
- *   make sim && ./build/autoplay [nombre de parties] [difficulte 0-2]
+ *   make sim && ./build/autoplay [nombre de parties] [difficulte 0-2] [scenario 0-1]
  */
 #include "../src/game.h"
 
@@ -14,10 +14,38 @@ static void PlayPassive(Game *g)
     if (g->pendingDilemma >= 0) Game_ResolveDilemma(g, 1);
 }
 
+/* valeur d'une situation pour le bot : ressources, cohesion et souverainete d'abord */
+static float Worth(const Game *g)
+{
+    float v = 0;
+    for (int r = 0; r < R_COUNT; r++) v += g->res[r] * (r == R_COHESION || r == R_SOUVERAINETE ? 2.5f : r == R_BUDGET ? 0.5f : 1.0f);
+    return v - g->debt * 0.05f + g->credibility * 0.2f;
+}
+
+/* evalue les deux options sur une copie de la partie, un tour plus tard */
+static int BestOption(const Game *g)
+{
+    static Game tmp;
+    float best = -1e9f;
+    int pick = 0;
+    for (int c = 0; c < 2; c++) {
+        tmp = *g;
+        Game_ResolveDilemma(&tmp, c);
+        tmp.pendingDilemma = -1;
+        Game_EndTurn(&tmp);
+        float v = tmp.state == GAME_RUNNING ? Worth(&tmp) : -1e6f;
+        if (v > best) { best = v; pick = c; }
+    }
+    return pick;
+}
+
 static void ResolveDilemmas(Game *g, bool hawk)
 {
     if (g->pendingDilemma < 0) return;
     int d = g->pendingDilemma, c = g->turn % 2;
+    if (d >= DLM_EVENT || d < DLM_ALLY_CALL) c = BestOption(g);
+    if (d == DLM_AI_ALLIANCE || d == DLM_AI_TRADE) c = 0;
+    if (d == DLM_PEACE_BLACKMAIL) c = g->credibility >= 55 ? 1 : 0;
     if (d == DLM_PEACE_OFFER || d == DLM_NUKE_BLACKMAIL) c = hawk ? 1 : 0;
     if (d == DLM_COUP_LEGAL) c = hawk ? 0 : 1;
     if (d == 12 || d == 13) c = 1;
@@ -109,6 +137,13 @@ static void Manage(Game *g)
 
     for (int r = 0; r < SR_COUNT; r++)
         if (g->nat[N_FRANCE].strat[r] < 4 && g->res[R_BUDGET] > 40) Strat_Buy(g, r);
+    /* gouvernement : le candidat le plus competent, une fois par an ; lobbies au bord de la rupture */
+    if (g->turn % 4 == 1 && g->commandPoints > 1)
+        for (int post = 0; post < MIN_COUNT; post++)
+            for (int k = 0; k < 3; k++)
+                if (g->candidates[post][k].skill > g->minister[post].skill && g->commandPoints > 1) { Cab_Appoint(g, post, k); break; }
+    if (g->lobby[LB_SYNDICATS] < 25) Eco_SetTax(g, S_TRAVAILLEURS, g->taxRate[S_TRAVAILLEURS] - 0.05f);
+    if (g->lobby[LB_INDUSTRIE] < 25) Eco_SetTax(g, S_ELITES, g->taxRate[S_ELITES] - 0.05f);
     for (int n = 1; n < N_COUNT; n++) War_Diplomacy(g, n, 1);
     for (int k = 0; k < BASE_CP; k++) {
         int best = -1; float bv = 0;
@@ -167,10 +202,18 @@ static void StrategistStaff(Game *g)
         /* reconnaissance puis brouillage de l'ennemi */
         if (!Ops_Blocked(g, enemy, OP_RECON)) Ops_Run(g, enemy, OP_RECON);
         else if (!Ops_Blocked(g, enemy, OP_BROUILLAGE)) Ops_Run(g, enemy, OP_BROUILLAGE);
+        /* chasseurs : un sur deux en superiorite aerienne */
+        int air = 0;
+        for (int i = 0; i < MAX_UNITS; i++)
+            if (g->units[i].active && g->units[i].owner == N_FRANCE && g->units[i].type == U_CHASSE)
+                War_SetMission(g, i, air++ % 2 ? AM_SUPERIORITY : AM_SUPPORT);
         /* les sous-marins menent la guerre au commerce */
         for (int i = 0; i < MAX_UNITS; i++)
             if (g->units[i].active && g->units[i].owner == N_FRANCE && g->units[i].type == U_SNA) War_SetMission(g, i, NM_RAID);
     } else {
+        for (int i = 0; i < MAX_UNITS; i++)
+            if (g->units[i].active && g->units[i].owner == N_FRANCE && UNIT_TYPES[g->units[i].type].domain == DOM_AIR)
+                War_SetMission(g, i, AM_SUPPORT);
         War_SetGroupOrder(g, 1, GM_NONE, 0);
         War_SetGroupOrder(g, 2, GM_NONE, 0);
     }
@@ -223,6 +266,7 @@ static void PlayConqueror(Game *g)
 }
 
 static int scenario;
+static bool trace;   /* detail de chaque partie du stratege */
 
 static void Run(const char *label, void (*strat)(Game *), int games, int diff)
 {
@@ -238,6 +282,13 @@ static void Run(const char *label, void (*strat)(Game *), int games, int diff)
             Game_EndTurn(&g);
         }
         causes[g.state]++;
+        if (trace) {
+            int wars = 0, threats = Game_ActiveThreats(&g);
+            for (int n = 0; n < N_COUNT; n++) wars += g.war[N_FRANCE][n];
+            printf("  partie %2d : fin %3d etat %d coh %5.1f souv %5.1f infl %4.1f pop %3.0f%% guerres %d menaces %2d prov %d regime %d\n", i, g.turn,
+                   g.state, g.res[R_COHESION], g.res[R_SOUVERAINETE], g.inflation, g.approval, wars, threats,
+                   Soc_NationProvinces(&g, N_FRANCE), g.nat[N_FRANCE].regime);
+        }
         if (g.state == GAME_WON) { wins++; vic[Game_Victory(&g)]++; }
         turnsSum += g.turn - g.startTurn;
         provSum += Soc_NationProvinces(&g, N_FRANCE);
@@ -262,6 +313,7 @@ int main(int argc, char **argv)
     int diff = argc > 2 ? atoi(argv[2]) : DIFF_NORMAL;
     scenario = argc > 3 ? atoi(argv[3]) : 0;
     printf("Difficulté : %s, scénario : %s, %d parties par stratégie\n", DIFFICULTY_NAMES[diff], SCENARIO_NAMES[scenario != 0], games);
+    if (argc > 4) { trace = true; Run("stratege", PlayStrategist, games, diff); return 0; }
     Run("passive", PlayPassive, games, diff);
     Run("gestionnaire", Manage, games, diff);
     Run("stratege", PlayStrategist, games, diff);

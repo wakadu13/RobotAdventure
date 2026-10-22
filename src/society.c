@@ -420,8 +420,9 @@ static void FrancePopulation(Game *g, int p, float support, bool war)
         pr->mil[s] = Clampf(m + up - down - 0.06f * (m - 2.5f), 0, 10);
 
         /* la conscience monte avec l'instruction, les privations et la repression */
-        float c = 0.015f * pr->literacy + (need < 0.97f ? (0.97f - need) * 0.3f : 0) + rg->repression * 0.04f - 0.03f;
-        if (support < 0.45f) c += 0.05f;
+        /* la repression eveille surtout les consciences la ou la colere gronde deja */
+        float c = 0.015f * pr->literacy + (need < 0.97f ? (0.97f - need) * 0.3f : 0) + rg->repression * (m > 4 ? 0.04f : 0.015f) - 0.03f;
+        if (support < 0.45f) c += 0.03f;
         if (g->boostTurns > 0) c += 0.02f;
         if (g->culturePolicy == CP_REPRESSION && s != S_ELITES) c += Soc_NonAccepted(g, p) * 0.05f;
         pr->con[s] = Clampf(pr->con[s] + c, 0, 10);

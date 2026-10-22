@@ -106,7 +106,7 @@ const RegimeDef REGIMES[RG_COUNT] = {
       1.10f, 0.10f, 0.15f, 0.5f, 10, 0.3f, 0.8f, 0.00f, 0.75f, 1.05f, { -0.05f, 0.05f, 0.00f }, "Conseil des experts : pas d'élections, recettes et projets optimisés, la conscience politique monte plus vite." },
     { "Régime autoritaire",
       "Exécutif fort, libertés restreintes. Mobilisation et ordre accrus, isolement diplomatique.",
-      1.05f, 0.18f, 0.35f, 0.3f, 4, -0.4f, 0.7f, 0.00f, 1.00f, 1.10f, { -0.05f, -0.10f, 0.10f }, "Élections suspendues. Les libertés sont restreintes : la répression masque le mécontentement sans l'effacer." },
+      1.05f, 0.18f, 0.35f, 0.3f, 4, -0.4f, 0.7f, 0.00f, 1.00f, 1.10f, { -0.02f, -0.05f, 0.10f }, "Élections suspendues. Les libertés sont restreintes : la répression masque le mécontentement sans l'effacer." },
     { "Junte militaire",
       "L'armée gouverne. Puissance militaire maximale, économie et diplomatie sacrifiées.",
       0.90f, 0.28f, 0.50f, 0.2f, 1, -1.0f, 0.5f, -0.02f, 1.10f, 1.25f, { -0.10f, -0.15f, 0.05f }, "L'armée gouverne : recrutement 25% moins cher, organisation des troupes restaurée plus vite." },
