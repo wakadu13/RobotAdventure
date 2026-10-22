@@ -264,6 +264,8 @@ extern const ActionDef   ACTIONS[A_COUNT];
 extern const DilemmaDef  DILEMMAS[];
 extern const int         DILEMMA_COUNT;
 extern const DilemmaDef  DYN_DILEMMAS[6];
+extern const char       *SCENARIO_NAMES[2];
+extern const char       *SCENARIO_DESC[2];
 extern const RegimeDef   REGIMES[RG_COUNT];
 extern const NationDef   NATIONS[N_COUNT];
 extern const ProvinceDef PROVINCES[PROV_COUNT];
@@ -283,6 +285,8 @@ extern const char       *ALERT_DESC[3];
 #define DLM_NUKE_BLACKMAIL 103
 #define DLM_BAILOUT        104
 #define DLM_UN_VETO        105
+#define DLM_EVENT          200   /* evenements contextuels : DLM_EVENT + indice */
+#define EVENT_MAX          96
 
 /* ---- etat dynamique ---- */
 typedef struct {
@@ -506,6 +510,8 @@ typedef struct {
     /* hot-seat : nations dirigees par des joueurs ; la France joue d'abord, puis chaque commandant */
     bool human[N_COUNT];
     int activePlayer;
+    int scenario;              /* 0 : janvier 2030 ; 1 : crise de 2040 */
+    int startTurn;
     float climateMitigation;
     float importBonus;
 
@@ -513,6 +519,7 @@ typedef struct {
     int dilemmaParam;
     int dilemmaParam2;
     bool dilemmaUsed[32];
+    bool eventUsed[EVENT_MAX];
 
     bool reportReady;
     int reportLogStart;
@@ -543,6 +550,7 @@ typedef struct {
 
 /* game.c */
 void        Game_Init(Game *g, unsigned seed, int difficulty);
+bool        Game_ApplyScenario(Game *g, int scenario);
 void        Game_EndTurn(Game *g);
 bool        Game_Save(const Game *g, const char *path);
 bool        Game_Load(Game *g, const char *path);
@@ -567,6 +575,13 @@ void        Game_DateString(int turn, char *buf, int len);
 int         Game_Score(const Game *g, int parts[SC_COUNT]);
 VictoryType Game_Victory(const Game *g);
 void        Game_Log(Game *g, LogKind kind, const char *fmt, ...);
+
+/* events.c : evenements contextuels decrits par des donnees */
+extern const int  EVENT_COUNT;
+const DilemmaDef *Ev_Dilemma(int k);
+void        Ev_Apply(Game *g, int k, int choice);
+bool        Ev_Trigger(Game *g);
+bool        Ev_Eligible(const Game *g, int k);
 
 /* economy.c */
 void        Eco_Turn(Game *g);
@@ -757,7 +772,7 @@ typedef enum {
     CMD_FAB, CMD_MINE, CMD_STRIKE, CMD_TACTICAL, CMD_ULTIMATUM, CMD_NUKE_POSTURE, CMD_UMBRELLA, CMD_PROMOTE,
     CMD_ASSIGN, CMD_RESEARCH_BUDGET, CMD_TREATY_DRAFT, CMD_TREATY_CEDE, CMD_TREATY_REPARATIONS, CMD_NEGOTIATE,
     CMD_NATO, CMD_EMBARGO, CMD_COUNTER, CMD_WARNING, CMD_CULTURE, CMD_TARIFF, CMD_STRAT_BUY, CMD_REGIME,
-    CMD_DECREE, CMD_MIGRATION, CMD_ALERT, CMD_ADD_PLAYER, CMD_PEACE,
+    CMD_DECREE, CMD_MIGRATION, CMD_ALERT, CMD_ADD_PLAYER, CMD_PEACE, CMD_SCENARIO,
     CMD_COUNT
 } CmdType;
 

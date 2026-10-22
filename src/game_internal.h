@@ -86,4 +86,9 @@ void Nuke_ResolveBlackmail(Game *g, bool give);
 void Hybrid_SpawnExterior(Game *g, int p, int strength);
 float Eco_ProvinceSupply(const Game *g, int p, int good);
 
+/* game.c : outils partages avec les evenements */
+void AddMilitancy(Game *g, int strata, float v);
+void AddImmigrants(Game *g, float millions);
+void SpawnThreatFor(Game *g, int f);
+
 #endif

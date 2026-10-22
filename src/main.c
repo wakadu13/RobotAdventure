@@ -76,6 +76,7 @@ static int      selTheater = TH_NORD;
 static int      hoverProvince = -1;
 static bool     uiSel[MAX_UNITS];
 static int      newDifficulty = DIFF_NORMAL;
+static int      newScenario;         /* 0 : 2030 ; 1 : crise de 2040 */
 static bool     showReports = true;
 static bool     strikeArmed;
 static int      strikeProvince = -1;
@@ -2418,7 +2419,7 @@ static void DrawDilemma(void)
     DrawRectangle(0, 0, VW, VH, Fade(BLACK, 0.6f));
     Rectangle r = { 290, 170, 700, 380 };
     Panel(r, C_PANEL);
-    DrawRectangle((int)r.x, (int)r.y, (int)r.width, 4, game.pendingDilemma >= DLM_ALLY_CALL ? C_WAR : C_EVENT);
+    DrawRectangle((int)r.x, (int)r.y, (int)r.width, 4, game.pendingDilemma >= DLM_ALLY_CALL && game.pendingDilemma < DLM_EVENT ? C_WAR : C_EVENT);
     Text("DÉCISION DU CONSEIL DE DÉFENSE", r.x + 20, r.y + 16, 10, C_EVENT);
     Text(d->title, r.x + 20, r.y + 32, 20, C_TEXT);
     float ty = r.y + 62;
@@ -2685,6 +2686,7 @@ static void NewGame(void)
     Replay_Clear(&session);
     session.seed = seed;
     session.difficulty = newDifficulty;
+    if (newScenario) Do(CMD_SCENARIO, newScenario, 0, 0, 0);
     ResetUi();
 }
 
@@ -2755,6 +2757,11 @@ static void DrawTitle(void)
                 "navigation en bas de l'écran passe de la carte au panneau, au journal ou à la barre des ressources. F2 pour basculer.");
     Tooltip(dr, "Facile : menaces et climat atténués, recettes accrues.\nDifficile : menaces, climat et IA plus agressifs, "
                 "recettes réduites ; le score est multiplié par 1,3.");
+    y += 38;
+    snprintf(buf, sizeof(buf), "Scénario : %s", SCENARIO_NAMES[newScenario]);
+    Rectangle scr = { bx, y, 280, 30 };
+    if (Button(scr, buf, true, 10)) newScenario = (newScenario + 1) % 2;
+    Tooltip(scr, SCENARIO_DESC[newScenario]);
     y += 38;
     if (Button((Rectangle){ bx, y, 88, 38 }, "AIDE", true, 20)) screen = SCR_HELP;
     Rectangle hr = { bx + 96, y, 88, 38 };

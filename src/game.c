@@ -29,7 +29,6 @@ static const int FACTION_GEO[F_COUNT][TH_COUNT] = {
 };
 /* (le theatre des territoires exterieurs n'est alimente que par l'occupation) */
 
-static void SpawnThreatFor(Game *g, int f);
 
 void Game_Log(Game *g, LogKind kind, const char *fmt, ...)
 {
@@ -159,6 +158,58 @@ void Game_Init(Game *g, unsigned seed, int difficulty)
     g->activePlayer = N_FRANCE;
     War_UpdateSupply(g);
     War_UpdateIntel(g);
+}
+
+/* scenario de depart en crise : 2040, a appliquer juste apres Game_Init */
+bool Game_ApplyScenario(Game *g, int scenario)
+{
+    if (scenario != 1 || g->turn != 0 || g->startTurn != 0) return false;
+    g->scenario = 1;
+    g->turn = g->startTurn = 40;
+    g->temp = 2.05f;
+    g->seaLevel = 0.2f + 0.45f * (g->temp - 1.5f);
+    g->res[R_BUDGET] = 15;
+    g->res[R_ENERGIE] = 48;
+    g->res[R_EAU] = 45;
+    g->res[R_ALIM] = 50;
+    g->res[R_COHESION] = 45;
+    g->res[R_INFLUENCE] = 42;
+    g->res[R_SOUVERAINETE] = 72;
+    /* dix ans de reformes : des capacites hybrides plus solides qu'en 2030 */
+    for (int d = D_ESPACE; d <= D_EM; d++) g->capacity[d] += 2;
+    g->debt += 120;
+    g->natoCohesion = 50;
+    g->credibility = 50;
+    for (int f = 0; f < F_COUNT; f++) AddFac(g, f, 10, 8);
+    for (int p = 0; p < PROV_COUNT; p++) {
+        Province *pr = &g->prov[p];
+        if (pr->owner == N_FRANCE) for (int s = 0; s < S_COUNT; s++) pr->mil[s] += 1.5f;
+        pr->hab = Soc_Habitability(g, p);
+    }
+    Nation *ly = &g->nat[N_LIBYE];
+    ly->failed = true;
+    ly->regime = RG_JUNTE;
+    g->nat[N_ALGERIE].nukeStatus = 1;
+    g->nat[N_ALGERIE].nukeProgress = 0.45f;
+    for (int n = N_MAROC; n <= N_EGYPTE; n++) AddRelation(g, n, -15);
+    for (int i = 0; i < 2; i++) SpawnThreatFor(g, Rand(g) % F_COUNT);
+    for (int t = 0; t <= g->turn; t++) {
+        g->histPop[t] = Soc_NationPop(g, N_FRANCE);
+        g->histCohesion[t] = g->res[R_COHESION];
+        g->histTemp[t] = g->temp;
+        g->histScore[t] = (float)Game_Score(g, NULL);
+        for (int n = 0; n < N_COUNT; n++) {
+            g->histNatPop[n][t] = Soc_NationPop(g, n);
+            g->histNatArmy[n][t] = g->nat[n].army;
+            g->histNatRel[n][t] = g->nat[n].relation;
+        }
+    }
+    Game_Log(g, EV_EVENT, "Janvier 2040. +2°C. Le Président vous rappelle aux affaires : le pays est au bord du gouffre.");
+    Game_Log(g, EV_WAR, "La Fédération Boréale franchit la frontière balte.");
+    War_StartWar(g, N_BOREALE, N_BALTES, true);
+    War_UpdateSupply(g);
+    War_UpdateIntel(g);
+    return true;
 }
 
 /* ------------------------------------------------------------------ */
@@ -375,11 +426,12 @@ const DilemmaDef *Game_CurrentDilemma(const Game *g)
 {
     int d = g->pendingDilemma;
     if (d < 0) return NULL;
+    if (d >= DLM_EVENT) return Ev_Dilemma(d - DLM_EVENT);
     if (d >= DLM_ALLY_CALL) return &DYN_DILEMMAS[d - DLM_ALLY_CALL];
     return &DILEMMAS[d];
 }
 
-static void AddMilitancy(Game *g, int strata, float v)
+void AddMilitancy(Game *g, int strata, float v)
 {
     for (int p = 0; p < PROV_COUNT; p++) {
         if (g->prov[p].owner != N_FRANCE) continue;
@@ -388,7 +440,7 @@ static void AddMilitancy(Game *g, int strata, float v)
     }
 }
 
-static void AddImmigrants(Game *g, float millions)
+void AddImmigrants(Game *g, float millions)
 {
     float total = Soc_NationPop(g, N_FRANCE);
     for (int p = 0; p < PROV_COUNT; p++) {
@@ -501,8 +553,11 @@ void Game_ResolveDilemma(Game *g, int c)
     case DLM_UN_VETO:
         Intl_ResolveVeto(g, A);
         break;
+    default:
+        if (d >= DLM_EVENT) Ev_Apply(g, d - DLM_EVENT, c);
+        break;
     }
-    if (d < DLM_ALLY_CALL)
+    if (d < DLM_ALLY_CALL || d >= DLM_EVENT)
         Game_Log(g, EV_EVENT, "%s : %s.", dd->title, A ? dd->optA : dd->optB);
 }
 
@@ -529,7 +584,7 @@ static int AddThreat(Game *g, int type, int theater, int f, int strength)
     return -1;
 }
 
-static void SpawnThreatFor(Game *g, int f)
+void SpawnThreatFor(Game *g, int f)
 {
     int type = FACTION_THREATS[f][Rand(g) % 8];
     Domain d = THREATS[type].domain;
@@ -858,6 +913,8 @@ void Game_EndTurn(Game *g)
             g->pendingDilemma = d;
         }
     }
+    /* 9. evenement contextuel */
+    if (g->pendingDilemma < 0 && g->turn >= 2 && Randf(g) < 0.16f) Ev_Trigger(g);
 }
 
 /* ------------------------------------------------------------------ */

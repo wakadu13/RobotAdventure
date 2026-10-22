@@ -249,6 +249,13 @@ const char *MIGRATION_DESC[3] = {
 };
 const float MIGRATION_ACCEPT[3] = { 0.9f, 0.5f, 0.15f };
 
+const char *SCENARIO_NAMES[2] = { "Janvier 2030", "La crise de 2040" };
+const char *SCENARIO_DESC[2] = {
+    "+1,5°C. Le monde bascule, mais la France a encore des marges : vingt ans pour se préparer.",
+    "+2°C, la mer a monté de 45 cm. La Fédération Boréale envahit les pays baltes, la Libye s'est effondrée, "
+    "l'Algérie se dote de la bombe. Trésor vide, dette record, pays fracturé : vingt ans à tenir.",
+};
+
 const char *ALERT_LEVELS[3] = { "Vigilance", "Alerte renforcée", "Urgence attentat" };
 const char *ALERT_DESC[3] = {
     "Posture normale. Aucun surcoût.",

@@ -144,6 +144,22 @@ int main(void){ int fails=0; Game g;
    CHECK(g.turn==4);
    static Game s2; CHECK(Game_Save(&g,"build/test3.sav") && Game_Load(&s2,"build/test3.sav") && s2.human[N_ALLEMAGNE] && Game_Checksum(&s2)==Game_Checksum(&g));
    (void)h; }
+ /* evenements contextuels : chaque evenement s'affiche et s'applique sans erreur */
+ CHECK(EVENT_COUNT >= 50 && EVENT_COUNT <= EVENT_MAX);
+ for(int k=0;k<EVENT_COUNT;k++){ Game_Init(&g, 300+k, 1); const DilemmaDef *d=Ev_Dilemma(k);
+   CHECK(d && d->title && d->effA[0] && d->effB[0]);
+   g.pendingDilemma = DLM_EVENT + k; CHECK(Game_CurrentDilemma(&g)!=NULL);
+   Command c={ CMD_DILEMMA, N_FRANCE, (short)(k%2),0,0,0 }; CHECK(Cmd_Apply(&g,&c) && g.pendingDilemma<0); }
+ { int fired=0; for(int s=0;s<20;s++){ Game_Init(&g, 900+s, 1); for(int t=0;t<20;t++){ g.pendingDilemma=-1; Game_EndTurn(&g); if(g.pendingDilemma>=DLM_EVENT) fired++; } }
+   CHECK(fired>=10); }
+ /* scenario de 2040 : partie en cours de crise, 80 tours a tenir, rejouable */
+ { static Replay rp; static Game h; rp.seed=55; rp.difficulty=1; Replay_Clear(&rp); Game_Init(&g, rp.seed, rp.difficulty);
+   Command sc={ CMD_SCENARIO, N_FRANCE, 1,0,0,0 }; CHECK(Cmd_Apply(&g,&sc)); Replay_Record(&rp,&sc);
+   CHECK(g.turn==40 && g.startTurn==40 && g.temp>2 && g.war[N_BOREALE][N_BALTES] && g.nat[N_LIBYE].failed);
+   CHECK(!Cmd_Apply(&g,&sc));
+   for(int k=0;k<8;k++){ if(g.pendingDilemma>=0){ Command d={ CMD_DILEMMA, N_FRANCE, 1,0,0,0 }; Cmd_Apply(&g,&d); Replay_Record(&rp,&d); }
+     Command e={ CMD_END_TURN, N_FRANCE, 0,0,0,0 }; Cmd_Apply(&g,&e); Replay_Record(&rp,&e); }
+   CHECK(g.turn==48 || g.state!=GAME_RUNNING); Replay_Run(&rp,&h); CHECK(Game_Checksum(&g)==Game_Checksum(&h)); }
  /* sauvegarde */
  Game_Init(&g, 47, 1); for(int i=0;i<6;i++){ g.pendingDilemma=-1; Game_EndTurn(&g);} 
  { static Game h; CHECK(Game_Save(&g, "build/test.sav")); CHECK(Game_Load(&h, "build/test.sav")); CHECK(memcmp(&g,&h,sizeof g)==0);

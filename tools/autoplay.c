@@ -222,6 +222,8 @@ static void PlayConqueror(Game *g)
     for (int n = 1; n < N_COUNT; n++) if (War_AtWar(g, N_FRANCE, n)) SeekPeace(g, n, 12);
 }
 
+static int scenario;
+
 static void Run(const char *label, void (*strat)(Game *), int games, int diff)
 {
     int wins = 0, causes[7] = { 0 }, turnsSum = 0, provSum = 0, scoreSum = 0, vic[VIC_COUNT] = { 0 };
@@ -229,6 +231,7 @@ static void Run(const char *label, void (*strat)(Game *), int games, int diff)
     for (int i = 0; i < games; i++) {
         Game g;
         Game_Init(&g, 1000u + (unsigned)i * 7919u, diff);
+        Game_ApplyScenario(&g, scenario);
         while (g.state == GAME_RUNNING) {
             strat(&g);
             if (g.pendingDilemma >= 0) Game_ResolveDilemma(&g, 0);
@@ -236,7 +239,7 @@ static void Run(const char *label, void (*strat)(Game *), int games, int diff)
         }
         causes[g.state]++;
         if (g.state == GAME_WON) { wins++; vic[Game_Victory(&g)]++; }
-        turnsSum += g.turn;
+        turnsSum += g.turn - g.startTurn;
         provSum += Soc_NationProvinces(&g, N_FRANCE);
         popSum += Soc_NationPop(&g, N_FRANCE);
         scoreSum += Game_Score(&g, NULL);
@@ -257,7 +260,8 @@ int main(int argc, char **argv)
 {
     int games = argc > 1 ? atoi(argv[1]) : 100;
     int diff = argc > 2 ? atoi(argv[2]) : DIFF_NORMAL;
-    printf("Difficulté : %s, %d parties par stratégie\n", DIFFICULTY_NAMES[diff], games);
+    scenario = argc > 3 ? atoi(argv[3]) : 0;
+    printf("Difficulté : %s, scénario : %s, %d parties par stratégie\n", DIFFICULTY_NAMES[diff], SCENARIO_NAMES[scenario != 0], games);
     Run("passive", PlayPassive, games, diff);
     Run("gestionnaire", Manage, games, diff);
     Run("stratege", PlayStrategist, games, diff);
