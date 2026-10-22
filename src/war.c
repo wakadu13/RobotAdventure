@@ -415,11 +415,11 @@ static int LandPath(const Game *g, const Unit *u, int target, int path[], int ma
     return len;
 }
 
-const char *War_OrderBlocked(const Game *g, int i, int t)
+static const char *OrderBlocked(const Game *g, int n, int i, int t)
 {
     const Unit *u = &g->units[i];
     const UnitDef *d = &UNIT_TYPES[u->type];
-    if (!u->active || u->owner != N_FRANCE) return "Unité invalide";
+    if (!u->active || u->owner != n) return "Unité invalide";
     if (u->training) return "En formation";
     if (t == u->prov) return NULL;   /* annulation */
     if (d->domain == DOM_AIR) {
@@ -433,7 +433,7 @@ const char *War_OrderBlocked(const Game *g, int i, int t)
         return NULL;
     }
     int o = g->prov[t].ctrl;
-    if (!IsAlly(g, N_FRANCE, o) && !War_AtWar(g, N_FRANCE, o)) return "Territoire d'une nation avec laquelle nous sommes en paix";
+    if (!IsAlly(g, n, o) && !War_AtWar(g, n, o)) return "Territoire d'une nation avec laquelle nous sommes en paix";
     int path[PROV_COUNT];
     int len = LandPath(g, u, t, path, d->speed);
     if (len == 0) {
@@ -442,6 +442,8 @@ const char *War_OrderBlocked(const Game *g, int i, int t)
     }
     return NULL;
 }
+
+const char *War_OrderBlocked(const Game *g, int i, int t) { return OrderBlocked(g, N_FRANCE, i, t); }
 
 bool War_Order(Game *g, int i, int t)
 {
@@ -1906,21 +1908,24 @@ static void Reveal(bool *v, int p, int radius)
     for (int k = 0; k < MAX_ADJ && PROVINCE_ADJ[p][k] >= 0; k++) Reveal(v, PROVINCE_ADJ[p][k], radius - 1);
 }
 
-void War_UpdateIntel(Game *g)
+/* vue du joueur actif (la France, ou le commandant dont c'est le tour en hot-seat) */
+void War_UpdateIntel(Game *g) { War_UpdateIntelFor(g, g->activePlayer); }
+
+void War_UpdateIntelFor(Game *g, int n0)
 {
     bool *v = g->visible;
     memset(v, 0, sizeof(g->visible));
-    int radius = g->proj[P_CONSTELL].state == 2 ? 2 : 1;
+    int radius = n0 == N_FRANCE && g->proj[P_CONSTELL].state == 2 ? 2 : 1;
     for (int p = 0; p < PROV_COUNT; p++)
-        if (War_Friendly(g, N_FRANCE, p)) Reveal(v, p, radius);
+        if (War_Friendly(g, n0, p)) Reveal(v, p, radius);
     for (int i = 0; i < MAX_UNITS; i++) {
         const Unit *u = &g->units[i];
-        if (!u->active || u->owner != N_FRANCE) continue;
+        if (!u->active || u->owner != n0) continue;
         UnitDomain d = UNIT_TYPES[u->type].domain;
         if (d == DOM_AIR) Reveal(v, u->prov, UNIT_TYPES[u->type].range);
         else if (d == DOM_SEA) Reveal(v, u->prov, 2);
     }
-    for (int n = 1; n < N_COUNT; n++) {
+    for (int n = 1; n < N_COUNT && n0 == N_FRANCE; n++) {
         if (g->nat[n].recon <= 0) continue;
         for (int p = 0; p < PROV_COUNT; p++) if (g->prov[p].ctrl == n || g->prov[p].owner == n) v[p] = true;
     }
@@ -2139,8 +2144,14 @@ void War_Turn(Game *g)
         float aggro = NATIONS[n].aggressiveness * DiffAggro(g);
         float deter = 1 - g->credibility / 100.0f * (Nuke_IsPower(g, n) ? 0.4f : 0.8f);
 
+        bool human = g->human[n];
+        if (human && g->war[N_FRANCE][n] && na->peaceAsk == N_FRANCE + 1 && g->pendingDilemma < 0) AiPeaceOfferToFrance(g, n);
+        if (human) na->peaceAsk = 0;
+
         /* guerre contre la France */
-        if (g->war[N_FRANCE][n]) {
+        if (human) {
+            /* un commandant decide lui-meme de la guerre et de la paix */
+        } else if (g->war[N_FRANCE][n]) {
             int wt = War_Turns(g, N_FRANCE, n);
             if (wt > 0 && wt % 8 == 0) na->deterred = Nuke_Deters(g, n);
             float s = War_Score(g, N_FRANCE, n);
@@ -2160,13 +2171,13 @@ void War_Turn(Game *g)
 
         /* guerres entre nations */
         for (int t = 1; t < N_COUNT; t++) {
-            if (t == n || !g->war[n][t] || t < n) continue;
+            if (t == n || !g->war[n][t] || t < n || human || g->human[t]) continue;
             int wt = War_Turns(g, n, t);
             float s = War_Score(g, n, t);
             float tired = (ExhaustionVs(g, n, t) + ExhaustionVs(g, t, n)) / 80.0f + fabsf(s) / 150.0f;
             if (fabsf(s) > 60 || (wt >= 4 && Randf(g) < Clampf(tired, 0, 0.5f) * 0.4f) || wt > 24) AiPeace(g, n, t);
         }
-        if (g->turn > 8 && Randf(g) < aggro * 0.015f * (na->failed ? 2 : 1)) {
+        if (!human && g->turn > 8 && Randf(g) < aggro * 0.015f * (na->failed ? 2 : 1)) {
             int best = -1;
             float bestPow = 1e9f;
             for (int t = 1; t < N_COUNT; t++) {
@@ -2185,8 +2196,10 @@ void War_Turn(Game *g)
             }
         }
 
-        AiRecruit(g, n);
-        AiOrders(g, n);
+        if (!human) {
+            AiRecruit(g, n);
+            AiOrders(g, n);
+        }
         AiMissions(g, n);
     }
 
@@ -2202,4 +2215,136 @@ void War_Turn(Game *g)
     War_UpdateSupply(g);
     War_UpdateIntel(g);
     UpdateArmyPower(g);
+}
+
+/* ------------------------------------------------------------------ */
+/* Commandants : nations dirigees par d'autres joueurs (hot-seat)      */
+/* ------------------------------------------------------------------ */
+/*
+ * Un commandant dirige l'armee et la diplomatie militaire de sa nation :
+ * recrutement sur son tresor, ordres, declarations de guerre, paix,
+ * alliances. Son economie, sa politique et ses services restent geres
+ * automatiquement, comme pour les autres nations.
+ */
+
+int War_NextPlayer(const Game *g, int after)
+{
+    for (int n = after + 1; n < N_COUNT; n++) if (n != N_FRANCE && g->human[n] && g->nat[n].alive) return n;
+    return -1;
+}
+
+float Cmdr_RecruitCost(int type) { return UNIT_TYPES[type].cost * 0.5f; }
+
+const char *Cmdr_RecruitBlocked(const Game *g, int n, int type, int p)
+{
+    const UnitDef *d = &UNIT_TYPES[type];
+    if (g->state != GAME_RUNNING) return "Partie terminée";
+    if (!Mil_UnitUnlocked(g, n, type)) return "Technologie insuffisante";
+    if (p < 0 || g->prov[p].owner != n || g->prov[p].ctrl != n) return "Choisissez une province de votre nation";
+    if (g->prov[p].revolt) return "Province en révolte";
+    if (d->domain == DOM_SEA && !PROVINCE_COASTAL[p]) return "Il faut une province côtière";
+    if (d->domain == DOM_SEA && War_PortFlooded(g, p)) return "Port submergé par la montée des eaux";
+    if (War_StackCount(g, n, p, d->domain) >= StackLimit(d->domain)) return "Province saturée (limite d'empilement)";
+    if (War_UnitLoad(g, n) + d->capWeight > War_ArmyMax(g, n) + 0.01f) return "Plafond de mobilisation atteint";
+    if (g->nat[n].treasury < Cmdr_RecruitCost(type)) return "Trésor insuffisant";
+    return Strat_RecruitBlocked(g, n, type);
+}
+
+bool Cmdr_Recruit(Game *g, int n, int type, int p)
+{
+    if (Cmdr_RecruitBlocked(g, n, type, p)) return false;
+    if (War_SpawnUnit(g, n, type, p, UNIT_TYPES[type].train) < 0) return false;
+    g->nat[n].treasury -= Cmdr_RecruitCost(type);
+    Strat_PayRecruit(g, n, type);
+    return true;
+}
+
+const char *Cmdr_OrderBlocked(const Game *g, int n, int i, int t) { return OrderBlocked(g, n, i, t); }
+
+bool Cmdr_Order(Game *g, int n, int i, int t)
+{
+    if (OrderBlocked(g, n, i, t)) return false;
+    g->units[i].target = (short)(t == g->units[i].prov ? -1 : t);
+    return true;
+}
+
+bool Cmdr_Disband(Game *g, int n, int i)
+{
+    if (!g->units[i].active || g->units[i].owner != n) return false;
+    g->units[i].active = false;
+    UpdateArmyPower(g);
+    return true;
+}
+
+const char *Cmdr_DeclareBlocked(const Game *g, int n, int t)
+{
+    if (g->state != GAME_RUNNING) return "Partie terminée";
+    if (t == n || !g->nat[t].alive) return "Impossible";
+    if (g->war[n][t]) return "Déjà en guerre";
+    if (g->truce[n][t] > 0) return "Trêve en cours";
+    if (g->ally[n][t]) return "Nation alliée";
+    if (!War_Adjacent(g, n, t)) return "Aucune frontière terrestre ou maritime commune";
+    if (g->nat[n].actedThisTurn) return "Déjà une décision diplomatique ce tour";
+    return NULL;
+}
+
+bool Cmdr_Declare(Game *g, int n, int t)
+{
+    if (Cmdr_DeclareBlocked(g, n, t)) return false;
+    g->nat[n].actedThisTurn = true;
+    Game_Log(g, EV_WAR, "%s déclare la guerre à %s !", NATIONS[n].name, t == N_FRANCE ? "la France" : NATIONS[t].name);
+    War_StartWar(g, n, t, true);
+    if (t == N_FRANCE) g->nat[n].relation = -80;
+    return true;
+}
+
+const char *Cmdr_PeaceBlocked(const Game *g, int n, int t)
+{
+    if (g->state != GAME_RUNNING) return "Partie terminée";
+    if (t == n || !g->war[n][t]) return "Pas en guerre";
+    if (War_Turns(g, n, t) < 2) return "La guerre vient de commencer";
+    if (g->nat[n].actedThisTurn) return "Déjà une décision diplomatique ce tour";
+    if (g->nat[n].peaceAsk == t + 1) return "Demande déjà transmise";
+    return NULL;
+}
+
+/* la France et les autres commandants recoivent la demande ; une IA l'accepte si la guerre tourne mal pour elle */
+bool Cmdr_Peace(Game *g, int n, int t)
+{
+    if (Cmdr_PeaceBlocked(g, n, t)) return false;
+    Nation *na = &g->nat[n];
+    na->actedThisTurn = true;
+    if (t == N_FRANCE) {
+        na->peaceAsk = (short)(t + 1);   /* offre presentee a la France a la resolution du tour */
+        return true;
+    }
+    if (g->human[t]) {
+        if (g->nat[t].peaceAsk == n + 1) { AiPeace(g, n, t); g->nat[t].peaceAsk = 0; }
+        else na->peaceAsk = (short)(t + 1);
+        return true;
+    }
+    float s = War_Score(g, n, t);
+    if (s >= 10 || ExhaustionVs(g, t, n) > 15 || (War_Turns(g, n, t) >= 8 && s > -15)) AiPeace(g, n, t);
+    else Game_Log(g, EV_INFO, "%s refuse la paix proposée par %s.", NATIONS[t].name, NATIONS[n].name);
+    return true;
+}
+
+const char *Cmdr_AllyBlocked(const Game *g, int n, int t)
+{
+    if (g->state != GAME_RUNNING) return "Partie terminée";
+    if (t == n || t == N_FRANCE || !g->nat[t].alive || g->human[t]) return "Alliance avec une nation dirigée par l'IA";
+    if (g->ally[n][t]) return "Déjà alliée";
+    if (g->war[n][t]) return "En guerre";
+    if (g->nat[n].actedThisTurn) return "Déjà une décision diplomatique ce tour";
+    if (g->airel[n][t] < 50) return "Relations insuffisantes (50)";
+    return NULL;
+}
+
+bool Cmdr_Ally(Game *g, int n, int t)
+{
+    if (Cmdr_AllyBlocked(g, n, t)) return false;
+    g->nat[n].actedThisTurn = true;
+    g->ally[n][t] = g->ally[t][n] = true;
+    Game_Log(g, EV_INFO, "Alliance entre %s et %s.", NATIONS[n].name, NATIONS[t].name);
+    return true;
 }

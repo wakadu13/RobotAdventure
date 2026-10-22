@@ -19,7 +19,7 @@
 #define SAVE_FILE "bouclier2050.sav"
 #define AUTOSAVE_FILE "bouclier2050_auto.sav"
 
-typedef enum { SCR_TITLE, SCR_HELP, SCR_GAME, SCR_END } Screen;
+typedef enum { SCR_TITLE, SCR_HELP, SCR_GAME, SCR_END, SCR_HOTSEAT } Screen;
 typedef enum {
     TAB_PROVINCE, TAB_ARMEE, TAB_ETATMAJOR, TAB_NATIONS, TAB_DEFENSE, TAB_HYBRIDE,
     TAB_SOCIETE, TAB_ECONOMIE, TAB_POLITIQUE, TAB_PROJETS, TAB_COUNT
@@ -100,6 +100,18 @@ static bool     orderMode;           /* ordre au prochain toucher (ecrans tactil
 static int      tutorial = -1;       /* etape du tutoriel (-1 : aucun) */
 static int      tutoUnits, tutoTurn, tutoProv;
 static Replay   session;             /* commandes de la partie : rejeu et futur multijoueur */
+static bool     hotseatPick[N_COUNT]; /* nations confiees a d'autres joueurs (hot-seat) */
+static int      handoffFor = -1;     /* ecran de passage de l'appareil au joueur suivant */
+static int      cmdrScroll;
+
+/* joueur dont c'est le tour : la France, ou un commandant en hot-seat */
+static int Me(void) { return game.activePlayer; }
+
+static bool HotSeat(void)
+{
+    for (int n = 1; n < N_COUNT; n++) if (game.human[n]) return true;
+    return false;
+}
 
 /* grande interface (telephones) : une region de l'ecran logique agrandie a toute la taille de l'ecran */
 typedef enum { VR_ALL, VR_MAP, VR_PANEL, VR_LOWER, VR_LOG, VR_TOPBAR, VR_MODAL, VR_COUNT } ViewRegion;
@@ -118,7 +130,7 @@ static void SaveSettings(void);
 /* toute action du joueur passe par une commande, enregistree pour le rejeu */
 static bool Do(int type, int a, int b, int c, float f)
 {
-    Command cmd = { (unsigned char)type, N_FRANCE, (short)a, (short)b, (short)c, f };
+    Command cmd = { (unsigned char)type, (signed char)game.activePlayer, (short)a, (short)b, (short)c, f };
     bool ok = Cmd_Apply(&game, &cmd);
     if (ok) Replay_Record(&session, &cmd);
     return ok;
@@ -275,7 +287,7 @@ static void SelectUnitsIn(int p, bool add)
     if (!add) memset(uiSel, 0, sizeof(uiSel));
     for (int i = 0; i < MAX_UNITS; i++) {
         const Unit *u = &game.units[i];
-        if (u->active && u->owner == N_FRANCE && u->prov == p && !u->training) uiSel[i] = true;
+        if (u->active && u->owner == Me() && u->prov == p && !u->training) uiSel[i] = true;
     }
 }
 
@@ -283,7 +295,7 @@ static int SelectedCount(void)
 {
     int c = 0;
     for (int i = 0; i < MAX_UNITS; i++)
-        if (uiSel[i] && game.units[i].active && game.units[i].owner == N_FRANCE) c++;
+        if (uiSel[i] && game.units[i].active && game.units[i].owner == Me()) c++;
     return c;
 }
 
@@ -292,18 +304,19 @@ static void OrderSelected(int p)
     int ok = 0, tried = 0;
     const char *why = NULL;
     for (int i = 0; i < MAX_UNITS; i++) {
-        if (!uiSel[i] || !game.units[i].active || game.units[i].owner != N_FRANCE) continue;
+        if (!uiSel[i] || !game.units[i].active || game.units[i].owner != Me()) continue;
         tried++;
-        const char *b = War_OrderBlocked(&game, i, p);
+        const char *b = Cmdr_OrderBlocked(&game, Me(), i, p);
         if (b) { why = b; continue; }
         Do(CMD_ORDER, i, p, 0, 0);
         ok++;
     }
     char buf[160];
-    if (!tried) Toast("Aucune division sélectionnée (clic gauche sur une province française).");
+    if (!tried) Toast(Me() == N_FRANCE ? "Aucune division sélectionnée (clic gauche sur une province française)."
+                                       : "Aucune division sélectionnée (clic gauche sur une de vos provinces).");
     else if (!ok) { snprintf(buf, sizeof(buf), "Ordre impossible : %s.", why); Toast(buf); }
     else {
-        bool enemy = !War_Friendly(&game, N_FRANCE, p);
+        bool enemy = !War_Friendly(&game, Me(), p);
         snprintf(buf, sizeof(buf), "%d unité(s) %s %s.", ok, enemy ? "lancée(s) à l'assaut de" : "en route vers", PROVINCE_NAMES[p]);
         Toast(buf);
     }
@@ -635,11 +648,11 @@ static void DrawUnitCounters(void)
         for (int i = 0; i < MAX_UNITS; i++) {
             const Unit *u = &game.units[i];
             if (!u->active || u->prov != p) continue;
-            if (!seen && u->owner != N_FRANCE && !game.ally[N_FRANCE][u->owner]) continue;   /* brouillard de guerre */
+            if (!seen && u->owner != Me() && !game.ally[Me()][u->owner]) continue;   /* brouillard de guerre */
             int d = UNIT_TYPES[u->type].domain;
             count[u->owner][d]++;
             if (!u->training) ready[u->owner][d]++;
-            if (uiSel[i] && u->owner == N_FRANCE) sel[d] = true;
+            if (uiSel[i] && u->owner == Me()) sel[d] = true;
         }
         int slot = 0, nslots = 0;
         for (int n = 0; n < N_COUNT; n++) for (int d = 0; d < 3; d++) if (count[n][d]) nslots++;
@@ -649,15 +662,16 @@ static void DrawUnitCounters(void)
                 if (!count[n][d]) continue;
                 Rectangle r = { x0 + slot * (chipW + 1), c.y + 4, chipW, chipH };
                 Color fill = n == N_FRANCE ? (Color){ 40, 90, 200, 255 } : Shade(NationColor(n), 0.85f);
+                bool mine = n == Me();
                 if (d == DOM_AIR) fill = Shade(fill, 1.25f);
                 if (d == DOM_SEA) fill = Shade(fill, 0.6f);
-                Color border = n == N_FRANCE ? (sel[d] ? C_SEL : WHITE) : War_AtWar(&game, N_FRANCE, n) ? C_WAR : (Color){ 20, 20, 20, 255 };
+                Color border = mine ? (sel[d] ? C_SEL : WHITE) : War_AtWar(&game, Me(), n) ? C_WAR : (Color){ 20, 20, 20, 255 };
                 DrawRectangleRec(r, fill);
                 DrawRectangleLinesEx(r, 1, border);
                 char buf[8];
                 snprintf(buf, sizeof(buf), "%s%d", DOMAIN_TAGS[d], count[n][d]);
                 Text(buf, r.x + (r.width - TextW(buf, font)) / 2, r.y + (chipH - font) / 2 + 1, font,
-                     ready[n][d] < count[n][d] && n == N_FRANCE ? C_DIM : WHITE);
+                     ready[n][d] < count[n][d] && mine ? C_DIM : WHITE);
                 if (inputLayer == activeLayer && CheckCollisionPointRec(mouse, r)) {
                     char tip[600];
                     int len = snprintf(tip, sizeof(tip), "%s de %s en %s", d == DOM_LAND ? "Divisions" : d == DOM_AIR ? "Escadres" : "Flottes",
@@ -695,11 +709,11 @@ static void DrawUnitCounters(void)
             DrawCircleLines((int)g.x, (int)g.y, 4, BLACK);
         }
     }
-    /* ordres francais */
+    /* ordres du joueur actif */
     for (int i = 0; i < MAX_UNITS; i++) {
         const Unit *u = &game.units[i];
-        if (!u->active || u->owner != N_FRANCE || u->target < 0 || u->target == u->prov) continue;
-        bool attack = !War_Friendly(&game, N_FRANCE, u->target);
+        if (!u->active || u->owner != Me() || u->target < 0 || u->target == u->prov) continue;
+        bool attack = !War_Friendly(&game, Me(), u->target);
         Color col = attack ? C_WAR : UNIT_TYPES[u->type].domain == DOM_LAND ? C_GOOD : C_ACCENT;
         DrawArrow(ProvinceCenter(u->prov), ProvinceCenter(u->target), col);
     }
@@ -780,7 +794,7 @@ static void DrawMap(void)
     float pulse = 0.5f + 0.5f * sinf(timeAcc * 5);
     for (int p = 0; p < PROV_COUNT; p++) {
         Vector2 c = ProvinceCenter(p);
-        if (War_AtWar(&game, N_FRANCE, game.prov[p].ctrl) && War_ProvinceAttackable(&game, p))
+        if (War_AtWar(&game, Me(), game.prov[p].ctrl) && (Me() != N_FRANCE || War_ProvinceAttackable(&game, p)))
             DrawCircleLines((int)c.x, (int)c.y, 6 + pulse * 2, C_WAR);
         if (game.prov[p].revolt) {
             DrawCircleV((Vector2){ c.x, c.y - 8 }, 5, Fade((Color){ 190, 60, 220, 255 }, 0.5f + 0.4f * pulse));
@@ -830,8 +844,8 @@ static void DrawMap(void)
         } else if (!mapDragging && hoverProvince >= 0) {
             const Province *pr = &game.prov[hoverProvince];
             selProvince = hoverProvince;
-            if (pr->owner != N_FRANCE) selNation = pr->owner;
-            else if (pr->ctrl != N_FRANCE) selNation = pr->ctrl;
+            if (pr->owner != Me()) selNation = pr->owner;
+            else if (pr->ctrl != Me()) selNation = pr->ctrl;
             SelectUnitsIn(hoverProvince, IsKeyDown(KEY_LEFT_SHIFT) || IsKeyDown(KEY_RIGHT_SHIFT));
             if (tab != TAB_NATIONS && tab != TAB_ARMEE && tab != TAB_ETATMAJOR) tab = TAB_PROVINCE;
             strikeArmed = false;
@@ -907,10 +921,30 @@ static void DrawMap(void)
 /* ------------------------------------------------------------------ */
 /* Barre superieure                                                    */
 /* ------------------------------------------------------------------ */
+static void DrawCommanderBar(void)
+{
+    int n = Me();
+    const Nation *na = &game.nat[n];
+    char date[32], buf[200];
+    Game_DateString(game.turn, date, sizeof(date));
+    Text("BOUCLIER 2050", 10, 4, 20, C_ACCENT);
+    snprintf(buf, sizeof(buf), "%s - %d/%d - hot-seat", date, game.turn + 1, TOTAL_TURNS);
+    Text(buf, 10, 26, 10, C_TEXT);
+    snprintf(buf, sizeof(buf), "COMMANDANT : %s", NATIONS[n].name);
+    Text(buf, 250, 6, 20, NationColor(n));
+    int wars = 0;
+    for (int k = 0; k < N_COUNT; k++) if (game.war[n][k]) wars++;
+    snprintf(buf, sizeof(buf), "Trésor %.0f Md  -  armée %.1f / %.1f  -  %d province(s), %.1f M hab.  -  %d guerre(s)  -  %s",
+             na->treasury, War_UnitLoad(&game, n), War_ArmyMax(&game, n), Soc_NationProvinces(&game, n), Soc_NationPop(&game, n),
+             wars, REGIMES[na->regime].name);
+    Text(buf, 250, 28, 10, C_TEXT);
+}
+
 static void DrawTopBar(void)
 {
     DrawRectangle(0, 0, VW, 44, C_PANEL);
     DrawLine(0, 44, VW, 44, C_BORDER);
+    if (Me() != N_FRANCE) { DrawCommanderBar(); return; }
 
     char date[32], buf[160];
     Game_DateString(game.turn, date, sizeof(date));
@@ -2647,6 +2681,7 @@ static void NewGame(void)
 {
     unsigned seed = (unsigned)time(NULL);
     Game_Init(&game, seed, newDifficulty);
+    handoffFor = -1;
     Replay_Clear(&session);
     session.seed = seed;
     session.difficulty = newDifficulty;
@@ -2659,6 +2694,7 @@ static void LoadGame(const char *path)
         Replay_Clear(&session);   /* le rejeu repart d'une nouvelle partie seulement */
         ResetUi();
         Toast("Partie chargée.");
+        if (HotSeat()) handoffFor = Me();
         if (game.state != GAME_RUNNING) screen = SCR_END;
     } else {
         Toast("Sauvegarde illisible ou d'une autre version.");
@@ -2720,8 +2756,11 @@ static void DrawTitle(void)
     Tooltip(dr, "Facile : menaces et climat atténués, recettes accrues.\nDifficile : menaces, climat et IA plus agressifs, "
                 "recettes réduites ; le score est multiplié par 1,3.");
     y += 38;
-    if (Button((Rectangle){ bx, y, 136, 38 }, "AIDE", true, 20)) screen = SCR_HELP;
-    if (Button((Rectangle){ bx + 144, y, 136, 38 }, "QUITTER", true, 20)) quitRequested = true;
+    if (Button((Rectangle){ bx, y, 88, 38 }, "AIDE", true, 20)) screen = SCR_HELP;
+    Rectangle hr = { bx + 96, y, 88, 38 };
+    if (Button(hr, "HOT-SEAT", true, 10)) screen = SCR_HOTSEAT;
+    Tooltip(hr, "Partie à plusieurs sur le même appareil : la France et jusqu'à trois nations dirigées par d'autres joueurs.");
+    if (Button((Rectangle){ bx + 192, y, 88, 38 }, "QUITTER", true, 20)) quitRequested = true;
 
     const char *dom = "Terre - Mer - Air - Espace - Cyber - Informationnel - Electromagnétique";
     Text(dom, VW / 2 - TextW(dom, 10) / 2, 660, 10, C_DIM);
@@ -2816,17 +2855,158 @@ static void DrawEnd(void)
     snprintf(buf, sizeof(buf), "SCORE FINAL : %d", score);
     Text(buf, 640 - TextW(buf, 20) / 2, y, 20, C_SEL);
 
-    if (Button((Rectangle){ VW / 2 - 140, 530, 280, 40 }, "REJOUER", true, 20)) NewGame();
-    if (Button((Rectangle){ VW / 2 - 140, 580, 280, 40 }, "MENU", true, 20)) screen = SCR_TITLE;
+    float by = 530;
+    for (int n = 1; n < N_COUNT; n++) {
+        if (!game.human[n]) continue;
+        snprintf(buf, sizeof(buf), "Commandant %s : %s, %d province(s) (%d au départ), %.1f M hab.", NATIONS[n].name,
+                 game.nat[n].alive ? "survit" : "anéanti", Soc_NationProvinces(&game, n), game.nat[n].startProvinces, Soc_NationPop(&game, n));
+        Text(buf, VW / 2 - TextW(buf, 10) / 2, by - 18, 10, NationColor(n));
+        by += 14;
+    }
+    if (Button((Rectangle){ VW / 2 - 140, by, 280, 40 }, "REJOUER", true, 20)) NewGame();
+    if (Button((Rectangle){ VW / 2 - 140, by + 50, 280, 40 }, "MENU", true, 20)) screen = SCR_TITLE;
+}
+
+/* ------------------------------------------------------------------ */
+/* Hot-seat : panneau du commandant et passage de l'appareil           */
+/* ------------------------------------------------------------------ */
+static void DrawCommanderPanel(void)
+{
+    int n = Me();
+    char buf[200];
+    float x = RP_X + 10, y = 56;
+    Text("ARMÉE ET DIPLOMATIE MILITAIRE", x, y, 10, C_ACCENT);
+    y += 14;
+    y += TextWrap("Vous dirigez l'armée de votre nation : recrutement sur le trésor, ordres (clic sur vos provinces puis clic droit "
+                  "ou ORDRE), guerre, paix et alliances. L'économie et la politique restent gérées automatiquement.",
+                  x, y, RP_W - 20, 10, C_DIM) + 6;
+    const Province *pr = &game.prov[selProvince];
+    snprintf(buf, sizeof(buf), "RECRUTER EN %s%s", PROVINCE_NAMES[selProvince], pr->owner == n ? "" : " (choisissez une de vos provinces)");
+    Text(buf, x, y, 10, C_ACCENT);
+    y += 14;
+    for (int t = 0; t < U_TYPE_COUNT; t++) {
+        Rectangle r = { x + (t % 3) * 182, y + (t / 3) * 22, 176, 20 };
+        snprintf(buf, sizeof(buf), "%s  %.0f Md", UNIT_TYPES[t].shortName, Cmdr_RecruitCost(t));
+        char desc[300];
+        snprintf(desc, sizeof(desc), "%s\n%s\nFormation %d tour(s).", UNIT_TYPES[t].name, UNIT_TYPES[t].desc, UNIT_TYPES[t].train);
+        if (ActionButton(r, buf, Cmdr_RecruitBlocked(&game, n, t, selProvince), desc)) Do(CMD_RECRUIT, t, selProvince, 0, 0);
+    }
+    y += ((U_TYPE_COUNT + 2) / 3) * 22 + 6;
+    int sel = 0;
+    for (int i = 0; i < MAX_UNITS; i++) if (uiSel[i] && game.units[i].active && game.units[i].owner == n) sel++;
+    snprintf(buf, sizeof(buf), "%d unité(s) sélectionnée(s)", sel);
+    Text(buf, x, y + 5, 10, C_TEXT);
+    if (Button((Rectangle){ x + 200, y, 160, 20 }, "Dissoudre la sélection", sel > 0, 10))
+        for (int i = 0; i < MAX_UNITS; i++) if (uiSel[i]) { Do(CMD_DISBAND, i, 0, 0, 0); uiSel[i] = false; }
+    y += 30;
+
+    Text("NATIONS VOISINES ET ENNEMIES", x, y, 10, C_ACCENT);
+    y += 16;
+    int list[N_COUNT], c = 0;
+    for (int k = 0; k < N_COUNT; k++)
+        if (k != n && game.nat[k].alive && (game.war[n][k] || game.ally[n][k] || War_Adjacent(&game, n, k))) list[c++] = k;
+    int rows = (int)((VH - 60 - y) / 24);
+    if (cmdrScroll > c - rows) cmdrScroll = c - rows;
+    if (cmdrScroll < 0) cmdrScroll = 0;
+    Rectangle area = { x, y, RP_W - 20, rows * 24.0f };
+    if (Hover(area)) {
+        float wheel = GetMouseWheelMove();
+        if (wheel > 0) cmdrScroll--;
+        if (wheel < 0) cmdrScroll++;
+    }
+    for (int i = 0; i < rows && cmdrScroll + i < c; i++) {
+        int k = list[cmdrScroll + i];
+        float ry = y + i * 24;
+        DrawRectangle((int)x, (int)ry, 6, 20, NationColor(k));
+        const char *st = game.war[n][k] ? "EN GUERRE" : game.ally[n][k] ? "alliée" : game.truce[n][k] > 0 ? "trêve" : "paix";
+        snprintf(buf, sizeof(buf), "%s%s", NATIONS[k].name, game.human[k] ? " (joueur)" : "");
+        Text(buf, x + 12, ry + 2, 10, C_TEXT);
+        if (game.war[n][k]) snprintf(buf, sizeof(buf), "%s - score %+.0f", st, War_Score(&game, n, k));
+        else snprintf(buf, sizeof(buf), "%s - relations %+.0f", st, k == N_FRANCE ? game.nat[n].relation : game.airel[n][k]);
+        Text(buf, x + 12, ry + 12, 10, game.war[n][k] ? C_BAD : C_DIM);
+        float bx = x + RP_W - 20 - 3 * 92;
+        if (ActionButton((Rectangle){ bx, ry, 88, 20 }, "Guerre", Cmdr_DeclareBlocked(&game, n, k),
+                         "Déclarer la guerre (une décision diplomatique par tour). Les alliés de la victime peuvent entrer en guerre.")) Do(CMD_DECLARE_WAR, k, 0, 0, 0);
+        if (ActionButton((Rectangle){ bx + 92, ry, 88, 20 }, "Paix", Cmdr_PeaceBlocked(&game, n, k),
+                         "Proposer la paix. Une IA accepte si la guerre tourne mal pour elle ; la France ou un autre joueur "
+                         "reçoit la proposition (un joueur doit la proposer en retour).")) Do(CMD_PEACE, k, 0, 0, 0);
+        if (ActionButton((Rectangle){ bx + 184, ry, 88, 20 }, "Alliance", Cmdr_AllyBlocked(&game, n, k),
+                         "Alliance défensive avec une nation dirigée par l'IA (relations 50 au moins).")) Do(CMD_DIPLOMACY, k, 2, 0, 0);
+    }
+}
+
+/* ecran opaque entre deux joueurs : on ne voit pas la carte de l'autre */
+static void DrawHandoff(void)
+{
+    DrawBackdrop();
+    Rectangle r = { 240, 160, 800, 400 };
+    Panel(r, C_PANEL);
+    DrawRectangle((int)r.x, (int)r.y, (int)r.width, 4, NationColor(handoffFor));
+    char buf[160];
+    Text("PASSEZ L'APPAREIL", r.x + 400 - TextW("PASSEZ L'APPAREIL", 20) / 2, r.y + 40, 20, C_DIM);
+    snprintf(buf, sizeof(buf), "%s", handoffFor == N_FRANCE ? "FRANCE" : NATIONS[handoffFor].name);
+    Text(buf, r.x + 400 - TextW(buf, 40) / 2, r.y + 90, 40, NationColor(handoffFor));
+    char date[32];
+    Game_DateString(game.turn, date, sizeof(date));
+    snprintf(buf, sizeof(buf), "%s - %s", date, handoffFor == N_FRANCE ? "Conseil de défense" : "phase du commandant");
+    Text(buf, r.x + 400 - TextW(buf, 10) / 2, r.y + 150, 10, C_TEXT);
+    const char *tip = handoffFor == N_FRANCE ? "Le trimestre a été résolu. Les autres joueurs ne doivent pas regarder l'écran."
+                                             : "Les ordres des joueurs précédents restent secrets. Les autres joueurs détournent les yeux.";
+    Text(tip, r.x + 400 - TextW(tip, 10) / 2, r.y + 172, 10, C_DIM);
+    if (Button((Rectangle){ r.x + 260, r.y + 260, 280, 44 }, "COMMENCER", true, 20) || IsKeyPressed(KEY_ENTER)) {
+        handoffFor = -1;
+        memset(uiSel, 0, sizeof(uiSel));
+        selProvince = -1;
+        for (int p = 0; p < PROV_COUNT && selProvince < 0; p++) if (game.prov[p].owner == Me()) selProvince = p;
+        if (selProvince < 0) selProvince = PV_FR_IDF;
+        FocusProvince(selProvince, 2);
+        mapSignature = 0;
+    }
+}
+
+/* configuration d'une partie a plusieurs sur le meme appareil */
+static void NewGame(void);
+static void DrawHotseatSetup(void)
+{
+    DrawBackdrop();
+    Rectangle r = { 180, 40, 920, 640 };
+    Panel(r, C_PANEL);
+    Text("PARTIE À PLUSIEURS (HOT-SEAT)", r.x + 20, r.y + 16, 20, C_ACCENT);
+    TextWrap("Le premier joueur dirige la France. Jusqu'à trois autres joueurs prennent chacun une nation et en commandent "
+             "l'armée et la diplomatie militaire. Chaque trimestre, la France joue, puis chaque commandant à son tour, puis le "
+             "trimestre se résout. Un écran de passage cache la carte entre deux joueurs.", r.x + 20, r.y + 44, r.width - 40, 10, C_DIM);
+    int picked = 0;
+    for (int n = 1; n < N_COUNT; n++) if (hotseatPick[n]) picked++;
+    char buf[96];
+    int col = 0, row = 0;
+    for (int n = 1; n < N_COUNT; n++) {
+        Rectangle b = { r.x + 20 + col * 222, r.y + 96 + row * 26, 214, 22 };
+        snprintf(buf, sizeof(buf), "%s%s", hotseatPick[n] ? "[X] " : "[ ] ", NATIONS[n].name);
+        if (Choice(b, buf, hotseatPick[n]) && (hotseatPick[n] || picked < 3)) hotseatPick[n] = !hotseatPick[n];
+        DrawRectangle((int)b.x + (int)b.width - 8, (int)b.y + 4, 4, 14, NationColor(n));
+        if (++col == 4) { col = 0; row++; }
+    }
+    snprintf(buf, sizeof(buf), "%d commandant(s) choisi(s) sur 3 - difficulté : %s", picked, DIFFICULTY_NAMES[newDifficulty]);
+    Text(buf, r.x + 20, r.y + r.height - 84, 10, C_TEXT);
+    if (Button((Rectangle){ r.x + 20, r.y + r.height - 60, 200, 40 }, "RETOUR", true, 20)) screen = SCR_TITLE;
+    if (Button((Rectangle){ r.x + r.width - 300, r.y + r.height - 60, 280, 40 }, "LANCER LA PARTIE", picked > 0, 20)) {
+        NewGame();
+        tutorial = -1;
+        for (int n = 1; n < N_COUNT; n++) if (hotseatPick[n]) Do(CMD_ADD_PLAYER, n, 0, 0, 0);
+        handoffFor = N_FRANCE;
+    }
 }
 
 static void DrawGame(void)
 {
     ClearBackground(C_BG);
-    bool report = game.reportReady && showReports && game.pendingDilemma < 0 && game.state == GAME_RUNNING;
+    if (handoffFor >= 0) { inputLayer = activeLayer = 0; DrawHandoff(); return; }
+    bool france = Me() == N_FRANCE;
+    bool report = france && game.reportReady && showReports && game.pendingDilemma < 0 && game.state == GAME_RUNNING;
     if (!showReports) game.reportReady = false;
     if (treatyOpen && (!game.treaty.active || game.pendingDilemma >= 0)) treatyOpen = false;
-    activeLayer = (game.pendingDilemma >= 0 || report || treatyOpen) ? 1 : 0;
+    if (!france) treatyOpen = false;
+    activeLayer = ((france && game.pendingDilemma >= 0) || report || treatyOpen) ? 1 : 0;
     inputLayer = 0;
 
     DrawMap();
@@ -2838,7 +3018,7 @@ static void DrawGame(void)
         "PROV.", "ARMÉE", "ÉT.-MAJ.", "NATIONS", "DÉFENSE", "HYBRIDE", "SOCIÉTÉ", "ÉCO.", "POLIT.", "PROJETS"
     };
     float tw = (RP_W - (TAB_COUNT - 1) * 2) / (float)TAB_COUNT;
-    for (int i = 0; i < TAB_COUNT; i++) {
+    for (int i = 0; i < TAB_COUNT && france; i++) {
         Rectangle r = { RP_X + i * (tw + 2), 52, tw, 28 };
         bool sel = tab == (Tab)i, h = Hover(r);
         DrawRectangleRec(r, sel ? (Color){ 44, 66, 96, 255 } : h ? C_PANEL2 : C_BG);
@@ -2846,7 +3026,7 @@ static void DrawGame(void)
         Text(tabNames[i], r.x + (r.width - TextW(tabNames[i], 10)) / 2, r.y + 9, 10, sel ? C_TEXT : C_DIM);
         if (h && clicked) { tab = (Tab)i; clicked = false; }
     }
-    switch (tab) {
+    switch (france ? tab : TAB_COUNT) {
     case TAB_PROVINCE:  DrawProvinceTab(); break;
     case TAB_ARMEE:     DrawArmyTab(); break;
     case TAB_ETATMAJOR: DrawStaffTab(); break;
@@ -2857,24 +3037,27 @@ static void DrawGame(void)
     case TAB_ECONOMIE:  DrawEconomyTab(); break;
     case TAB_POLITIQUE: DrawPolitiqueTab(); break;
     case TAB_PROJETS:   DrawProjectsTab(); break;
-    default: break;
+    default: DrawCommanderPanel(); break;
     }
 
     Rectangle eb = { RP_X + RP_W - 200, VH - 46, 200, 38 };
-    bool endTurn = Button(eb, "FIN DU TOUR  >>", game.state == GAME_RUNNING, 20);
-    Tooltip(eb, "Résoudre le trimestre (Espace ou Entrée)");
+    bool last = War_NextPlayer(&game, france ? 0 : Me()) < 0;
+    bool endTurn = Button(eb, last ? "FIN DU TOUR  >>" : "FIN DE PHASE  >>", game.state == GAME_RUNNING, 20);
+    Tooltip(eb, last ? "Résoudre le trimestre (Espace ou Entrée)" : "Passer la main au joueur suivant (Espace ou Entrée)");
     char lbl[64];
-    snprintf(lbl, sizeof(lbl), "PC restants : %d", game.commandPoints);
+    if (france) snprintf(lbl, sizeof(lbl), "PC restants : %d", game.commandPoints);
+    else snprintf(lbl, sizeof(lbl), "Trésor : %.0f Md", game.nat[Me()].treasury);
     Text(lbl, RP_X + 10, VH - 32, 10, C_ACCENT);
     if (activeLayer == 0 && (IsKeyPressed(KEY_SPACE) || IsKeyPressed(KEY_ENTER))) endTurn = true;
     if (endTurn && activeLayer == 0) {
-        Do(CMD_END_TURN, 0, 0, 0, 0);
+        int turnBefore = game.turn;
+        if (Do(CMD_END_TURN, 0, 0, 0, 0) && HotSeat() && game.state == GAME_RUNNING) handoffFor = Me();
         logScroll = 0;
         strikeArmed = false;
         for (int i = 0; i < MAX_UNITS; i++) if (!game.units[i].active) uiSel[i] = false;
-        if (game.turn % 4 == 0 && game.state == GAME_RUNNING) Game_Save(&game, AUTOSAVE_FILE);
+        if (game.turn != turnBefore && game.turn % 4 == 0 && game.state == GAME_RUNNING) Game_Save(&game, AUTOSAVE_FILE);
     }
-    if (activeLayer == 0) {
+    if (activeLayer == 0 && france) {
         for (int i = 0; i < 9; i++) if (IsKeyPressed(KEY_ONE + i)) tab = (Tab)i;
         if (IsKeyPressed(KEY_ZERO)) tab = TAB_PROJETS;
         if (IsKeyPressed(KEY_M)) mapMode = (MapMode)((mapMode + 1) % MAP_MODE_COUNT);
@@ -2885,8 +3068,8 @@ static void DrawGame(void)
         if (IsKeyPressed(KEY_F9) && FileExists(SAVE_FILE)) LoadGame(SAVE_FILE);
     }
 
-    if (activeLayer == 0) DrawTutorial();
-    if (game.pendingDilemma >= 0) {
+    if (activeLayer == 0 && france) DrawTutorial();
+    if (france && game.pendingDilemma >= 0) {
         tooltip[0] = 0;
         inputLayer = 1;
         DrawDilemma();
@@ -2912,7 +3095,9 @@ static Rectangle CurrentRegion(void)
 {
     if (!bigUi) return REGIONS[VR_ALL];
     if (screen == SCR_TITLE) return (Rectangle){ 320, 40, 640, 660 };
+    if (screen == SCR_HOTSEAT) return (Rectangle){ 180, 40, 920, 640 };
     if (screen != SCR_GAME) return REGIONS[VR_ALL];
+    if (handoffFor >= 0) return REGIONS[VR_MODAL];
     bool modal = game.pendingDilemma >= 0 || treatyOpen || (game.reportReady && showReports && game.state == GAME_RUNNING);
     return REGIONS[modal ? VR_MODAL : region];
 }
@@ -3017,6 +3202,7 @@ int main(void)
         case SCR_HELP:  DrawHelp(); break;
         case SCR_GAME:  DrawGame(); break;
         case SCR_END:   DrawEnd(); break;
+        case SCR_HOTSEAT: DrawHotseatSetup(); break;
         }
         DrawTooltip();
         EndTextureMode();

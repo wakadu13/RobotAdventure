@@ -411,6 +411,7 @@ typedef struct {
     short peaceCooldown;       /* delai avant une nouvelle offre de paix */
     short peaceRefusals;       /* offres refusees par la France */
     float raid;                /* pertes commerciales dues a la guerre au commerce */
+    short peaceAsk;            /* commandant humain : demande de paix a la nation (indice + 1) */
 } Nation;
 
 typedef struct {
@@ -501,6 +502,10 @@ typedef struct {
     bool umbrella;
 
     bool aiDefense;
+
+    /* hot-seat : nations dirigees par des joueurs ; la France joue d'abord, puis chaque commandant */
+    bool human[N_COUNT];
+    int activePlayer;
     float climateMitigation;
     float importBonus;
 
@@ -677,6 +682,22 @@ const char *War_MissionBlocked(const Game *g, int unit, int mission);
 bool        War_SetMission(Game *g, int unit, int mission);
 bool        War_PortFlooded(const Game *g, int p);
 
+/* war.c : commandants (nations dirigees par d'autres joueurs en hot-seat) */
+int         War_NextPlayer(const Game *g, int after);   /* -1 : plus personne apres */
+void        War_UpdateIntelFor(Game *g, int n);
+float       Cmdr_RecruitCost(int type);
+const char *Cmdr_RecruitBlocked(const Game *g, int n, int type, int p);
+bool        Cmdr_Recruit(Game *g, int n, int type, int p);
+const char *Cmdr_OrderBlocked(const Game *g, int n, int unit, int target);
+bool        Cmdr_Order(Game *g, int n, int unit, int target);
+bool        Cmdr_Disband(Game *g, int n, int unit);
+const char *Cmdr_DeclareBlocked(const Game *g, int n, int t);
+bool        Cmdr_Declare(Game *g, int n, int t);
+const char *Cmdr_PeaceBlocked(const Game *g, int n, int t);
+bool        Cmdr_Peace(Game *g, int n, int t);
+const char *Cmdr_AllyBlocked(const Game *g, int n, int t);
+bool        Cmdr_Ally(Game *g, int n, int t);
+
 /* intl.c : ONU, OTAN, sanctions */
 void        Intl_Init(Game *g);
 void        Intl_Turn(Game *g);
@@ -736,7 +757,7 @@ typedef enum {
     CMD_FAB, CMD_MINE, CMD_STRIKE, CMD_TACTICAL, CMD_ULTIMATUM, CMD_NUKE_POSTURE, CMD_UMBRELLA, CMD_PROMOTE,
     CMD_ASSIGN, CMD_RESEARCH_BUDGET, CMD_TREATY_DRAFT, CMD_TREATY_CEDE, CMD_TREATY_REPARATIONS, CMD_NEGOTIATE,
     CMD_NATO, CMD_EMBARGO, CMD_COUNTER, CMD_WARNING, CMD_CULTURE, CMD_TARIFF, CMD_STRAT_BUY, CMD_REGIME,
-    CMD_DECREE, CMD_MIGRATION, CMD_ALERT,
+    CMD_DECREE, CMD_MIGRATION, CMD_ALERT, CMD_ADD_PLAYER, CMD_PEACE,
     CMD_COUNT
 } CmdType;
 

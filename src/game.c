@@ -155,6 +155,8 @@ void Game_Init(Game *g, unsigned seed, int difficulty)
     Game_Log(g, EV_INFO, "Gérez la population, protégez les frontières dans tous les milieux et tenez jusqu'en 2060.");
 
     for (int i = 0; i < 2; i++) SpawnThreatFor(g, Rand(g) % F_COUNT);
+    g->human[N_FRANCE] = true;
+    g->activePlayer = N_FRANCE;
     War_UpdateSupply(g);
     War_UpdateIntel(g);
 }

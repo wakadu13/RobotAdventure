@@ -126,6 +126,24 @@ int main(void){ int fails=0; Game g;
    c4={ CMD_TREATY_CEDE, N_FRANCE, 3,0,0,0 }, c5={ 250, N_FRANCE, 0,0,0,0 };
    CHECK(Cmd_Apply(&g,&c1) && g.tariff>0.19f && g.tariff<0.21f); CHECK(Cmd_Apply(&g,&c2) && g.alertLevel==2); CHECK(Cmd_Apply(&g,&c3) && g.nukePosture==1);
    CHECK(!Cmd_Apply(&g,&c4)); CHECK(!Cmd_Apply(&g,&c5)); }
+ /* hot-seat : la France joue, puis le commandant allemand, puis le tour se resout */
+ { static Replay rp; static Game h; rp.seed=77; rp.difficulty=1; Replay_Clear(&rp); Game_Init(&g, rp.seed, rp.difficulty);
+   Command add={ CMD_ADD_PLAYER, N_FRANCE, N_ALLEMAGNE,0,0,0 }, end={ CMD_END_TURN, N_FRANCE, 0,0,0,0 };
+   CHECK(Cmd_Apply(&g,&add) && g.human[N_ALLEMAGNE]); Replay_Record(&rp,&add);
+   g.pendingDilemma=-1; CHECK(Cmd_Apply(&g,&end)); Replay_Record(&rp,&end);
+   CHECK(g.activePlayer==N_ALLEMAGNE && g.turn==0);
+   CHECK(!Cmd_Apply(&g,&end));                        /* la France attend son tour */
+   g.nat[N_ALLEMAGNE].treasury=500;
+   Command rec={ CMD_RECRUIT, N_ALLEMAGNE, U_INF, PV_DE_NRW,0,0 }; int before=War_UnitCount(&g,N_ALLEMAGNE);
+   CHECK(Cmd_Apply(&g,&rec) && War_UnitCount(&g,N_ALLEMAGNE)==before+1);
+   Command tax={ CMD_TAX, N_ALLEMAGNE, 0,0,0,0.3f }; CHECK(!Cmd_Apply(&g,&tax));   /* le commandant ne gere pas la France */
+   Command dw={ CMD_DECLARE_WAR, N_ALLEMAGNE, N_FRANCE,0,0,0 }; CHECK(Cmd_Apply(&g,&dw) && g.war[N_ALLEMAGNE][N_FRANCE]);
+   Command end2={ CMD_END_TURN, N_ALLEMAGNE, 0,0,0,0 }; CHECK(Cmd_Apply(&g,&end2)); CHECK(g.turn==1 && g.activePlayer==N_FRANCE);
+   for(int k=0;k<6;k++){ if(g.pendingDilemma>=0){ Command d={ CMD_DILEMMA, N_FRANCE, 0,0,0,0 }; Cmd_Apply(&g,&d); }
+     Command e={ CMD_END_TURN, (signed char)g.activePlayer, 0,0,0,0 }; CHECK(Cmd_Apply(&g,&e)); }
+   CHECK(g.turn==4);
+   static Game s2; CHECK(Game_Save(&g,"build/test3.sav") && Game_Load(&s2,"build/test3.sav") && s2.human[N_ALLEMAGNE] && Game_Checksum(&s2)==Game_Checksum(&g));
+   (void)h; }
  /* sauvegarde */
  Game_Init(&g, 47, 1); for(int i=0;i<6;i++){ g.pendingDilemma=-1; Game_EndTurn(&g);} 
  { static Game h; CHECK(Game_Save(&g, "build/test.sav")); CHECK(Game_Load(&h, "build/test.sav")); CHECK(memcmp(&g,&h,sizeof g)==0);

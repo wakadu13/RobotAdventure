@@ -247,9 +247,19 @@ emporté par la guerre hybride de fin de partie. La dette héritée dépend de l
 
 ## Multijoueur
 
-Pas encore jouable, mais préparé : les actions passent par des commandes sérialisables, la simulation
-est déterministe et vérifiable par somme de contrôle, et une partie peut être rejouée. Voir
-[docs/MULTIJOUEUR.md](docs/MULTIJOUEUR.md).
+**Hot-seat** (plusieurs joueurs sur le même appareil) : bouton `HOT-SEAT` du menu. Le premier joueur
+dirige la France ; jusqu'à trois autres choisissent chacun une nation et en commandent l'armée et la
+diplomatie militaire : recrutement payé sur le trésor national, ordres, déclarations de guerre,
+propositions de paix, alliances avec les nations de l'IA. L'économie, la politique et les services
+de ces nations restent automatiques. Chaque trimestre, la France joue, puis chaque commandant à son
+tour (bouton `FIN DE PHASE`), puis le trimestre se résout ; un écran de passage masque la carte entre
+deux joueurs et chacun ne voit que son propre brouillard de guerre. Une paix entre deux joueurs
+exige que chacun la propose ; une paix proposée à la France lui est présentée comme une offre de
+traité.
+
+Toutes les actions de l'interface passent par des commandes sérialisables et validées, la
+simulation est déterministe et vérifiable par somme de contrôle, et une partie peut être rejouée :
+c'est la base d'un futur jeu en réseau. Voir [docs/MULTIJOUEUR.md](docs/MULTIJOUEUR.md).
 
 ## Organisation du code
 
@@ -267,7 +277,7 @@ src/ops.c           opérations cyber, informationnelles, spatiales et électrom
 src/resources.c     ressources stratégiques (terres rares, uranium, semi-conducteurs)
 src/nuclear.c       dissuasion, prolifération, armes tactiques
 src/intl.c          ONU, OTAN, sanctions
-src/command.c       commandes, somme de contrôle et rejeu (base du multijoueur)
+src/command.c       commandes, phases du hot-seat, somme de contrôle et rejeu
 src/save_fields.c/.h registre des champs sauvegardés (généré)
 src/map_data.c/.h   carte générée (grille 0,125°, 130 régions, adjacences, cultures, religions)
 src/main.c          interface raylib

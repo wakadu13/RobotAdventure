@@ -15,6 +15,37 @@
 
 #define IN(v, n) ((v) >= 0 && (v) < (n))
 
+/* fin de la phase du joueur actif : on passe au commandant suivant, ou on resout le tour */
+static bool EndPhase(Game *g)
+{
+    if (g->activePlayer == N_FRANCE && g->pendingDilemma >= 0) return false;
+    int next = War_NextPlayer(g, g->activePlayer == N_FRANCE ? 0 : g->activePlayer);
+    if (next >= 0) {
+        g->activePlayer = next;
+        War_UpdateIntel(g);
+        return true;
+    }
+    g->activePlayer = N_FRANCE;
+    War_UpdateIntel(g);   /* la resolution du tour se fait avec la vue francaise */
+    Game_EndTurn(g);
+    return true;
+}
+
+/* actions d'un commandant (nation dirigee par un autre joueur) */
+static bool CommanderApply(Game *g, const Command *c)
+{
+    int n = c->player;
+    switch (c->type) {
+    case CMD_RECRUIT:     return Cmdr_Recruit(g, n, c->a, c->b);
+    case CMD_ORDER:       return Cmdr_Order(g, n, c->a, c->b);
+    case CMD_DISBAND:     return Cmdr_Disband(g, n, c->a);
+    case CMD_DECLARE_WAR: return Cmdr_Declare(g, n, c->a);
+    case CMD_PEACE:       return Cmdr_Peace(g, n, c->a);
+    case CMD_DIPLOMACY:   return c->b == 2 && Cmdr_Ally(g, n, c->a);
+    default:              return false;
+    }
+}
+
 /* bornes des arguments : une commande venue du reseau ne doit jamais sortir des tableaux */
 static bool ArgsValid(const Command *c)
 {
@@ -23,7 +54,7 @@ static bool ArgsValid(const Command *c)
     case CMD_RECRUIT:        return IN(a, U_TYPE_COUNT) && IN(b, PROV_COUNT);
     case CMD_ORDER:          return IN(a, MAX_UNITS) && IN(b, PROV_COUNT);
     case CMD_DISBAND:        return IN(a, MAX_UNITS);
-    case CMD_DECLARE_WAR:    case CMD_EMBARGO: case CMD_RESOLUTION: case CMD_WARNING: return IN(a, N_COUNT);
+    case CMD_DECLARE_WAR:    case CMD_EMBARGO: case CMD_RESOLUTION: case CMD_WARNING: case CMD_PEACE: case CMD_ADD_PLAYER: return IN(a, N_COUNT);
     case CMD_DIPLOMACY:      return IN(a, N_COUNT) && IN(b, 3);
     case CMD_OPERATION:      return IN(a, N_COUNT) && IN(b, OP_COUNT);
     case CMD_COUNTER:        return IN(a, N_COUNT) && IN(b, 2);
@@ -46,10 +77,15 @@ static bool ArgsValid(const Command *c)
 
 bool Cmd_Apply(Game *g, const Command *c)
 {
-    if (c->type >= CMD_COUNT || !ArgsValid(c)) return false;
-    if (c->player != N_FRANCE) return false;   /* un seul camp jouable pour l'instant */
+    if (c->type >= CMD_COUNT || !ArgsValid(c) || c->player < 0 || c->player >= N_COUNT) return false;
+    if (c->player != g->activePlayer) return false;   /* ce n'est pas son tour */
+    if (c->type == CMD_END_TURN) return EndPhase(g);
+    if (c->player != N_FRANCE) return CommanderApply(g, c);
     switch (c->type) {
-    case CMD_END_TURN:        if (g->pendingDilemma >= 0) return false; Game_EndTurn(g); return true;
+    case CMD_ADD_PLAYER:
+        if (g->turn != 0 || c->a <= 0 || c->a >= N_COUNT || !g->nat[c->a].alive) return false;
+        g->human[c->a] = !g->human[c->a];
+        return true;
     case CMD_RECRUIT:         return War_Recruit(g, c->a, c->b);
     case CMD_ORDER:           return War_Order(g, c->a, c->b);
     case CMD_DISBAND:         return War_Disband(g, c->a);
