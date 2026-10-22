@@ -1,0 +1,63 @@
+# Integration continue : a chaque push et pull request, tests (avec sanitizers) puis
+# compilation pour les quatre plateformes. Les releases restent dans release.yml.
+name: CI
+
+on:
+  push:
+    branches: ['**']
+    paths-ignore: ['VERSION', '**.md', 'docs/**']
+  pull_request:
+
+env:
+  RAYLIB_TAG: '5.0'
+
+jobs:
+  tests:
+    runs-on: ubuntu-22.04
+    steps:
+      - uses: actions/checkout@v4
+      - name: Tests
+        run: make test
+      - name: Tests avec AddressSanitizer et UBSan
+        run: |
+          SIM=$(grep '^SIM' Makefile | sed 's/SIM *:= *//')
+          gcc -std=c99 -O1 -g -fsanitize=address,undefined -fno-sanitize-recover=all $SIM tools/tests.c -lm -o tests_san
+          ./tests_san
+      - name: Banc d'essai (5 parties)
+        run: make build/autoplay && ./build/autoplay 5 1
+
+  build:
+    needs: tests
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - { target: linux, os: ubuntu-22.04 }
+          - { target: windows, os: ubuntu-22.04 }
+          - { target: macos, os: macos-14 }
+          - { target: android, os: ubuntu-22.04 }
+    runs-on: ${{ matrix.os }}
+    steps:
+      - uses: actions/checkout@v4
+        with: { fetch-depth: 0 }
+      - name: Dépendances
+        if: matrix.os == 'ubuntu-22.04'
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y zip libx11-dev libxrandr-dev libxinerama-dev libxcursor-dev libxi-dev libgl1-mesa-dev
+          if [ "${{ matrix.target }}" = windows ]; then sudo apt-get install -y mingw-w64; fi
+      - uses: actions/setup-java@v4
+        if: matrix.target == 'android'
+        with: { distribution: temurin, java-version: '17' }
+      - run: git clone --depth 1 --branch "$RAYLIB_TAG" https://github.com/raysan5/raylib.git "$RUNNER_TEMP/raylib"
+      - name: Compilation
+        shell: bash
+        run: |
+          export VERSION="ci-${GITHUB_SHA::7}"
+          if [ "${{ matrix.target }}" = android ]; then export ANDROID_NDK_HOME="${ANDROID_NDK_LATEST_HOME:-$ANDROID_NDK_HOME}"; fi
+          tools/release/build.sh ${{ matrix.target }} "$RUNNER_TEMP/raylib"
+      - uses: actions/upload-artifact@v4
+        with:
+          name: bouclier2050-${{ matrix.target }}
+          path: dist/*
+          retention-days: 7

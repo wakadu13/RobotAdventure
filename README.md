@@ -183,6 +183,10 @@ en local (`tools/release/build.sh windows ~/raylib` compile la version Windows d
 MinGW-w64). Pour signer l'APK avec une clé stable, ajoutez les secrets `ANDROID_KEYSTORE_B64` et
 `ANDROID_KEYSTORE_PASS` ; sinon une clé de débogage est générée.
 
+L'intégration continue (`.github/workflows/ci.yml`) vérifie chaque push : tests, tests sous
+AddressSanitizer et UBSan, quelques parties automatiques, puis compilation pour les quatre
+plateformes (paquets téléchargeables 7 jours dans l'onglet Actions).
+
 ## Compilation
 
 Le jeu n'utilise que des formes 2D, une texture de carte générée et la police intégrée de raylib :
