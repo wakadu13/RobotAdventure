@@ -127,6 +127,8 @@ void Game_Init(Game *g, unsigned seed, int difficulty)
     g->seaLevel = 0.2f;
     static const float debt0[DIFF_COUNT] = { 220, 300, 420 };   /* dette heritee selon la difficulte */
     g->debt = debt0[g->difficulty];
+    g->inflation = 2;
+    g->priceLevel = 1;
     Intl_Init(g);
     Strat_Init(g);
     Mil_Init(g);
@@ -179,6 +181,8 @@ bool Game_ApplyScenario(Game *g, int scenario)
     /* dix ans de reformes : des capacites hybrides plus solides qu'en 2030 */
     for (int d = D_ESPACE; d <= D_EM; d++) g->capacity[d] += 2;
     g->debt += 120;
+    g->inflation = 6;
+    g->priceLevel = 1.3f;
     g->natoCohesion = 50;
     g->credibility = 50;
     for (int f = 0; f < F_COUNT; f++) AddFac(g, f, 10, 8);
@@ -842,7 +846,9 @@ void Game_EndTurn(Game *g)
 
     /* 1. budget de l'Etat */
     Eco_Budget(g, g->budget);
-    g->res[R_BUDGET] += Eco_Net(g);
+    float net = Eco_Net(g);
+    g->res[R_BUDGET] += net;
+    Eco_Inflation(g, net);
     /* un deficit de tresorerie se finance par l'emprunt, tant que les marches suivent */
     if (g->res[R_BUDGET] < 0) {
         if (Eco_Rating(g) < RATING_COUNT - 1) {

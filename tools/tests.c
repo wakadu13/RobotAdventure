@@ -185,6 +185,9 @@ int main(void){ int fails=0; Game g;
  /* routes commerciales : la guerre coupe la route terrestre */
  { Game_Init(&g, 61, 1); CHECK(g.routeKind[N_ALLEMAGNE]==1 && g.route[N_ALLEMAGNE]==1.0f);
    War_StartWar(&g, N_FRANCE, N_ALLEMAGNE, false); War_UpdateTradeRoutes(&g); CHECK(g.routeKind[N_ALLEMAGNE]!=1); }
+ /* inflation : un deficit massif et des penuries la font monter, elle erode la dette */
+ { Game_Init(&g, 71, 1); float d0=g.debt; g.res[R_ENERGIE]=10; g.res[R_ALIM]=10; for(int k=0;k<8;k++) Eco_Inflation(&g, -30);
+   CHECK(g.inflation>10 && g.priceLevel>1.1f && g.debt<d0 && Eco_InterestRate(&g)>0.02f); }
  /* sauvegarde */
  Game_Init(&g, 47, 1); for(int i=0;i<6;i++){ g.pendingDilemma=-1; Game_EndTurn(&g);} 
  { static Game h; CHECK(Game_Save(&g, "build/test.sav")); CHECK(Game_Load(&h, "build/test.sav")); CHECK(memcmp(&g,&h,sizeof g)==0);

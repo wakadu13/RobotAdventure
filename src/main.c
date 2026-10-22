@@ -2298,6 +2298,13 @@ static void DrawEconomyTab(void)
              Eco_DebtRatio(&game), Tr(RATING_NAMES[rating]), Eco_InterestRate(&game) * 100, game.debt * Eco_InterestRate(&game) / 4,
              game.austerityTurns > 0 ? " - AUSTÉRITÉ" : "");
     Text(buf, x, y, 10, rating >= 4 ? C_BAD : rating >= 3 ? C_WARN : C_TEXT);
+    y += 14;
+    snprintf(buf, sizeof(buf), Tr("Inflation : %.1f %%/an - indice des prix %.0f (2030 = 100)"), game.inflation, game.priceLevel * 100);
+    Text(buf, x, y, 10, game.inflation > 8 ? C_BAD : game.inflation > 4 ? C_WARN : C_DIM);
+    Tooltip((Rectangle){ x, y, 400, 12 }, "L'inflation monte avec le déficit, les pénuries d'énergie et d'alimentation, la cherté "
+                                          "des marchés mondiaux et l'excès de dette ; l'austérité la freine. Elle érode la dette, "
+                                          "mais renchérit les taux d'intérêt et attise la militance des travailleurs et des classes "
+                                          "moyennes ; au-delà de 10 %, la cohésion s'effrite.");
     y += 16;
     if (ActionButton((Rectangle){ x, y, 150, 18 }, "Emprunter 10 Md", Eco_BorrowBlocked(&game),
                      "Émet des obligations : +10 Md de trésorerie, +10 Md de dette. Un déficit est de toute façon financé par "

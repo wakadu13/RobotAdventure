@@ -476,6 +476,8 @@ typedef struct {
     float natoCohesion;
     int unCooldown;
     float debt;
+    float inflation;           /* % par an */
+    float priceLevel;          /* indice des prix (2030 = 1) */
     int bailouts, austerityTurns;
 
     /* relations internationales */
@@ -615,6 +617,7 @@ bool        Eco_TradeAllowed(const Game *g, int n);
 int         Eco_Rating(const Game *g);
 float       Eco_InterestRate(const Game *g);   /* taux annuel */
 float       Eco_DebtRatio(const Game *g);
+void        Eco_Inflation(Game *g, float net);
 const char *Eco_BorrowBlocked(const Game *g);
 bool        Eco_Borrow(Game *g);
 const char *Eco_RepayBlocked(const Game *g);

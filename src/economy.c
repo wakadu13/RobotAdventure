@@ -355,7 +355,36 @@ int Eco_Rating(const Game *g)
 
 float Eco_InterestRate(const Game *g)
 {
-    return RATING_RATE[Eco_Rating(g)];
+    /* les preteurs exigent une prime quand l'inflation depasse la cible */
+    return RATING_RATE[Eco_Rating(g)] + fmaxf(0, g->inflation - 2) * 0.004f;
+}
+
+/*
+ * Inflation : nourrie par le deficit, les penuries d'energie et d'alimentation,
+ * la cherte des marches mondiaux et une dette excessive ; l'austerite la freine.
+ * Elle erode la dette, mais releve les taux et attise la colere sociale.
+ */
+void Eco_Inflation(Game *g, float net)
+{
+    float world = 0;
+    int k2 = 0;
+    for (int k = 0; k < G_COUNT; k++)
+        if (k != G_WATER) { world += g->price[k] / GOOD_BASE_PRICE[k]; k2++; }
+    world = k2 ? world / k2 : 1;
+    float target = 2 + fmaxf(0, -net) * 0.25f + fmaxf(0, 45 - g->res[R_ENERGIE]) * 0.12f + fmaxf(0, 45 - g->res[R_ALIM]) * 0.12f
+                 + (world - 1) * 6 + fmaxf(0, Eco_DebtRatio(g) - 1.2f) * 3 - (g->austerityTurns > 0 ? 2 : 0);
+    float before = g->inflation;
+    g->inflation = Clampf(g->inflation + (target - g->inflation) * 0.25f, -3, 60);
+    g->priceLevel *= 1 + g->inflation / 400;
+    if (g->inflation > 4) {
+        AddMilitancy(g, S_TRAVAILLEURS, (g->inflation - 4) * 0.012f);
+        AddMilitancy(g, S_MOYENNES, (g->inflation - 4) * 0.008f);
+    }
+    if (g->inflation > 10) AddRes(g, R_COHESION, -(g->inflation - 10) * 0.05f);
+    if (g->inflation > 0) g->debt *= 1 - g->inflation / 400 * 0.6f;
+    if (before <= 8 && g->inflation > 8) Game_Log(g, EV_BAD, "L'inflation dépasse 8 %% par an : les salaires ne suivent plus.");
+    if (before <= 20 && g->inflation > 20) Game_Log(g, EV_BAD, "Hyperinflation menaçante : %.0f %% par an.", g->inflation);
+    if (before > 8 && g->inflation <= 6) Game_Log(g, EV_GOOD, "L'inflation est maîtrisée.");
 }
 
 const char *Eco_BorrowBlocked(const Game *g)

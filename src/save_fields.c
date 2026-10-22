@@ -133,6 +133,8 @@ const SaveField SAVE_FIELDS[] = {
     { "natoCohesion", offsetof(Game, natoCohesion), sizeof(((Game *)0)->natoCohesion), 1, 0, sizeof(((Game *)0)->natoCohesion) },
     { "unCooldown", offsetof(Game, unCooldown), sizeof(((Game *)0)->unCooldown), 1, 0, sizeof(((Game *)0)->unCooldown) },
     { "debt", offsetof(Game, debt), sizeof(((Game *)0)->debt), 1, 0, sizeof(((Game *)0)->debt) },
+    { "inflation", offsetof(Game, inflation), sizeof(((Game *)0)->inflation), 1, 0, sizeof(((Game *)0)->inflation) },
+    { "priceLevel", offsetof(Game, priceLevel), sizeof(((Game *)0)->priceLevel), 1, 0, sizeof(((Game *)0)->priceLevel) },
     { "bailouts", offsetof(Game, bailouts), sizeof(((Game *)0)->bailouts), 1, 0, sizeof(((Game *)0)->bailouts) },
     { "austerityTurns", offsetof(Game, austerityTurns), sizeof(((Game *)0)->austerityTurns), 1, 0, sizeof(((Game *)0)->austerityTurns) },
     { "war", offsetof(Game, war), sizeof(((Game *)0)->war[0]), N_COUNT, 0, sizeof(((Game *)0)->war[0]) },

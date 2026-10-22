@@ -1744,6 +1744,8 @@ const LangPair LANG_TABLE_EN[] = {
       "Hydra offers to buy out water management in the Southeast. The offer is generous, but water would become a lever in its hands." },
     { "Hydra recrute des mercenaires pour protéger ses mines au Sahel et menace nos ressortissants.",
       "Hydra hires mercenaries to guard its Sahel mines and threatens our nationals." },
+    { "Hyperinflation menaçante : %.0f %% par an.",
+      "Hyperinflation looms: %.0f%% a year." },
     { "Hégémonie",
       "Hegemony" },
     { "IA de défense autonome",
@@ -1790,6 +1792,8 @@ const LangPair LANG_TABLE_EN[] = {
       "Infantry in armored vehicles: versatile, advances 2 provinces." },
     { "Infanterie, montagne, forces spéciales, robots (niveau 2). +6% par niveau.",
       "Infantry, mountain, special forces, robots (level 2). +6% per level." },
+    { "Inflation : %.1f %%/an - indice des prix %.0f (2030 = 100)",
+      "Inflation: %.1f%%/yr - price index %.0f (2030 = 100)" },
     { "Inflation alimentaire",
       "Food inflation" },
     { "Influence",
@@ -1916,6 +1920,12 @@ const LangPair LANG_TABLE_EN[] = {
       "Industry struggles to keep up with shell and missile use." },
     { "L'inflation alimentaire déclenche une grève générale. Le pays est paralysé.",
       "Food inflation triggers a general strike. The country is paralyzed." },
+    { "L'inflation dépasse 8 %% par an : les salaires ne suivent plus.",
+      "Inflation exceeds 8%% a year: wages can no longer keep up." },
+    { "L'inflation est maîtrisée.",
+      "Inflation is under control." },
+    { "L'inflation monte avec le déficit, les pénuries d'énergie et d'alimentation, la cherté des marchés mondiaux et l'excès de dette ; l'austérité la freine. Elle érode la dette, mais renchérit les taux d'intérêt et attise la militance des travailleurs et des classes moyennes ; au-delà de 10 %, la cohésion s'effrite.",
+      "Inflation rises with the deficit, energy and food shortages, high world prices and excessive debt; austerity curbs it. It erodes the debt but raises interest rates and stokes militancy among workers and the middle classes; above 10%, cohesion crumbles." },
     { "L'occupation de %s anéantit le programme nucléaire de %s.",
       "Occupation of %s wipes out the nuclear program of %s." },
     { "L'ordre est rétabli en %s.",
@@ -3787,4 +3797,4 @@ const LangPair LANG_TABLE_EN[] = {
     { "élites",
       "elites" },
 };
-const int LANG_TABLE_EN_COUNT = 1892;
+const int LANG_TABLE_EN_COUNT = 1897;

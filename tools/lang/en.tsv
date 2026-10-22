@@ -1893,3 +1893,8 @@ Route commerciale coupée	Trade route cut
 Route commerciale terrestre	Overland trade route
 Route commerciale maritime : %.0f%%	Sea trade route: %.0f%%
 Les excédents d'une nation ne nous parviennent que par une route : par la terre à travers des pays qui ne nous combattent pas, ou par la mer entre deux ports, au gré du blocus et de la guerre au commerce.	A nation's surpluses only reach us along a route: overland through countries not fighting us, or by sea between two ports, subject to blockades and commerce raiding.
+L'inflation dépasse 8 %% par an : les salaires ne suivent plus.	Inflation exceeds 8%% a year: wages can no longer keep up.
+Hyperinflation menaçante : %.0f %% par an.	Hyperinflation looms: %.0f%% a year.
+L'inflation est maîtrisée.	Inflation is under control.
+Inflation : %.1f %%/an - indice des prix %.0f (2030 = 100)	Inflation: %.1f%%/yr - price index %.0f (2030 = 100)
+L'inflation monte avec le déficit, les pénuries d'énergie et d'alimentation, la cherté des marchés mondiaux et l'excès de dette ; l'austérité la freine. Elle érode la dette, mais renchérit les taux d'intérêt et attise la militance des travailleurs et des classes moyennes ; au-delà de 10 %, la cohésion s'effrite.	Inflation rises with the deficit, energy and food shortages, high world prices and excessive debt; austerity curbs it. It erodes the debt but raises interest rates and stokes militancy among workers and the middle classes; above 10%, cohesion crumbles.
