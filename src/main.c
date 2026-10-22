@@ -1099,11 +1099,11 @@ static void DrawProvinceTab(void)
             if (ActionButton((Rectangle){ x + 330, y - 3, 105, 16 }, buf, War_FortBlocked(&game, p),
                              "+1 niveau de fortification (3 au plus, 3 tours de travaux) : +15% de défense et une garnison renforcée. "
                              "Une fortification prise perd un niveau."))
-                War_Fortify(&game, p);
+                Do(CMD_FORTIFY, p, 0, 0, 0);
             if (ActionButton((Rectangle){ x + 440, y - 3, 100, 16 }, "Dépôt (4 Md)", War_DepotBlocked(&game, p),
                              "Dépôt logistique (3 au plus) : point de ravitaillement avancé, même en territoire conquis. Sans "
                              "ravitaillement, une poche encerclée perd organisation et effectifs."))
-                War_BuildDepot(&game, p);
+                Do(CMD_DEPOT, p, 0, 0, 0);
         }
     } else if (!War_Visible(&game, p)) {
         Text("Hors de vue : forces ennemies inconnues (reconnaissance satellitaire, aviation, flottes).", x, y, 10, C_WARN);
@@ -1124,7 +1124,7 @@ static void DrawProvinceTab(void)
                              "+1 usine : 2 biens industriels par tour (consomme énergie et minerais) et environ 0,4 M d'emplois. "
                              "Les biens satisfont les classes moyennes et les élites, équipent l'armée et soutiennent la prospérité. "
                              "Une usine sans main-d'oeuvre tourne au ralenti."))
-                Eco_BuildFactory(&game, p);
+                Do(CMD_FACTORY, p, 0, 0, 0);
         }
         if (pr->fabBuild > 0) {
             snprintf(buf, sizeof(buf), "Fonderie en construction : %d tour(s)", pr->fabBuild);
@@ -1132,12 +1132,12 @@ static void DrawProvinceTab(void)
         } else if (ActionButton((Rectangle){ x + 310, y, 220, 24 }, "Fonderie de puces (15 Md)", Strat_FabBlocked(&game, p),
                                 "Semi-conducteurs : +0,6 lot par tour (6 tours de chantier). Il faut un tissu industriel (3 usines) "
                                 "et de l'énergie."))
-            Strat_BuildFab(&game, p);
+            Do(CMD_FAB, p, 0, 0, 0);
         y += 30;
         if (pr->mineClosed) {
             if (ActionButton((Rectangle){ x, y, 300, 24 }, "Rouvrir les mines (10 Md)", Strat_MineBlocked(&game, p),
                              "Exploite le gisement de la province : souveraineté accrue, mais les riverains protestent."))
-                Strat_OpenMine(&game, p);
+                Do(CMD_MINE, p, 0, 0, 0);
             y += 30;
         }
         TextWrap("Clic droit sur la carte pour déplacer les unités sélectionnées. Recrutement : onglet ARMÉE ; généraux : ÉT.-MAJOR.",
@@ -1173,7 +1173,7 @@ static void DrawProvinceTab(void)
         y += 44;
         if (strikeArmed && strikeProvince == p) {
             if (Button((Rectangle){ x, y, 260, 26 }, "CONFIRMER LA FRAPPE STRATÉGIQUE", true, 10)) {
-                Nuke_Strike(&game, p);
+                Do(CMD_STRIKE, p, 0, 0, 0);
                 strikeArmed = false;
             }
             if (Button((Rectangle){ x + 270, y, 120, 26 }, "Annuler", true, 10)) strikeArmed = false;
@@ -1182,7 +1182,7 @@ static void DrawProvinceTab(void)
                              "Arme nucléaire de théâtre (technologie nucléaire 3, 1 PC) : les unités ennemies présentes perdent 75% "
                              "de leurs effectifs, retombées sur la province. Réprobation internationale ; contre une puissance "
                              "nucléaire, risque de riposte tactique, voire d'escalade stratégique."))
-                Nuke_Tactical(&game, p);
+                Do(CMD_TACTICAL, p, 0, 0, 0);
             if (ActionButton((Rectangle){ x + 270, y, 260, 26 }, "Frappe stratégique", Nuke_StrikeBlocked(&game, p),
                              "Dévaste la province et contraint un ennemi non nucléaire à capituler sans conditions. La France devient "
                              "un paria (relations, influence, UE). Contre une puissance nucléaire : riposte et fin de partie.")) {
@@ -1199,7 +1199,7 @@ static void DrawProvinceTab(void)
     if (ActionButton((Rectangle){ x, y, 260, 26 }, "Ultimatum : exiger la cession", War_UltimatumBlocked(&game, p),
                      "Exige la province sous menace de guerre (1 PC). Réussit si notre armée et nos alliés pèsent 2,5 fois plus "
                      "(une dissuasion renforcée aide). Échec : relation -25, Influence -5."))
-        War_Ultimatum(&game, p);
+        Do(CMD_ULTIMATUM, p, 0, 0, 0);
     if (ActionButton((Rectangle){ x + 270, y, 260, 26 }, "Déclarer la guerre", War_DeclareBlocked(&game, pr->owner), DECLARE_DESC))
         Do(CMD_DECLARE_WAR, pr->owner, 0, 0, 0);
     y += 36;
@@ -1282,7 +1282,7 @@ static void DrawArmyTab(void)
             if (mh && clicked) {
                 clicked = false;
                 for (int k = 1; k <= NM_COUNT; k++)
-                    if (War_SetMission(&game, i, (u->mission + k) % NM_COUNT)) break;
+                    if (Do(CMD_MISSION, i, (u->mission + k) % NM_COUNT, 0, 0)) break;
             }
             y += 18;
             shown++;
@@ -1304,7 +1304,7 @@ static void DrawArmyTab(void)
     if (Button((Rectangle){ x + 136, y, 130, 20 }, "Annuler les ordres", SelectedCount() > 0, 10))
         for (int i = 0; i < MAX_UNITS; i++) if (uiSel[i] && game.units[i].active) game.units[i].target = -1;
     if (Button((Rectangle){ x + 272, y, 130, 20 }, "Dissoudre", SelectedCount() > 0, 10))
-        for (int i = 0; i < MAX_UNITS; i++) if (uiSel[i]) { War_Disband(&game, i); uiSel[i] = false; }
+        for (int i = 0; i < MAX_UNITS; i++) if (uiSel[i]) { Do(CMD_DISBAND, i, 0, 0, 0); uiSel[i] = false; }
     snprintf(buf, sizeof(buf), "%d sélectionnée(s)", SelectedCount());
     Text(buf, x + 412, y + 5, 10, C_SEL);
     y += 24;
@@ -1313,7 +1313,7 @@ static void DrawArmyTab(void)
         snprintf(buf, sizeof(buf), k ? "G%d" : "Aucun", k);
         Rectangle gb = { x + 60 + k * 54, y, 50, 18 };
         if (Button(gb, buf, SelectedCount() > 0, 10))
-            for (int i = 0; i < MAX_UNITS; i++) if (uiSel[i] && game.units[i].active) War_SetGroup(&game, i, k);
+            for (int i = 0; i < MAX_UNITS; i++) if (uiSel[i] && game.units[i].active) Do(CMD_GROUP, i, k, 0, 0);
         Tooltip(gb, "Affecte les divisions sélectionnées à un groupe d'armées ; ses ordres se donnent dans l'onglet ÉT.-MAJ.");
     }
     y += 24;
@@ -1353,14 +1353,14 @@ static void DrawArmyTab(void)
     };
     for (int i = 0; i < 3; i++) {
         Rectangle r = { x + i * 120, y, 114, 20 };
-        if (Choice(r, NUKE_POSTURES[i], game.nukePosture == i)) Nuke_SetPosture(&game, i);
+        if (Choice(r, NUKE_POSTURES[i], game.nukePosture == i)) Do(CMD_NUKE_POSTURE, i, 0, 0, 0);
         Tooltip(r, postureDesc[i]);
     }
     const char *ub = Nuke_UmbrellaBlocked(&game);
     if (ActionButton((Rectangle){ x + 368, y, 172, 20 }, game.umbrella ? "Retirer le parapluie UE" : "Parapluie européen",
                      ub, "Étend la dissuasion aux partenaires de l'UE (+1 Md/tour) : influence, relations, les agresseurs "
                          "hésitent à envahir un État membre, et les Européens renoncent à leurs propres programmes."))
-        Nuke_ToggleUmbrella(&game);
+        Do(CMD_UMBRELLA, 0, 0, 0, 0);
     y += 26;
     TextWrap("Ultime avertissement et contre-prolifération : onglet NATIONS. Frappes tactique et stratégique : depuis une province "
              "ennemie (onglet PROVINCE).", x, y, RP_W - 30, 10, C_DIM);
@@ -1373,7 +1373,7 @@ static void DrawStaffTab(void)
     Text("GÉNÉRAUX", x, y, 10, C_ACCENT);
     if (ActionButton((Rectangle){ RP_X + RP_W - 196, y - 2, 186, 18 }, "Promouvoir un général (3 Md)", Mil_PromoteBlocked(&game),
                      "Nomme un nouveau général (compétence 1 ou 2, trait aléatoire). 8 au maximum."))
-        Mil_Promote(&game);
+        Do(CMD_PROMOTE, 0, 0, 0, 0);
     y += 18;
     int shown = 0;
     for (int i = 0; i < MAX_GENERALS; i++) {
@@ -1407,9 +1407,9 @@ static void DrawStaffTab(void)
         snprintf(buf, sizeof(buf), "Affecter à %s", PROVINCE_NAMES[selProvince]);
         if (ActionButton((Rectangle){ x, y, 260, 22 }, buf, Mil_AssignBlocked(&game, selGeneral, selProvince),
                          "Le général commande toutes nos divisions de la province sélectionnée sur la carte."))
-            Mil_Assign(&game, selGeneral, selProvince);
+            Do(CMD_ASSIGN, selGeneral, selProvince, 0, 0);
         if (Button((Rectangle){ x + 270, y, 140, 22 }, "Mettre en réserve", game.generals[selGeneral].prov >= 0, 10))
-            Mil_Assign(&game, selGeneral, -1);
+            Do(CMD_ASSIGN, selGeneral, -1, 0, 0);
     } else {
         Text("Sélectionnez un général puis une province sur la carte pour l'y affecter.", x, y + 5, 10, C_DIM);
     }
@@ -1427,7 +1427,7 @@ static void DrawStaffTab(void)
         int mode = game.groups[k - 1].mode, tgt = game.groups[k - 1].target;
         for (int m = 0; m < GM_COUNT; m++) {
             Rectangle mr = { x + 90 + m * 100, y, 96, 18 };
-            if (Choice(mr, GROUP_MODE_NAMES[m], mode == m)) War_SetGroupOrder(&game, k, m, tgt > 0 ? tgt : selNation);
+            if (Choice(mr, GROUP_MODE_NAMES[m], mode == m)) Do(CMD_GROUP_ORDER, k, m, tgt > 0 ? tgt : selNation, 0);
         }
         Rectangle tr = { x + 395, y, 145, 18 };
         snprintf(buf, sizeof(buf), "> %s", tgt > 0 ? NATIONS[tgt].name : "cible ?");
@@ -1436,7 +1436,7 @@ static void DrawStaffTab(void)
             for (int step = 1; step < N_COUNT; step++) {
                 int c = (tgt + step) % N_COUNT;
                 if (c == N_FRANCE || !game.nat[c].alive) continue;
-                if (War_AtWar(&game, N_FRANCE, c) || War_Adjacent(&game, N_FRANCE, c)) { War_SetGroupOrder(&game, k, mode, c); break; }
+                if (War_AtWar(&game, N_FRANCE, c) || War_Adjacent(&game, N_FRANCE, c)) { Do(CMD_GROUP_ORDER, k, mode, c, 0); break; }
             }
         }
         Tooltip(tr, "Nation visée : le groupe tient le front face à elle, ou y mène l'offensive (en guerre seulement). "
@@ -1466,7 +1466,7 @@ static void DrawStaffTab(void)
         char tip[300];
         snprintf(tip, sizeof(tip), "%s\n%s\nClic : orienter la recherche vers ce domaine.", TECHS[t].name, TECHS[t].desc);
         Tooltip(row, tip);
-        if (h && clicked) { Mil_SetResearch(&game, t); clicked = false; }
+        if (h && clicked) { Do(CMD_RESEARCH, t, 0, 0, 0); clicked = false; }
         y += 21;
     }
     y += 4;
@@ -1474,7 +1474,7 @@ static void DrawStaffTab(void)
     Stepper(x, y, "Budget de recherche", game.researchBudget / 100.0f, &v, 0.005f, "%.1f Md",
             "Crédits consacrés à la recherche militaire chaque tour. Les points dépendent aussi de l'alphabétisation et du régime "
             "(la technocratie est la plus efficace).");
-    if (v != game.researchBudget / 100.0f) Mil_SetResearchBudget(&game, v * 100.0f);
+    if (v != game.researchBudget / 100.0f) Do(CMD_RESEARCH_BUDGET, 0, 0, 0, v * 100.0f);
     y += 26;
     snprintf(buf, sizeof(buf), "Les autres nations progressent aussi : %s en est au niveau moyen %.1f.",
              NATIONS[selNation].name, (game.nat[selNation].tech[0] + game.nat[selNation].tech[1] + game.nat[selNation].tech[2]
@@ -1515,7 +1515,7 @@ static void DrawOpsPanel(int n, float dx, float dy, float bw)
                  o->budget, o->influence > 0 ? ", de l'influence" : "", o->needWar ? " Contre un ennemi seulement." : "",
                  b ? "\nIndisponible : " : "", b ? b : "");
         Tooltip(r, tip);
-        if (h && clicked) { clicked = false; Ops_Run(&game, n, op); }
+        if (h && clicked) { clicked = false; Do(CMD_OPERATION, n, op, 0, 0); }
         dy += 39;
     }
     TextWrap("Une opération attribuée à la France dégrade la relation et l'influence ; une nation très hostile peut riposter "
@@ -1526,7 +1526,7 @@ static void DrawOpsPanel(int n, float dx, float dy, float bw)
 static void OpenTreaty(int n)
 {
     negoMsg[0] = 0;
-    War_TreatyDraft(&game, n);
+    Do(CMD_TREATY_DRAFT, n, 0, 0, 0);
     treatyOpen = true;
     provScroll = 0;
 }
@@ -1567,7 +1567,7 @@ static void DrawNationsTab(void)
                          Intl_NatoBlocked(&game), game.nat[N_FRANCE].nato
                          ? "Indépendance stratégique (+5 Souveraineté) mais plus de garantie de l'article 5 ; relations avec les Alliés -15. 1 PC."
                          : "Retour dans le commandement intégré : protection de l'article 5, relations avec les Alliés +10. 1 PC."))
-            Intl_ToggleNato(&game);
+            Do(CMD_NATO, 0, 0, 0, 0);
     }
 
     int n = selNation == N_FRANCE ? N_ALLEMAGNE : selNation;
@@ -1651,35 +1651,35 @@ static void DrawNationsTab(void)
 
     float half = (bw - 6) / 2;
     if (ActionButton((Rectangle){ dx, dy, half, 22 }, "Rapprochement", War_DiploBlocked(&game, n, 0), "Améliore la relation de 12 (1 PC, 5 Influence)."))
-        War_Diplomacy(&game, n, 0);
+        Do(CMD_DIPLOMACY, n, 0, 0, 0);
     if (ActionButton((Rectangle){ dx + half + 6, dy, half, 22 }, "Accord commercial", War_DiploBlocked(&game, n, 1),
                      "La France est servie en priorité sur leurs excédents au marché mondial (1 PC). Relation 25 requise."))
-        War_Diplomacy(&game, n, 1);
+        Do(CMD_DIPLOMACY, n, 1, 0, 0);
     dy += 26;
     if (ActionButton((Rectangle){ dx, dy, half, 22 }, "Alliance défensive", War_DiploBlocked(&game, n, 2),
                      "Chacun s'engage à entrer en guerre si l'autre est attaqué (1 PC). Relation 60 requise. Nos alliés comptent "
                      "dans les ultimatums et dissuadent les agresseurs."))
-        War_Diplomacy(&game, n, 2);
+        Do(CMD_DIPLOMACY, n, 2, 0, 0);
     if (ActionButton((Rectangle){ dx + half + 6, dy, half, 22 }, na->embargo ? "Lever l'embargo" : "Embargo", Eco_EmbargoBlocked(&game, n),
                      "Coupe le commerce avec cette nation (1 PC) : leurs exportations chutent, mais nos importations aussi. Relation -25, "
                      "risque d'embargo en retour. Impossible entre membres de l'UE."))
-        Eco_ToggleEmbargo(&game, n);
+        Do(CMD_EMBARGO, n, 0, 0, 0);
     dy += 26;
     if (na->nukeStatus == 1) {
         if (ActionButton((Rectangle){ dx, dy, half, 22 }, "Pression diplomatique", Nuke_CounterBlocked(&game, n, 0),
                          "Contre-prolifération (1 PC, 15 Influence) : freine le programme si la pression porte (accords, UE, influence)."))
-            Nuke_Counter(&game, n, 0);
+            Do(CMD_COUNTER, n, 0, 0, 0);
         if (ActionButton((Rectangle){ dx + half + 6, dy, half, 22 }, "Sabotage cyber", Nuke_CounterBlocked(&game, n, 1),
                          "Contre-prolifération (1 PC, 2 Md, capacité cyber 3) : détruit une partie du programme ; s'il est découvert, "
                          "scandale international. Occuper leur capitale anéantit le programme."))
-            Nuke_Counter(&game, n, 1);
+            Do(CMD_COUNTER, n, 1, 0, 0);
         dy += 26;
     }
     if (ActionButton((Rectangle){ dx, dy, bw, 22 }, "Saisir le Conseil de sécurité", Intl_ResolutionBlocked(&game, n),
                      "Propose une résolution condamnant cette nation (agression ou programme nucléaire) : sanctions internationales "
                      "pendant 4 ans si aucun membre permanent n'oppose son veto (Royaume-Uni, Fédération Boréale, États-Unis, Chine). "
                      "1 PC, 10 Influence."))
-        Intl_ProposeResolution(&game, n);
+        Do(CMD_RESOLUTION, n, 0, 0, 0);
     dy += 26;
     if (game.war[N_FRANCE][n]) {
         if (ActionButton((Rectangle){ dx, dy, half, 22 }, "Négocier la paix", NULL,
@@ -1688,7 +1688,7 @@ static void DrawNationsTab(void)
         if (ActionButton((Rectangle){ dx + half + 6, dy, half, 22 }, "Ultime avertissement", Nuke_WarningBlocked(&game, n),
                          "Menace d'emploi si l'ennemi ne quitte pas le sol national (une fois par guerre, 1 PC). Succès selon la "
                          "crédibilité ; un bluff percé coûte 20 points de crédibilité."))
-            Nuke_Warning(&game, n);
+            Do(CMD_WARNING, n, 0, 0, 0);
     } else if (ActionButton((Rectangle){ dx, dy, bw, 22 }, "Déclarer la guerre", War_DeclareBlocked(&game, n), DECLARE_DESC)) {
         Do(CMD_DECLARE_WAR, n, 0, 0, 0);
     }
@@ -1698,7 +1698,7 @@ static void DrawNationsTab(void)
 static void DrawTreaty(void)
 {
     Treaty *t = &game.treaty;
-    if (!t->active || !game.war[N_FRANCE][t->other]) { treatyOpen = false; t->active = false; return; }
+    if (!t->active || !game.war[N_FRANCE][t->other]) { treatyOpen = false; return; }
     int n = t->other;
     bool win = t->winner == N_FRANCE;
     int loser = win ? n : N_FRANCE;
@@ -1749,7 +1749,7 @@ static void DrawTreaty(void)
         float delta = fabsf(War_TreatyCost(&game, &tmp) - cost);
         snprintf(buf, sizeof(buf), "%.1f M  %s  %.0f pts", game.prov[p].pop, game.prov[p].ctrl == t->winner ? "occupée" : "        ", delta);
         Text(buf, row.x + 250, row.y + 5, 10, game.prov[p].ctrl == t->winner ? C_GOOD : C_DIM);
-        if (h && clicked) { t->cede[p] = !t->cede[p]; clicked = false; }
+        if (h && clicked) { Do(CMD_TREATY_CEDE, p, 0, 0, 0); clicked = false; }
     }
     if (c > rows) {
         snprintf(buf, sizeof(buf), "%d-%d sur %d (molette)", provScroll + 1, provScroll + rows, c);
@@ -1763,8 +1763,7 @@ static void DrawTreaty(void)
     for (int i = 0; i < 4; i++) {
         snprintf(buf, sizeof(buf), i ? "%.0f Md/tour" : "Aucune", reps[i]);
         if (Choice((Rectangle){ x2, y2 + i * 24, 260, 20 }, buf, fabsf(t->reparations - reps[i]) < 0.1f)) {
-            t->reparations = reps[i];
-            t->reparationTurns = 16;
+            Do(CMD_TREATY_REPARATIONS, 0, 0, 0, reps[i]);
         }
     }
     y2 += 110;
@@ -1790,13 +1789,14 @@ static void DrawTreaty(void)
                      "Soumet le traité (1 PC pour la séance, 3 propositions par trimestre). L'ennemi accepte s'il reste dans "
                      "la limite de son score et de sa lassitude ; sinon il fait une contre-proposition, à accepter telle quelle "
                      "ou à amender.")) {
-        int r = War_Negotiate(&game);
+        Do(CMD_NEGOTIATE, 0, 0, 0, 0);
+        int r = !game.treaty.active ? 1 : game.treaty.countered ? 2 : 0;
         if (r == 1) { treatyOpen = false; Toast("Traité signé."); }
         else if (r == 2) snprintf(negoMsg, sizeof(negoMsg), "Contre-proposition de %s : conditions modifiées ci-contre. Proposez-les pour signer.", NATIONS[n].name);
         else snprintf(negoMsg, sizeof(negoMsg), "Négociations rompues pour ce trimestre.");
     }
     y2 += 36;
-    if (Button((Rectangle){ x2, y2, 260, 26 }, "Conditions par défaut", true, 10)) { War_TreatyDraft(&game, n); negoMsg[0] = 0; }
+    if (Button((Rectangle){ x2, y2, 260, 26 }, "Conditions par défaut", true, 10)) { Do(CMD_TREATY_DRAFT, n, 0, 0, 0); negoMsg[0] = 0; }
     y2 += 32;
     if (Button((Rectangle){ x2, y2, 260, 26 }, "Quitter la table", true, 10) || IsKeyPressed(KEY_ESCAPE)) {
         treatyOpen = false;
@@ -1819,9 +1819,9 @@ static void DrawDefenseTab(void)
     Panel((Rectangle){ RP_X + 6, y, RP_W - 12, 60 }, C_PANEL2);
     snprintf(buf, sizeof(buf), "Posture : %d", game.posture[t]);
     Text(buf, RP_X + 16, y + 8, 20, C_TEXT);
-    if (Button((Rectangle){ RP_X + 170, y + 6, 26, 24 }, "-", game.posture[t] > 0, 20)) Game_ChangePosture(&game, t, -1);
+    if (Button((Rectangle){ RP_X + 170, y + 6, 26, 24 }, "-", game.posture[t] > 0, 20)) Do(CMD_POSTURE, t, -1, 0, 0);
     if (Button((Rectangle){ RP_X + 200, y + 6, 26, 24 }, "+", Game_PostureUsed(&game, d) < game.capacity[d], 20))
-        Game_ChangePosture(&game, t, 1);
+        Do(CMD_POSTURE, t, 1, 0, 0);
     snprintf(buf, sizeof(buf), "Capacité %s : %d / %d - défense %.1f", DOMAIN_NAMES[d], Game_PostureUsed(&game, d),
              game.capacity[d], Game_DefensePower(&game, t));
     Text(buf, RP_X + 16, y + 40, 10, C_DIM);
@@ -1832,7 +1832,7 @@ static void DrawDefenseTab(void)
         float cost = Game_InvestCost(&game, d);
         snprintf(buf, sizeof(buf), "Investir +2 capacité (%.0f Md)", cost);
         Rectangle br = { RP_X + 290, y + 8, 256, 22 };
-        if (Button(br, buf, game.res[R_BUDGET] >= cost, 10)) Game_InvestCapacity(&game, d);
+        if (Button(br, buf, game.res[R_BUDGET] >= cost, 10)) Do(CMD_INVEST, d, 0, 0, 0);
         Tooltip(br, "Disponible après 2 tours. Capacité : 0,1 Md/tour, posture engagée : 0,6 Md/tour. Air, Espace, Cyber et EM "
                     "renforcent aussi les divisions ; Mer permet les traversées et les débarquements ; Espace et Mer rendent la "
                     "dissuasion plus crédible.");
@@ -1935,7 +1935,7 @@ static void DrawHybridTab(void)
             else if (ACTIONS[a].influence > 0) snprintf(cost, sizeof(cost), "Coût : 1 PC, %.0f Influence", ACTIONS[a].influence);
             else snprintf(cost, sizeof(cost), "Coût : 1 PC");
             snprintf(desc, sizeof(desc), "%s\n%s", ACTIONS[a].desc, cost);
-            if (ActionButton(br, ACTIONS[a].name, Game_ActionBlocked(&game, f, a), desc)) Game_FactionAction(&game, f, a);
+            if (ActionButton(br, ACTIONS[a].name, Game_ActionBlocked(&game, f, a), desc)) Do(CMD_FACTION_ACTION, f, a, 0, 0);
         }
         y += 132;
     }
@@ -2032,7 +2032,7 @@ static void DrawSocietyTab(void)
         Rectangle r = { x + i * 182, y, 176, 20 };
         const char *b = Soc_CulturePolicyBlocked(&game, i);
         bool cur = game.culturePolicy == i;
-        if (Choice(r, CULTURE_POLICY_NAMES[i], cur) && b == NULL) Soc_SetCulturePolicy(&game, i);
+        if (Choice(r, CULTURE_POLICY_NAMES[i], cur) && b == NULL) Do(CMD_CULTURE, i, 0, 0, 0);
         char tip[300];
         snprintf(tip, sizeof(tip), "%s\n%s%s%s", CULTURE_POLICY_NAMES[i], CULTURE_POLICY_DESC[i],
                  b && !cur ? "\nIndisponible : " : "", b && !cur ? b : "");
@@ -2121,7 +2121,7 @@ static void DrawEconomyTab(void)
     };
     for (int s = 0; s < S_COUNT; s++) {
         Stepper(x, y, STRATA_NAMES[s], game.taxRate[s], &v, 0.05f, "%.0f%%", taxTip[s]);
-        if (v != game.taxRate[s]) Eco_SetTax(&game, s, v);
+        if (v != game.taxRate[s]) Do(CMD_TAX, s, 0, 0, v);
         y += 22;
     }
     y += 6;
@@ -2131,12 +2131,12 @@ static void DrawEconomyTab(void)
         char tip[300];
         snprintf(tip, sizeof(tip), "%s\nCoût actuel : %.1f Md/tour.", SPENDING_DESC[s], Eco_SpendingCost(&game, s));
         Stepper(x, y, SPENDING_NAMES[s], game.spending[s], &v, 0.1f, "%.0f%%", tip);
-        if (v != game.spending[s]) Eco_SetSpending(&game, s, v);
+        if (v != game.spending[s]) Do(CMD_SPENDING, s, 0, 0, v);
         y += 22;
     }
     Stepper(x, y, "Droits de douane", game.tariff, &v, 0.05f, "%.0f%%",
             "Prélèvement sur les importations : recettes immédiates, mais prospérité en baisse.");
-    if (v != game.tariff) Eco_SetTariff(&game, v);
+    if (v != game.tariff) Do(CMD_TARIFF, 0, 0, 0, v);
     y += 30;
 
     /* budget */
@@ -2217,7 +2217,7 @@ static void DrawEconomyTab(void)
         snprintf(tip, sizeof(tip), "%s : %s\nAchat de 2 %s sur le marché mondial (prix x2,5 en période de crise). Le recrutement des "
                  "unités modernes en consomme ; une pénurie bride l'énergie nucléaire, la recherche, l'industrie ou la dissuasion.",
                  STRATS[r].name, STRATS[r].desc, STRATS[r].unit);
-        if (ActionButton((Rectangle){ x + 420, y, 120, 18 }, buf, Strat_BuyBlocked(&game, r), tip)) Strat_Buy(&game, r);
+        if (ActionButton((Rectangle){ x + 420, y, 120, 18 }, buf, Strat_BuyBlocked(&game, r), tip)) Do(CMD_STRAT_BUY, r, 0, 0, 0);
         y += 20;
     }
     y += 4;
@@ -2232,10 +2232,10 @@ static void DrawEconomyTab(void)
     if (ActionButton((Rectangle){ x, y, 150, 18 }, "Emprunter 10 Md", Eco_BorrowBlocked(&game),
                      "Émet des obligations : +10 Md de trésorerie, +10 Md de dette. Un déficit est de toute façon financé par "
                      "l'emprunt tant que la note le permet ; au-delà (CCC), c'est la crise de la dette."))
-        Eco_Borrow(&game);
+        Do(CMD_BORROW, 0, 0, 0, 0);
     if (ActionButton((Rectangle){ x + 160, y, 150, 18 }, "Rembourser 10 Md", Eco_RepayBlocked(&game),
                      "Réduit la dette, donc les intérêts, et améliore la note."))
-        Eco_Repay(&game);
+        Do(CMD_REPAY, 0, 0, 0, 0);
 }
 
 static void DrawPolitiqueTab(void)
@@ -2265,7 +2265,7 @@ static void DrawPolitiqueTab(void)
         if (!isCur) {
             snprintf(buf, sizeof(buf), "Adopter (-%.0f coh.)", Soc_RegimeChangeCost(&game, r));
             if (ActionButton((Rectangle){ row.x + row.width - 128, row.y + 5, 122, 20 }, buf, Soc_RegimeBlocked(&game, r), desc))
-                Soc_ChangeRegime(&game, r);
+                Do(CMD_REGIME, r, 0, 0, 0);
         } else {
             Tooltip(row, desc);
         }
@@ -2282,7 +2282,7 @@ static void DrawPolitiqueTab(void)
         char desc[300];
         snprintf(desc, sizeof(desc), "%s\nCoût : 1 PC%s. Recharge : %d tours.", d->desc, d->budget > 0 ? ", budget" : "", d->cooldown);
         snprintf(buf, sizeof(buf), d->budget > 0 ? "%s (%.0f Md)" : "%s", d->name, d->budget);
-        if (ActionButton((Rectangle){ x + k * 274, y, 266, 24 }, buf, Pol_DecreeBlocked(&game, k), desc)) Pol_Decree(&game, k);
+        if (ActionButton((Rectangle){ x + k * 274, y, 266, 24 }, buf, Pol_DecreeBlocked(&game, k), desc)) Do(CMD_DECREE, k, 0, 0, 0);
     }
     y += 32;
 
@@ -2291,10 +2291,10 @@ static void DrawPolitiqueTab(void)
     y += 14;
     for (int i = 0; i < 3; i++) {
         Rectangle r = { x, y + i * 22, 260, 20 };
-        if (Choice(r, MIGRATION_DOCTRINES[i], game.migrationDoctrine == i)) Game_SetMigrationDoctrine(&game, i);
+        if (Choice(r, MIGRATION_DOCTRINES[i], game.migrationDoctrine == i)) Do(CMD_MIGRATION, i, 0, 0, 0);
         Tooltip(r, MIGRATION_DESC[i]);
         Rectangle a = { x + 280, y + i * 22, 260, 20 };
-        if (Choice(a, ALERT_LEVELS[i], game.alertLevel == i)) Game_SetAlertLevel(&game, i);
+        if (Choice(a, ALERT_LEVELS[i], game.alertLevel == i)) Do(CMD_ALERT, i, 0, 0, 0);
         Tooltip(a, ALERT_DESC[i]);
     }
     y += 72;
@@ -2329,7 +2329,7 @@ static void DrawProjectsTab(void)
         if (pr->state == 0) {
             float c = Game_ProjectCost(&game, p);
             snprintf(buf, sizeof(buf), "Lancer : %.0f Md / %d t", c, PROJECTS[p].turns);
-            if (Button(br, buf, game.res[R_BUDGET] >= c, 10)) Game_StartProject(&game, p);
+            if (Button(br, buf, game.res[R_BUDGET] >= c, 10)) Do(CMD_PROJECT, p, 0, 0, 0);
         } else if (pr->state == 1) {
             snprintf(buf, sizeof(buf), "Chantier : %d tour(s)", pr->turnsLeft);
             Text(buf, br.x + 10, br.y + 4, 10, C_WARN);

@@ -121,6 +121,11 @@ int main(void){ int fails=0; Game g;
      if(g.pendingDilemma>=0){ Command d={ CMD_DILEMMA, N_FRANCE, 0,0,0,0 }; Cmd_Apply(&g,&d); Replay_Record(&rp,&d); }
      Cmd_Apply(&g, &c2); Replay_Record(&rp, &c2); }
    Replay_Run(&rp, &h); CHECK(Game_Checksum(&g)==Game_Checksum(&h)); CHECK(g.turn==h.turn && g.turn>=2); }
+ /* toutes les actions de l'interface passent par des commandes */
+ { Game_Init(&g, 9, 1); Command c1={ CMD_TARIFF, N_FRANCE, 0,0,0, 0.2f }, c2={ CMD_ALERT, N_FRANCE, 2,0,0,0 }, c3={ CMD_NUKE_POSTURE, N_FRANCE, 1,0,0,0 },
+   c4={ CMD_TREATY_CEDE, N_FRANCE, 3,0,0,0 }, c5={ 250, N_FRANCE, 0,0,0,0 };
+   CHECK(Cmd_Apply(&g,&c1) && g.tariff>0.19f && g.tariff<0.21f); CHECK(Cmd_Apply(&g,&c2) && g.alertLevel==2); CHECK(Cmd_Apply(&g,&c3) && g.nukePosture==1);
+   CHECK(!Cmd_Apply(&g,&c4)); CHECK(!Cmd_Apply(&g,&c5)); }
  /* sauvegarde */
  Game_Init(&g, 47, 1); for(int i=0;i<6;i++){ g.pendingDilemma=-1; Game_EndTurn(&g);} 
  { static Game h; CHECK(Game_Save(&g, "build/test.sav")); CHECK(Game_Load(&h, "build/test.sav")); CHECK(memcmp(&g,&h,sizeof g)==0);

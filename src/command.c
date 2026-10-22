@@ -13,8 +13,40 @@
 #include <stdio.h>
 #include <string.h>
 
+#define IN(v, n) ((v) >= 0 && (v) < (n))
+
+/* bornes des arguments : une commande venue du reseau ne doit jamais sortir des tableaux */
+static bool ArgsValid(const Command *c)
+{
+    int a = c->a, b = c->b;
+    switch (c->type) {
+    case CMD_RECRUIT:        return IN(a, U_TYPE_COUNT) && IN(b, PROV_COUNT);
+    case CMD_ORDER:          return IN(a, MAX_UNITS) && IN(b, PROV_COUNT);
+    case CMD_DISBAND:        return IN(a, MAX_UNITS);
+    case CMD_DECLARE_WAR:    case CMD_EMBARGO: case CMD_RESOLUTION: case CMD_WARNING: return IN(a, N_COUNT);
+    case CMD_DIPLOMACY:      return IN(a, N_COUNT) && IN(b, 3);
+    case CMD_OPERATION:      return IN(a, N_COUNT) && IN(b, OP_COUNT);
+    case CMD_COUNTER:        return IN(a, N_COUNT) && IN(b, 2);
+    case CMD_POSTURE:        return IN(a, TH_COUNT) && (b == 1 || b == -1);
+    case CMD_INVEST:         return IN(a, D_COUNT);
+    case CMD_FACTION_ACTION: return IN(a, F_COUNT) && IN(b, A_COUNT);
+    case CMD_PROJECT:        return IN(a, P_COUNT);
+    case CMD_FORTIFY:        case CMD_DEPOT: case CMD_FACTORY: case CMD_FAB: case CMD_MINE:
+    case CMD_STRIKE:         case CMD_TACTICAL: case CMD_ULTIMATUM: return IN(a, PROV_COUNT);
+    case CMD_GROUP:          return IN(a, MAX_UNITS);
+    case CMD_MISSION:        return IN(a, MAX_UNITS) && IN(b, NM_COUNT);
+    case CMD_ASSIGN:         return IN(a, MAX_GENERALS) && b >= -1 && b < PROV_COUNT;
+    case CMD_CULTURE:        return IN(a, CP_COUNT);
+    case CMD_STRAT_BUY:      return IN(a, SR_COUNT);
+    case CMD_REGIME:         return IN(a, RG_COUNT);
+    case CMD_DECREE:         return IN(a, 2);
+    default:                 return true;
+    }
+}
+
 bool Cmd_Apply(Game *g, const Command *c)
 {
+    if (c->type >= CMD_COUNT || !ArgsValid(c)) return false;
     if (c->player != N_FRANCE) return false;   /* un seul camp jouable pour l'instant */
     switch (c->type) {
     case CMD_END_TURN:        if (g->pendingDilemma >= 0) return false; Game_EndTurn(g); return true;
@@ -28,8 +60,8 @@ bool Cmd_Apply(Game *g, const Command *c)
     case CMD_INVEST:          return Game_InvestCapacity(g, (Domain)c->a);
     case CMD_FACTION_ACTION:  return Game_FactionAction(g, c->a, c->b);
     case CMD_PROJECT:         return Game_StartProject(g, c->a);
-    case CMD_TAX:             Eco_SetTax(g, c->a, c->f); return true;
-    case CMD_SPENDING:        Eco_SetSpending(g, c->a, c->f); return true;
+    case CMD_TAX:             if (c->a < 0 || c->a >= S_COUNT) return false; Eco_SetTax(g, c->a, c->f); return true;
+    case CMD_SPENDING:        if (c->a < 0 || c->a >= SP_COUNT) return false; Eco_SetSpending(g, c->a, c->f); return true;
     case CMD_RESEARCH:        Mil_SetResearch(g, c->a); return true;
     case CMD_FORTIFY:         return War_Fortify(g, c->a);
     case CMD_DEPOT:           return War_BuildDepot(g, c->a);
@@ -41,6 +73,35 @@ bool Cmd_Apply(Game *g, const Command *c)
     case CMD_REPAY:           return Eco_Repay(g);
     case CMD_RESOLUTION:      return Intl_ProposeResolution(g, c->a);
     case CMD_FACTORY:         return Eco_BuildFactory(g, c->a);
+    case CMD_FAB:             return Strat_BuildFab(g, c->a);
+    case CMD_MINE:            return Strat_OpenMine(g, c->a);
+    case CMD_STRIKE:          return Nuke_Strike(g, c->a);
+    case CMD_TACTICAL:        return Nuke_Tactical(g, c->a);
+    case CMD_ULTIMATUM:       return War_Ultimatum(g, c->a);
+    case CMD_NUKE_POSTURE:    Nuke_SetPosture(g, c->a); return true;
+    case CMD_UMBRELLA:        if (Nuke_UmbrellaBlocked(g)) return false; Nuke_ToggleUmbrella(g); return true;
+    case CMD_PROMOTE:         return Mil_Promote(g);
+    case CMD_ASSIGN:          return Mil_Assign(g, c->a, c->b);
+    case CMD_RESEARCH_BUDGET: Mil_SetResearchBudget(g, c->f); return true;
+    case CMD_TREATY_DRAFT:    if (c->a <= 0 || c->a >= N_COUNT || !g->war[N_FRANCE][c->a]) return false; War_TreatyDraft(g, c->a); return true;
+    case CMD_TREATY_CEDE:     if (!g->treaty.active || c->a < 0 || c->a >= PROV_COUNT) return false; g->treaty.cede[c->a] = !g->treaty.cede[c->a]; return true;
+    case CMD_TREATY_REPARATIONS:
+        if (!g->treaty.active || c->f < 0 || c->f > 10) return false;
+        g->treaty.reparations = c->f;
+        g->treaty.reparationTurns = 16;
+        return true;
+    case CMD_NEGOTIATE:       if (!g->treaty.active) return false; War_Negotiate(g); return true;
+    case CMD_NATO:            if (Intl_NatoBlocked(g)) return false; Intl_ToggleNato(g); return true;
+    case CMD_EMBARGO:         return Eco_ToggleEmbargo(g, c->a);
+    case CMD_COUNTER:         return Nuke_Counter(g, c->a, c->b);
+    case CMD_WARNING:         return Nuke_Warning(g, c->a);
+    case CMD_CULTURE:         if (Soc_CulturePolicyBlocked(g, c->a)) return false; Soc_SetCulturePolicy(g, c->a); return true;
+    case CMD_TARIFF:          Eco_SetTariff(g, c->f); return true;
+    case CMD_STRAT_BUY:       return Strat_Buy(g, c->a);
+    case CMD_REGIME:          return Soc_ChangeRegime(g, c->a);
+    case CMD_DECREE:          return Pol_Decree(g, c->a);
+    case CMD_MIGRATION:       if (c->a < 0 || c->a >= 3) return false; Game_SetMigrationDoctrine(g, c->a); return true;
+    case CMD_ALERT:           if (c->a < 0 || c->a >= 3) return false; Game_SetAlertLevel(g, c->a); return true;
     default:                  return false;
     }
 }
