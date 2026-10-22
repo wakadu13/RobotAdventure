@@ -542,6 +542,7 @@ static void AiEconomy(Game *g)
         float trade = 0;
         for (int k = 0; k < G_COUNT; k++) trade += (g->eco[n].exports[k] - g->eco[n].imports[k]) * g->price[k];
         float rep = na->reparationTurns > 0 ? -na->reparations : 0;
+        if (g->human[n]) income *= 1 + 0.12f * na->taxLevel;   /* fiscalite choisie par le commandant */
         na->treasury += income * 0.35f - upkeep * 0.5f + trade * 0.15f + rep - na->raid * 3 - CoastalCost(g, n) * 0.5f
                       - (na->sanctions > 0 ? 1.5f : 0);
         if (na->failed) na->treasury = fminf(na->treasury, 4);
@@ -553,8 +554,9 @@ static void AiEconomy(Game *g)
         na->inflation = Clampf(na->inflation + (target - na->inflation) * 0.25f, -2, 60);
         na->treasury -= fmaxf(0, na->inflation - 3) * 0.03f;
 
-        /* investissements : eau et alimentation d'abord, puis industrie */
+        /* investissements : eau et alimentation d'abord, puis industrie (un commandant decide lui-meme) */
         const NationEconomy *ne = &g->eco[n];
+        if (g->human[n]) continue;
         if (na->treasury > 6 && ne->sat[G_WATER] < 0.95f) {
             na->treasury -= 5;
             na->waterBonus += 0.5f;

@@ -432,6 +432,7 @@ typedef struct {
     float manpower;            /* reserve de main-d'oeuvre (en points de mobilisation) */
     short offerCooldown;       /* delai avant une nouvelle proposition a la France */
     float inflation;           /* inflation annuelle (%) des nations de l'IA */
+    signed char taxLevel;      /* commandant humain : pression fiscale (-2 a +2) */
 } Nation;
 
 typedef struct {
@@ -758,6 +759,10 @@ const char *Cmdr_PeaceBlocked(const Game *g, int n, int t);
 bool        Cmdr_Peace(Game *g, int n, int t);
 const char *Cmdr_AllyBlocked(const Game *g, int n, int t);
 bool        Cmdr_Ally(Game *g, int n, int t);
+bool        Cmdr_SetTax(Game *g, int n, int level);
+float       Cmdr_InvestCost(int kind);
+const char *Cmdr_InvestBlocked(const Game *g, int n, int kind, int p);
+bool        Cmdr_Invest(Game *g, int n, int kind, int p);   /* 0 eau, 1 alimentation, 2 usine en p */
 
 /* intl.c : ONU, OTAN, sanctions */
 void        Intl_Init(Game *g);
@@ -818,7 +823,7 @@ typedef enum {
     CMD_FAB, CMD_MINE, CMD_STRIKE, CMD_TACTICAL, CMD_ULTIMATUM, CMD_NUKE_POSTURE, CMD_UMBRELLA, CMD_PROMOTE,
     CMD_ASSIGN, CMD_RESEARCH_BUDGET, CMD_TREATY_DRAFT, CMD_TREATY_CEDE, CMD_TREATY_REPARATIONS, CMD_NEGOTIATE,
     CMD_NATO, CMD_EMBARGO, CMD_COUNTER, CMD_WARNING, CMD_CULTURE, CMD_TARIFF, CMD_STRAT_BUY, CMD_REGIME,
-    CMD_DECREE, CMD_MIGRATION, CMD_ALERT, CMD_ADD_PLAYER, CMD_PEACE, CMD_SCENARIO, CMD_MINISTER, CMD_DROP_PLAYER,
+    CMD_DECREE, CMD_MIGRATION, CMD_ALERT, CMD_ADD_PLAYER, CMD_PEACE, CMD_SCENARIO, CMD_MINISTER, CMD_DROP_PLAYER, CMD_CMDR_TAX, CMD_CMDR_INVEST,
     CMD_COUNT
 } CmdType;
 

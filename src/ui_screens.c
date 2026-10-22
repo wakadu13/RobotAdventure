@@ -315,7 +315,7 @@ void DrawCommanderPanel(void)
     Text("ARMÉE ET DIPLOMATIE MILITAIRE", x, y, 10, C_ACCENT);
     y += 14;
     y += TextWrap("Vous dirigez l'armée de votre nation : recrutement sur le trésor, ordres (clic sur vos provinces puis clic droit "
-                  "ou ORDRE), guerre, paix et alliances. L'économie et la politique restent gérées automatiquement.",
+                  "ou ORDRE), guerre, paix et alliances, ainsi que ses impôts et ses investissements. La politique reste automatique.",
                   x, y, RP_W - 20, 10, C_DIM) + 6;
     const Province *pr = &game.prov[selProvince];
     snprintf(buf, sizeof(buf), Tr("RECRUTER EN %s%s"), Tr(PROVINCE_NAMES[selProvince]), pr->owner == n ? "" : " (choisissez une de vos provinces)");
@@ -337,6 +337,23 @@ void DrawCommanderPanel(void)
         for (int i = 0; i < MAX_UNITS; i++) if (uiSel[i]) { Do(CMD_DISBAND, i, 0, 0, 0); uiSel[i] = false; }
     y += 30;
 
+    /* economie de la nation : impots et investissements */
+    {
+        const Nation *na = &game.nat[n];
+        static const char *TAX[5] = { "très bas", "bas", "normaux", "élevés", "très élevés" };
+        snprintf(buf, sizeof(buf), Tr("Impôts : %s"), Tr(TAX[na->taxLevel + 2]));
+        Text(buf, x, y + 5, 10, C_TEXT);
+        Tooltip((Rectangle){ x, y, 160, 20 }, "Des impôts élevés remplissent le trésor mais agitent la population ; des impôts bas l'apaisent.");
+        if (Button((Rectangle){ x + 160, y, 24, 20 }, "-", na->taxLevel > -2, 10)) Do(CMD_CMDR_TAX, na->taxLevel - 1, 0, 0, 0);
+        if (Button((Rectangle){ x + 188, y, 24, 20 }, "+", na->taxLevel < 2, 10)) Do(CMD_CMDR_TAX, na->taxLevel + 1, 0, 0, 0);
+        static const char *INV[3] = { "Eau (5 Md)", "Agriculture (5 Md)", "Usine ici (8 Md)" };
+        static const char *INVD[3] = { "Réseaux et réservoirs : couverture des besoins en eau.", "Irrigation et stocks : couverture alimentaire.",
+                                       "Une usine dans la province sélectionnée : emplois et production (4 tours)." };
+        for (int k = 0; k < 3; k++)
+            if (ActionButton((Rectangle){ x + 222 + k * 112, y, 108, 20 }, INV[k], Cmdr_InvestBlocked(&game, n, k, selProvince), INVD[k]))
+                Do(CMD_CMDR_INVEST, k, selProvince, 0, 0);
+        y += 28;
+    }
     Text("NATIONS VOISINES ET ENNEMIES", x, y, 10, C_ACCENT);
     y += 16;
     int list[N_COUNT], c = 0;

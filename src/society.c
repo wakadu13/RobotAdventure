@@ -451,6 +451,7 @@ static void AiPopulation(Game *g, int p)
         if (na->failed) up += 0.15f;
         if (pr->hab < 45) up += (45 - pr->hab) / 100.0f;
         if (s != S_ELITES && na->inflation > 5) up += (na->inflation - 5) * 0.01f;
+        if (g->human[n]) up += na->taxLevel * 0.03f;   /* l'impot d'un commandant agite ou apaise */
         float sup = Pol_StrataSupport(g, p, s);
         if (sup < 0.45f) up += (0.45f - sup) * 0.3f;
         if (support < 0.45f) up += (0.45f - support) * 0.15f;

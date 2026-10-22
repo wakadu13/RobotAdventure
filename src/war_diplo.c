@@ -662,6 +662,39 @@ const char *Cmdr_AllyBlocked(const Game *g, int n, int t)
     return NULL;
 }
 
+bool Cmdr_SetTax(Game *g, int n, int level)
+{
+    if (level < -2 || level > 2 || g->state != GAME_RUNNING) return false;
+    g->nat[n].taxLevel = (signed char)level;
+    return true;
+}
+
+float Cmdr_InvestCost(int kind) { return kind == 2 ? 8 : 5; }
+
+const char *Cmdr_InvestBlocked(const Game *g, int n, int kind, int p)
+{
+    if (g->state != GAME_RUNNING) return "Partie terminée";
+    if (kind < 0 || kind > 2) return "Choix invalide";
+    if (g->nat[n].treasury < Cmdr_InvestCost(kind)) return "Trésor insuffisant";
+    if (kind == 2) {
+        if (p < 0 || p >= PROV_COUNT || g->prov[p].owner != n || g->prov[p].ctrl != n) return "Choisissez une province de votre nation";
+        if (g->prov[p].factoryBuild > 0) return "Chantier déjà en cours";
+        if (g->prov[p].revolt) return "Province en révolte";
+    }
+    return NULL;
+}
+
+bool Cmdr_Invest(Game *g, int n, int kind, int p)
+{
+    if (Cmdr_InvestBlocked(g, n, kind, p)) return false;
+    Nation *na = &g->nat[n];
+    na->treasury -= Cmdr_InvestCost(kind);
+    if (kind == 0) na->waterBonus += 0.5f;
+    else if (kind == 1) na->foodBonus += 0.6f;
+    else g->prov[p].factoryBuild = 4;
+    return true;
+}
+
 bool Cmdr_Ally(Game *g, int n, int t)
 {
     if (Cmdr_AllyBlocked(g, n, t)) return false;

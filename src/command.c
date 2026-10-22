@@ -42,6 +42,8 @@ static bool CommanderApply(Game *g, const Command *c)
     case CMD_DECLARE_WAR: return Cmdr_Declare(g, n, c->a);
     case CMD_PEACE:       return Cmdr_Peace(g, n, c->a);
     case CMD_DIPLOMACY:   return c->b == 2 && Cmdr_Ally(g, n, c->a);
+    case CMD_CMDR_TAX:    return Cmdr_SetTax(g, n, c->a);
+    case CMD_CMDR_INVEST: return c->b >= -1 && c->b < PROV_COUNT && Cmdr_Invest(g, n, c->a, c->b);
     default:              return false;
     }
 }

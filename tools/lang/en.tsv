@@ -1997,3 +1997,17 @@ Aucun joueur pour l'instant.	No players yet.
 Difficulté : %s - scénario : %s (réglages du menu)	Difficulty: %s - scenario: %s (menu settings)
 Connecté à %s. Votre nation : %s.	Connected to %s. Your nation: %s.
 en attente de confirmation	awaiting confirmation
+Vous dirigez l'armée de votre nation : recrutement sur le trésor, ordres (clic sur vos provinces puis clic droit ou ORDRE), guerre, paix et alliances, ainsi que ses impôts et ses investissements. La politique reste automatique.	You lead your nation's army: recruitment from the treasury, orders (click your provinces, then right-click or ORDER), war, peace and alliances, plus its taxes and investments. Politics stays automatic.
+très bas	very low
+bas	low
+normaux	normal
+élevés	high
+très élevés	very high
+Impôts : %s	Taxes: %s
+Des impôts élevés remplissent le trésor mais agitent la population ; des impôts bas l'apaisent.	High taxes fill the treasury but stir unrest; low taxes calm it.
+Eau (5 Md)	Water (5 bn)
+Agriculture (5 Md)	Farming (5 bn)
+Usine ici (8 Md)	Factory here (8 bn)
+Réseaux et réservoirs : couverture des besoins en eau.	Networks and reservoirs: covers water needs.
+Irrigation et stocks : couverture alimentaire.	Irrigation and stocks: covers food needs.
+Une usine dans la province sélectionnée : emplois et production (4 tours).	A factory in the selected province: jobs and output (4 turns).

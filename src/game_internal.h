@@ -37,8 +37,8 @@ static inline void AddRelation(Game *g, int n, float v)
 static inline bool IsDemocratic(Regime r) { return r <= RG_TECHNOCRATIE; }
 
 /* multiplicateurs de difficulte */
-static inline float DiffThreat(const Game *g)  { static const float k[3] = { 0.7f, 1.0f, 1.18f }; return k[g->difficulty]; }
-static inline float DiffIncome(const Game *g)  { static const float k[3] = { 1.12f, 1.0f, 0.94f }; return k[g->difficulty]; }
+static inline float DiffThreat(const Game *g)  { static const float k[3] = { 0.7f, 1.0f, 1.32f }; return k[g->difficulty]; }
+static inline float DiffIncome(const Game *g)  { static const float k[3] = { 1.12f, 1.0f, 0.9f }; return k[g->difficulty]; }
 static inline float DiffAggro(const Game *g)   { static const float k[3] = { 0.6f, 1.0f, 1.5f }; return k[g->difficulty]; }
 static inline float DiffClimate(const Game *g) { static const float k[3] = { 0.85f, 1.0f, 1.1f }; return k[g->difficulty]; }
 

@@ -200,6 +200,12 @@ int main(void){ int fails=0; Game g;
  { Game_Init(&g, 95, 1); War_StartWar(&g, N_ITALIE, N_ESPAGNE, false); g.nat[N_ITALIE].blockade=0.8f;
    for(int k=0;k<6;k++){ g.pendingDilemma=-1; Game_EndTurn(&g); g.nat[N_ITALIE].blockade=0.8f; }
    CHECK(g.nat[N_ITALIE].inflation > 4 || !g.nat[N_ITALIE].alive); }
+ /* commandant : impots et investissements de sa nation */
+ { Game_Init(&g, 99, 1); Command add={ CMD_ADD_PLAYER, N_FRANCE, N_ITALIE,0,0,0 }, end={ CMD_END_TURN, N_FRANCE, 0,0,0,0 };
+   CHECK(Cmd_Apply(&g,&add)); g.pendingDilemma=-1; CHECK(Cmd_Apply(&g,&end) && g.activePlayer==N_ITALIE);
+   Command tax={ CMD_CMDR_TAX, N_ITALIE, 2,0,0,0 }; CHECK(Cmd_Apply(&g,&tax) && g.nat[N_ITALIE].taxLevel==2);
+   g.nat[N_ITALIE].treasury=20; float w=g.nat[N_ITALIE].waterBonus;
+   Command inv={ CMD_CMDR_INVEST, N_ITALIE, 0,-1,0,0 }; CHECK(Cmd_Apply(&g,&inv) && g.nat[N_ITALIE].waterBonus>w && g.nat[N_ITALIE].treasury<20); }
  /* sauvegarde */
  Game_Init(&g, 47, 1); for(int i=0;i<6;i++){ g.pendingDilemma=-1; Game_EndTurn(&g);} 
  { static Game h; CHECK(Game_Save(&g, "build/test.sav")); CHECK(Game_Load(&h, "build/test.sav")); CHECK(memcmp(&g,&h,sizeof g)==0);

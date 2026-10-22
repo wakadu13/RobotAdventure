@@ -74,6 +74,7 @@ const SaveField SAVE_FIELDS[] = {
     { "nat.manpower", offsetof(Game, nat), sizeof(Nation), N_COUNT, offsetof(Nation, manpower), sizeof(((Nation *)0)->manpower) },
     { "nat.offerCooldown", offsetof(Game, nat), sizeof(Nation), N_COUNT, offsetof(Nation, offerCooldown), sizeof(((Nation *)0)->offerCooldown) },
     { "nat.inflation", offsetof(Game, nat), sizeof(Nation), N_COUNT, offsetof(Nation, inflation), sizeof(((Nation *)0)->inflation) },
+    { "nat.taxLevel", offsetof(Game, nat), sizeof(Nation), N_COUNT, offsetof(Nation, taxLevel), sizeof(((Nation *)0)->taxLevel) },
     { "prov.owner", offsetof(Game, prov), sizeof(Province), PROV_COUNT, offsetof(Province, owner), sizeof(((Province *)0)->owner) },
     { "prov.ctrl", offsetof(Game, prov), sizeof(Province), PROV_COUNT, offsetof(Province, ctrl), sizeof(((Province *)0)->ctrl) },
     { "prov.core", offsetof(Game, prov), sizeof(Province), PROV_COUNT, offsetof(Province, core), sizeof(((Province *)0)->core) },

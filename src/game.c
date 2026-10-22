@@ -213,7 +213,7 @@ bool Game_ApplyScenario(Game *g, int scenario)
     g->res[R_ALIM] = 50;
     g->res[R_COHESION] = 45;
     g->res[R_INFLUENCE] = 42;
-    g->res[R_SOUVERAINETE] = 72;
+    g->res[R_SOUVERAINETE] = 66;
     /* dix ans de reformes : des capacites hybrides plus solides qu'en 2030 */
     for (int d = D_ESPACE; d <= D_EM; d++) g->capacity[d] += 2;
     g->debt += 120;
@@ -221,7 +221,7 @@ bool Game_ApplyScenario(Game *g, int scenario)
     g->priceLevel = 1.3f;
     g->natoCohesion = 50;
     g->credibility = 50;
-    for (int f = 0; f < F_COUNT; f++) AddFac(g, f, 10, 8);
+    for (int f = 0; f < F_COUNT; f++) AddFac(g, f, 12, 12);
     for (int p = 0; p < PROV_COUNT; p++) {
         Province *pr = &g->prov[p];
         if (pr->owner == N_FRANCE) for (int s = 0; s < S_COUNT; s++) pr->mil[s] += 1.5f;
@@ -233,7 +233,7 @@ bool Game_ApplyScenario(Game *g, int scenario)
     g->nat[N_ALGERIE].nukeStatus = 1;
     g->nat[N_ALGERIE].nukeProgress = 0.45f;
     for (int n = N_MAROC; n <= N_EGYPTE; n++) AddRelation(g, n, -15);
-    for (int i = 0; i < 2; i++) SpawnThreatFor(g, Rand(g) % F_COUNT);
+    for (int i = 0; i < 4; i++) SpawnThreatFor(g, Rand(g) % F_COUNT);
     for (int t = 0; t <= g->turn; t++) {
         g->histPop[t] = Soc_NationPop(g, N_FRANCE);
         g->histCohesion[t] = g->res[R_COHESION];
