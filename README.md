@@ -256,15 +256,16 @@ Machines anciennes : compilez raylib en OpenGL 2.1
 - `make sim` (ou `./build/autoplay [parties] [difficulté 0-2] [scénario 0-1]`) joue des parties
   automatiques sans interface.
 
-Taux de victoire indicatifs des bots (qui jouent leur stratégie sans erreur) :
+Taux de victoire indicatifs des bots, sur 100 parties par case. Les bots évaluent chaque dilemme en simulant
+ses deux options, ce qu'un joueur ne peut pas faire : ces chiffres sont un plafond plutôt qu'une moyenne.
 
 | Stratégie | Facile | Normale | Difficile |
 |---|---|---|---|
-| Passive (ne fait rien) | 0 % | 0 %, effondrement vers 2041 | 0 % |
-| Gestionnaire défensif | 100 % | 100 % | 56 % |
-| Stratège (régime autoritaire, groupes d'armées, opérations, guerres choisies) | 100 % | 80 % | 0 % |
-| Gestionnaire, crise de 2040 | 100 % | 65 % | 20 % |
-| Stratège, crise de 2040 | 90 % | 50 % | 10 % |
+| Passive (ne fait rien) | 0 % | 0 % | 0 % |
+| Gestionnaire défensif | 100 % | 100 % | 38 % |
+| Stratège (régime autoritaire, groupes d'armées, opérations, missions aériennes, guerres choisies) | 100 % | 97 % | 42 % |
+| Gestionnaire, crise de 2040 | 100 % | 88 % | 16 % |
+| Stratège, crise de 2040 | 100 % | 81 % | 12 % |
 | Conquérant total (junte, guerres en chaîne) | 0 % | 0 % : coalitions, révoltes, faillite | 0 % |
 
 Le stratège utilise les groupes d'armées, les généraux, la reconnaissance et le brouillage, la guerre
