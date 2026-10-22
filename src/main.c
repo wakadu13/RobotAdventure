@@ -693,6 +693,8 @@ static void DrawUnitCounters(void)
                         if (!u->active || u->prov != p || u->owner != n || (int)UNIT_TYPES[u->type].domain != d) continue;
                         len += snprintf(tip + len, sizeof(tip) - len, Tr("\n%s  effectifs %.0f%%  organisation %.0f%%%s"),
                                         Tr(UNIT_TYPES[u->type].name), u->str * 100, u->org * 100, u->training ? "  (formation)" : "");
+                        if (d == DOM_LAND && len < (int)sizeof(tip) - 30)
+                            len += snprintf(tip + len, sizeof(tip) - len, "  %s", Tr(VET_RANKS[War_VetRank(u)]));
                     }
                     snprintf(tooltip, sizeof(tooltip), "%s", tip);
                 }
@@ -1275,6 +1277,18 @@ static void DrawArmyTab(void)
              War_Quality(&game, N_FRANCE), War_ArmyUpkeep(&game));
     Text(buf, x, y, 10, C_TEXT);
     y += 14;
+    {
+        const Nation *fr = &game.nat[N_FRANCE];
+        snprintf(buf, sizeof(buf), Tr("Réserve de main-d'œuvre : %.0f 000 hommes sur %.0f 000 (+%.0f 000 par tour)"),
+                 fr->manpower * MEN_PER_POINT / 1000, War_ManpowerMax(&game, N_FRANCE) * MEN_PER_POINT / 1000,
+                 War_ManpowerGain(&game, N_FRANCE) * MEN_PER_POINT / 1000);
+        Rectangle mr = { x, y, RP_W - 20, 12 };
+        Text(buf, x, y, 10, fr->manpower < War_ManpowerMax(&game, N_FRANCE) * 0.2f ? C_BAD : C_DIM);
+        Tooltip(mr, "Les recrues viennent de la population : chaque division consomme la réserve à sa création, et les "
+                    "renforts qui comblent les pertes y puisent aussi. La réserve se reconstitue chaque tour, plus vite en "
+                    "guerre. Les unités gagnent en expérience au combat (jusqu'à +20 %) ; les renforts la diluent.");
+        y += 14;
+    }
     snprintf(buf, sizeof(buf), Tr("Recruter en : %s  (%d/%d divisions, %d/%d escadres, %d/%d navires)"), Tr(PROVINCE_NAMES[selProvince]),
              War_StackCount(&game, N_FRANCE, selProvince, DOM_LAND), STACK_LAND, War_StackCount(&game, N_FRANCE, selProvince, DOM_AIR),
              STACK_AIR, War_StackCount(&game, N_FRANCE, selProvince, DOM_SEA), STACK_SEA);

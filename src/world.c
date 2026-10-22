@@ -249,6 +249,8 @@ const char *MIGRATION_DESC[3] = {
 };
 const float MIGRATION_ACCEPT[3] = { 0.9f, 0.5f, 0.15f };
 
+const char *VET_RANKS[4] = { "Recrues", "Aguerris", "Vétérans", "Élite" };
+
 const char *SCENARIO_NAMES[2] = { "Janvier 2030", "La crise de 2040" };
 const char *SCENARIO_DESC[2] = {
     "+1,5°C. Le monde bascule, mais la France a encore des marges : vingt ans pour se préparer.",

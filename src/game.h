@@ -265,6 +265,7 @@ extern const DilemmaDef  DILEMMAS[];
 extern const int         DILEMMA_COUNT;
 extern const DilemmaDef  DYN_DILEMMAS[6];
 extern const char       *SCENARIO_NAMES[2];
+extern const char       *VET_RANKS[4];
 extern const char       *SCENARIO_DESC[2];
 extern const RegimeDef   REGIMES[RG_COUNT];
 extern const NationDef   NATIONS[N_COUNT];
@@ -359,6 +360,7 @@ typedef struct {
     int training;
     unsigned char group;   /* groupe d'armees francais (0 : aucun) */
     unsigned char mission; /* mission navale */
+    unsigned char xp;      /* veterance 0-100 */
 } Unit;
 
 typedef struct {
@@ -416,6 +418,7 @@ typedef struct {
     short peaceRefusals;       /* offres refusees par la France */
     float raid;                /* pertes commerciales dues a la guerre au commerce */
     short peaceAsk;            /* commandant humain : demande de paix a la nation (indice + 1) */
+    float manpower;            /* reserve de main-d'oeuvre (en points de mobilisation) */
 } Nation;
 
 typedef struct {
@@ -648,6 +651,11 @@ float       War_ArmyMax(const Game *g, int n);
 float       War_UnitLoad(const Game *g, int n);
 int         War_UnitCount(const Game *g, int n);
 float       War_Quality(const Game *g, int n);
+float       War_ManpowerMax(const Game *g, int n);
+float       War_ManpowerGain(const Game *g, int n);
+float       War_VetBonus(const Unit *u);
+int         War_VetRank(const Unit *u);
+#define     MEN_PER_POINT 15000   /* hommes par point de mobilisation (affichage) */
 bool        War_Adjacent(const Game *g, int nationA, int nationB);
 bool        War_Friendly(const Game *g, int nation, int p);
 bool        War_ProvinceAttackable(const Game *g, int p);

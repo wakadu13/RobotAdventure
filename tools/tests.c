@@ -160,6 +160,11 @@ int main(void){ int fails=0; Game g;
    for(int k=0;k<8;k++){ if(g.pendingDilemma>=0){ Command d={ CMD_DILEMMA, N_FRANCE, 1,0,0,0 }; Cmd_Apply(&g,&d); Replay_Record(&rp,&d); }
      Command e={ CMD_END_TURN, N_FRANCE, 0,0,0,0 }; Cmd_Apply(&g,&e); Replay_Record(&rp,&e); }
    CHECK(g.turn==48 || g.state!=GAME_RUNNING); Replay_Run(&rp,&h); CHECK(Game_Checksum(&g)==Game_Checksum(&h)); }
+ /* main-d'oeuvre et veterance */
+ { Game_Init(&g, 31, 1); float m0=g.nat[N_FRANCE].manpower; CHECK(m0>0 && m0<=War_ManpowerMax(&g,N_FRANCE));
+   g.res[R_BUDGET]=200; CHECK(War_Recruit(&g, U_INF, PV_FR_IDF) || War_Recruit(&g, U_INF, PV_FR_NAQ)); CHECK(g.nat[N_FRANCE].manpower < m0);
+   g.nat[N_FRANCE].manpower=0; CHECK(War_RecruitBlocked(&g, U_INF, PV_FR_NAQ)!=NULL);
+   Unit u={0}; u.xp=0; CHECK(War_VetBonus(&u)==1.0f); u.xp=100; CHECK(War_VetBonus(&u)>1.19f && War_VetRank(&u)==3); }
  /* sauvegarde */
  Game_Init(&g, 47, 1); for(int i=0;i<6;i++){ g.pendingDilemma=-1; Game_EndTurn(&g);} 
  { static Game h; CHECK(Game_Save(&g, "build/test.sav")); CHECK(Game_Load(&h, "build/test.sav")); CHECK(memcmp(&g,&h,sizeof g)==0);

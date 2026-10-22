@@ -152,6 +152,20 @@ float War_ArmyMax(const Game *g, int n)
     return m;
 }
 
+/* reserve de main-d'oeuvre : alimentee par la population, consommee par le recrutement et les renforts */
+float War_ManpowerMax(const Game *g, int n) { return War_ArmyMax(g, n) * 0.6f; }
+
+float War_ManpowerGain(const Game *g, int n)
+{
+    return War_ArmyMax(g, n) * (War_AtWarAny(g, n) ? 0.05f : 0.03f);
+}
+
+/* veterance : jusqu'a +20 % au combat */
+float War_VetBonus(const Unit *u) { return 1 + 0.2f * u->xp / 100.0f; }
+int War_VetRank(const Unit *u) { return u->xp >= 75 ? 3 : u->xp >= 50 ? 2 : u->xp >= 25 ? 1 : 0; }
+
+static void GainXp(Unit *u, int v) { u->xp = (unsigned char)(u->xp + v > 100 ? 100 : u->xp + v); }
+
 float War_UnitLoad(const Game *g, int n)
 {
     float l = 0;
@@ -330,6 +344,7 @@ void War_InitUnits(Game *g)
             load += UNIT_TYPES[type].capWeight;
         }
     }
+    for (int n = 0; n < N_COUNT; n++) g->nat[n].manpower = War_ManpowerMax(g, n) * 0.6f;
     UpdateArmyPower(g);
 }
 
@@ -350,6 +365,7 @@ const char *War_RecruitBlocked(const Game *g, int type, int p)
     if (d->domain == DOM_SEA && War_PortFlooded(g, p)) return "Port submergé par la montée des eaux";
     if (War_StackCount(g, N_FRANCE, p, d->domain) >= StackLimit(d->domain)) return "Province saturée (limite d'empilement)";
     if (War_UnitLoad(g, N_FRANCE) + d->capWeight > War_ArmyMax(g, N_FRANCE) + 0.01f) return "Plafond de mobilisation atteint";
+    if (g->nat[N_FRANCE].manpower < d->capWeight) return "Réserve de main-d'œuvre épuisée";
     if (g->res[R_BUDGET] < War_RecruitCost(g, type)) return "Budget insuffisant";
     return Strat_RecruitBlocked(g, N_FRANCE, type);
 }
@@ -359,6 +375,7 @@ bool War_Recruit(Game *g, int type, int p)
     if (War_RecruitBlocked(g, type, p)) return false;
     if (War_SpawnUnit(g, N_FRANCE, type, p, UNIT_TYPES[type].train) < 0) return false;
     g->res[R_BUDGET] -= War_RecruitCost(g, type);
+    g->nat[N_FRANCE].manpower -= UNIT_TYPES[type].capWeight;
     Strat_PayRecruit(g, N_FRANCE, type);
     return true;
 }
@@ -528,14 +545,14 @@ static float UnitAttack(const Game *g, const Unit *u, int p, int defender)
     /* reconnaissance satellitaire francaise ; a l'aveugle sans renseignement */
     if (u->owner == N_FRANCE && g->nat[defender].recon > 0) a *= 1.15f;
     if (u->owner == N_FRANCE && !g->visible[p]) a *= 0.9f;
-    return a * (0.7f + 0.3f * War_SupplyLevel(g, u->owner, u->prov));
+    return a * War_VetBonus(u) * (0.7f + 0.3f * War_SupplyLevel(g, u->owner, u->prov));
 }
 
 static float UnitDefense(const Game *g, const Unit *u, int p)
 {
     const UnitDef *d = &UNIT_TYPES[u->type];
     return d->def * Readiness(u) * War_Quality(g, u->owner) * Mil_TechBonus(g, u->owner, u->type)
-         * TerrainFactor(u->type, PROVINCE_TERRAIN[p], false) * Mil_GeneralBonus(g, u->owner, p, u->type, false)
+         * TerrainFactor(u->type, PROVINCE_TERRAIN[p], false) * Mil_GeneralBonus(g, u->owner, p, u->type, false) * War_VetBonus(u)
          * (0.7f + 0.3f * War_SupplyLevel(g, u->owner, p));
 }
 
@@ -751,6 +768,11 @@ static void Battle(Game *g, int p, int a)
     }
 
     bool won = r > 1 && (defUnits == 0 || defOrg / defUnits < 0.35f);
+    for (int i = 0; i < MAX_UNITS; i++) {
+        Unit *u = &g->units[i];
+        if (IsAttacker(g, u, p, a)) GainXp(u, won ? 10 : 6);
+        else if (IsDefender(g, u, p, a)) GainXp(u, won ? 6 : 10);
+    }
     Mil_BattleXp(g, a, p, won);
     Mil_BattleXp(g, defender, p, !won);
     if (won) {
@@ -1103,8 +1125,9 @@ static void AiRecruit(Game *g, int n)
     float cost = UNIT_TYPES[type].cost * 0.5f;
     if (na->treasury < cost && !war) return;
     int site = SpawnSite(g, n, type);
-    if (site < 0) return;
+    if (site < 0 || na->manpower < UNIT_TYPES[type].capWeight) return;
     na->treasury -= cost;
+    na->manpower -= UNIT_TYPES[type].capWeight;
     Strat_PayRecruit(g, n, type);
     War_SpawnUnit(g, n, type, site, UNIT_TYPES[type].train);
 }
@@ -1684,6 +1707,8 @@ static void Battles(Game *g)
 
 static void Supply(Game *g)
 {
+    for (int n = 0; n < N_COUNT; n++)
+        if (g->nat[n].alive) g->nat[n].manpower = fminf(War_ManpowerMax(g, n), g->nat[n].manpower + War_ManpowerGain(g, n));
     for (int i = 0; i < MAX_UNITS; i++) {
         Unit *u = &g->units[i];
         if (!u->active) continue;
@@ -1710,7 +1735,15 @@ static void Supply(Game *g)
             float k = UNIT_TYPES[u->type].domain == DOM_LAND ? lvl : 1;
             u->org = Clampf(u->org + recov * k, 0, 1);
             bool funds = n != N_FRANCE || g->res[R_BUDGET] > 0;
-            if (!blockaded) u->str = Clampf(u->str + (funds ? 0.05f : 0.02f) * k, 0, 1);
+            if (!blockaded && u->str < 1) {
+                float want = fminf(1 - u->str, (funds ? 0.05f : 0.02f) * k), cw = UNIT_TYPES[u->type].capWeight;
+                float got = cw > 0 ? fminf(want, g->nat[n].manpower / cw) : want;
+                if (got > 0) {
+                    u->str += got;
+                    g->nat[n].manpower -= got * cw;
+                    u->xp = (unsigned char)(u->xp * (1 - got * 0.5f));   /* les renforts diluent l'experience */
+                }
+            }
             if (UNIT_TYPES[u->type].domain == DOM_SEA && War_PortFlooded(g, u->prov)) u->org = Clampf(u->org - 0.1f, 0, 1);
         } else if (TouchesNation(g, u->prov, n)) {
             u->org = Clampf(u->org + 0.05f, 0, 1);
@@ -2247,6 +2280,7 @@ const char *Cmdr_RecruitBlocked(const Game *g, int n, int type, int p)
     if (d->domain == DOM_SEA && War_PortFlooded(g, p)) return "Port submergé par la montée des eaux";
     if (War_StackCount(g, n, p, d->domain) >= StackLimit(d->domain)) return "Province saturée (limite d'empilement)";
     if (War_UnitLoad(g, n) + d->capWeight > War_ArmyMax(g, n) + 0.01f) return "Plafond de mobilisation atteint";
+    if (g->nat[n].manpower < d->capWeight) return "Réserve de main-d'œuvre épuisée";
     if (g->nat[n].treasury < Cmdr_RecruitCost(type)) return "Trésor insuffisant";
     return Strat_RecruitBlocked(g, n, type);
 }
@@ -2256,6 +2290,7 @@ bool Cmdr_Recruit(Game *g, int n, int type, int p)
     if (Cmdr_RecruitBlocked(g, n, type, p)) return false;
     if (War_SpawnUnit(g, n, type, p, UNIT_TYPES[type].train) < 0) return false;
     g->nat[n].treasury -= Cmdr_RecruitCost(type);
+    g->nat[n].manpower -= UNIT_TYPES[type].capWeight;
     Strat_PayRecruit(g, n, type);
     return true;
 }
