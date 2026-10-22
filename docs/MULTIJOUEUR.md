@@ -34,18 +34,21 @@ compare régulièrement une **somme de contrôle** pour détecter une désynchro
 - `make test` vérifie l'aller-retour de sérialisation, qu'un rejeu donne la même somme de contrôle
   et l'enchaînement des phases du hot-seat.
 
+- **Réseau** (`src/net.c`, `src/ui_net.c`) : TCP non bloquant, trames fixes de 16 octets, topologie en
+  étoile. L'hôte (la France) applique les commandes des clients puis les diffuse à tous, émetteur compris :
+  l'ordre est donc identique partout. Phases successives comme en hot-seat ; chaque client calcule son
+  brouillard de guerre (`War_UpdateIntelFor`), recalculé pour la France avant la résolution du tour. Sommes
+  de contrôle comparées par l'hôte à chaque tour ; `CMD_DROP_PLAYER` rend à l'IA la nation d'un joueur
+  déconnecté. Simulation sans contraction FMA et sans fonction transcendante : calculs identiques sur toutes
+  les plateformes. Testé par `make net-test` (deux processus sur la boucle locale) en CI.
+
 ## Reste à faire
 
 1. **Généraliser l'État joueur** : les commandants ne gèrent ni le budget, ni la défense hybride, ni
    les décrets, propres à la France (`N_FRANCE` dans ces systèmes). Pour offrir à chaque joueur
    l'ensemble du jeu, il faudra déplacer cet état (posture M2MC, budget, projets, doctrine...) dans
    une structure par joueur.
-2. **Tours simultanés** en réseau : chaque joueur envoie ses commandes du tour, l'hôte les ordonne
-   (par numéro de joueur), puis tous appliquent les fins de phase dans le même ordre.
-3. **Réseau** : raylib ne fournit pas de couche réseau. Une bibliothèque légère comme ENet
-   (UDP fiable, C, licence MIT) convient ; l'hôte fait office de relais.
-4. **Déterminisme flottant entre plateformes** : la simulation utilise des `float`. Pour jouer entre
-   Windows, Linux, macOS et Android, il faudra compiler avec des options strictes
-   (`-ffp-contract=off`, pas de `-ffast-math`) et vérifier la somme de contrôle à chaque tour ;
-   en cas d'écart, l'hôte renvoie l'état complet (`Game_Save`).
-5. **Interface réseau** : salon, discussion, minuteur de tour.
+2. **Reprise après désynchronisation** : l'hôte pourrait renvoyer l'état complet (`Game_Save`) au lieu
+   d'arrêter la partie ; de même, permettre à un joueur de rejoindre une partie en cours.
+3. **Traversée des NAT** : aujourd'hui, l'hôte doit ouvrir le port 27050 pour jouer par Internet.
+4. **Discussion et minuteur de phase** dans le salon et en jeu.

@@ -20,7 +20,7 @@ RL_SRC="rcore rshapes rtextures rtext rmodels raudio utils"
 mkdir -p "$DIST" "$WORK"
 
 sources() {
-    for f in main ui_widgets ui_map ui_tabs_war ui_tabs_state ui_screens sound; do printf '%s ' "$ROOT/src/$f.c"; done
+    for f in main ui_widgets ui_map ui_tabs_war ui_tabs_state ui_screens ui_net net sound; do printf '%s ' "$ROOT/src/$f.c"; done
     for f in $SIM; do printf '%s ' "$ROOT/src/$f.c"; done
 }
 
@@ -48,7 +48,7 @@ linux)
     build_raylib_desktop "${CC:-gcc}" ar
     OUT="$WORK/bouclier2050"
     mkdir -p "$OUT"
-    ${CC:-gcc} -std=c99 -O2 -I"$RAYLIB/src" $(sources) "$WORK/libraylib.a" -lGL -lm -lpthread -ldl -lrt -lX11 -o "$OUT/bouclier2050"
+    ${CC:-gcc} -std=c99 -O2 -ffp-contract=off -I"$RAYLIB/src" $(sources) "$WORK/libraylib.a" -lGL -lm -lpthread -ldl -lrt -lX11 -o "$OUT/bouclier2050"
     docs "$OUT"
     tar -C "$WORK" -czf "$DIST/bouclier2050-$VERSION-linux-x64.tar.gz" bouclier2050
     ;;
@@ -57,7 +57,7 @@ windows)
     build_raylib_desktop "$CCW" "${ARW:-x86_64-w64-mingw32-ar}"
     OUT="$WORK/bouclier2050"
     mkdir -p "$OUT"
-    $CCW -std=c99 -O2 -I"$RAYLIB/src" $(sources) "$WORK/libraylib.a" -lopengl32 -lgdi32 -lwinmm -static -mwindows \
+    $CCW -std=c99 -O2 -ffp-contract=off -I"$RAYLIB/src" $(sources) "$WORK/libraylib.a" -lopengl32 -lgdi32 -lwinmm -lws2_32 -static -mwindows \
         -o "$OUT/bouclier2050.exe"
     docs "$OUT"
     (cd "$WORK" && rm -f "$DIST/bouclier2050-$VERSION-windows-x64.zip" && zip -qr "$DIST/bouclier2050-$VERSION-windows-x64.zip" bouclier2050)
@@ -67,7 +67,7 @@ macos)
     APP="$WORK/Bouclier 2050.app"
     rm -rf "$APP"
     mkdir -p "$APP/Contents/MacOS"
-    clang -std=c99 -O2 -arch arm64 -mmacosx-version-min=11.0 -I"$RAYLIB/src" $(sources) "$WORK/libraylib.a" \
+    clang -std=c99 -O2 -ffp-contract=off -arch arm64 -mmacosx-version-min=11.0 -I"$RAYLIB/src" $(sources) "$WORK/libraylib.a" \
         -framework OpenGL -framework Cocoa -framework IOKit -framework CoreVideo -framework CoreAudio -framework AudioToolbox \
         -o "$APP/Contents/MacOS/bouclier2050"
     cat > "$APP/Contents/Info.plist" << PLIST
@@ -107,7 +107,7 @@ android)
     $CCA -c -O2 -fPIC "$NDK/sources/android/native_app_glue/android_native_app_glue.c" -o "$WORK/glue.o"
     LIB="$WORK/apk/lib/arm64-v8a"
     mkdir -p "$LIB"
-    $CCA -std=c99 -O2 -fPIC -shared -DPLATFORM_ANDROID -I"$RAYLIB/src" -I"$NDK/sources/android/native_app_glue" $(sources) \
+    $CCA -std=c99 -O2 -ffp-contract=off -fPIC -shared -DPLATFORM_ANDROID -I"$RAYLIB/src" -I"$NDK/sources/android/native_app_glue" $(sources) \
         $objs "$WORK/glue.o" -u ANativeActivity_onCreate -llog -landroid -lEGL -lGLESv2 -lOpenSLES -ldl -lm -o "$LIB/libmain.so"
     # paquet : manifeste, bibliotheque native, alignement et signature
     "$BT/aapt2" link -o "$WORK/base.apk" --manifest "$ROOT/tools/release/android/AndroidManifest.xml" -I "$PLATFORM/android.jar" \

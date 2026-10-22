@@ -477,8 +477,10 @@ void DrawGame(void)
     }
 
     Rectangle eb = { RP_X + RP_W - 200, VH - 46, 200, 38 };
-    bool last = War_NextPlayer(&game, france ? 0 : Me()) < 0;
-    bool endTurn = Button(eb, last ? "FIN DU TOUR  >>" : "FIN DE PHASE  >>", game.state == GAME_RUNNING, 20);
+    bool last = War_NextPlayer(&game, game.activePlayer == N_FRANCE ? 0 : game.activePlayer) < 0;
+    bool myPhase = !netPlaying || game.activePlayer == localNation;
+    bool endTurn = Button(eb, last ? "FIN DU TOUR  >>" : "FIN DE PHASE  >>", game.state == GAME_RUNNING && myPhase, 20);
+    if (!myPhase) endTurn = false;
     Tooltip(eb, last ? "Résoudre le trimestre (Espace ou Entrée)" : "Passer la main au joueur suivant (Espace ou Entrée)");
     char lbl[64];
     if (france) snprintf(lbl, sizeof(lbl), Tr("PC restants : %d"), game.commandPoints);
@@ -490,7 +492,7 @@ void DrawGame(void)
         int battlesBefore = game.statBattlesWon + game.statBattlesLost;
         float cohBefore = game.res[R_COHESION];
         for (int n = 0; n < N_COUNT; n++) warsBefore += game.war[N_FRANCE][n];
-        if (Do(CMD_END_TURN, 0, 0, 0, 0) && HotSeat() && game.state == GAME_RUNNING) handoffFor = Me();
+        if (Do(CMD_END_TURN, 0, 0, 0, 0) && HotSeat() && !netPlaying && game.state == GAME_RUNNING) handoffFor = Me();
         if (game.turn != turnBefore) {
             int wars = 0;
             for (int n = 0; n < N_COUNT; n++) wars += game.war[N_FRANCE][n];
@@ -514,10 +516,11 @@ void DrawGame(void)
         if (IsKeyPressed(KEY_F6))
             Toast(session.count && Replay_Save(&session, "bouclier2050.replay") ? "Rejeu enregistré (bouclier2050.replay)."
                                                                                : "Aucun rejeu à enregistrer (partie chargée ?).");
-        if (IsKeyPressed(KEY_F9) && FileExists(SAVE_FILE)) LoadGame(SAVE_FILE);
+        if (IsKeyPressed(KEY_F9) && FileExists(SAVE_FILE) && !netPlaying) LoadGame(SAVE_FILE);
     }
 
     if (activeLayer == 0 && france) DrawTutorial();
+    NetBanner();
     if (france && game.pendingDilemma >= 0) {
         tooltip[0] = 0;
         inputLayer = 1;

@@ -54,7 +54,7 @@ static bool ArgsValid(const Command *c)
     case CMD_RECRUIT:        return IN(a, U_TYPE_COUNT) && IN(b, PROV_COUNT);
     case CMD_ORDER:          return IN(a, MAX_UNITS) && IN(b, PROV_COUNT);
     case CMD_DISBAND:        return IN(a, MAX_UNITS);
-    case CMD_DECLARE_WAR:    case CMD_EMBARGO: case CMD_RESOLUTION: case CMD_WARNING: case CMD_PEACE: case CMD_ADD_PLAYER: return IN(a, N_COUNT);
+    case CMD_DECLARE_WAR:    case CMD_EMBARGO: case CMD_RESOLUTION: case CMD_WARNING: case CMD_PEACE: case CMD_ADD_PLAYER: case CMD_DROP_PLAYER: return IN(a, N_COUNT);
     case CMD_DIPLOMACY:      return IN(a, N_COUNT) && IN(b, 3);
     case CMD_OPERATION:      return IN(a, N_COUNT) && IN(b, OP_COUNT);
     case CMD_COUNTER:        return IN(a, N_COUNT) && IN(b, 2);
@@ -78,6 +78,17 @@ static bool ArgsValid(const Command *c)
 bool Cmd_Apply(Game *g, const Command *c)
 {
     if (c->type >= CMD_COUNT || !ArgsValid(c) || c->player < 0 || c->player >= N_COUNT) return false;
+    /* un joueur deconnecte : sa nation revient a l'IA (emis par l'hote, meme hors de sa phase) */
+    if (c->type == CMD_DROP_PLAYER && c->player == N_FRANCE && c->a > 0 && c->a < N_COUNT && g->human[c->a]) {
+        g->human[c->a] = false;
+        if (g->activePlayer == c->a) {   /* c'etait sa phase : on passe au suivant */
+            int next = War_NextPlayer(g, c->a);
+            g->activePlayer = next >= 0 ? next : N_FRANCE;
+            War_UpdateIntel(g);
+            if (next < 0) Game_EndTurn(g);
+        }
+        return true;
+    }
     if (c->player != g->activePlayer) return false;   /* ce n'est pas son tour */
     if (c->type == CMD_END_TURN) return EndPhase(g);
     if (c->player != N_FRANCE) return CommanderApply(g, c);

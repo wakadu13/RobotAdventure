@@ -6,20 +6,21 @@
 #   make test                 tests des mecaniques (nucleaire, decrets, elections...)
 #   make run                  compile et lance
 #   make ui-test              tests d'interface : captures comparees a tests/ui (xvfb-run sans ecran)
+#   make net-test             partie en reseau sur la boucle locale (hote + client, sommes de controle)
 #   make ui-ref               regenere les captures de reference apres un changement voulu de l'interface
 #
 # Windows (MinGW/w64devkit) : make RAYLIB_PATH=C:/raylib/raylib/src
 
 CC      ?= gcc
-CFLAGS  ?= -std=c99 -O2 -Wall -Wextra
+CFLAGS  ?= -std=c99 -O2 -Wall -Wextra -ffp-contract=off   # pas de FMA : memes calculs sur toutes les plateformes (reseau)
 BUILD   := build
 TARGET  := $(BUILD)/bouclier2050
 SIM     := src/game.c src/world.c src/society.c src/war.c src/war_ai.c src/war_diplo.c src/war_logistics.c src/military.c src/ops.c src/resources.c src/intl.c src/command.c src/economy.c src/politics.c src/nuclear.c src/map_data.c src/save_fields.c src/events.c src/cabinet.c src/lang.c src/lang_en.c
-SRC     := src/main.c src/ui_widgets.c src/ui_map.c src/ui_tabs_war.c src/ui_tabs_state.c src/ui_screens.c src/sound.c $(SIM)
+SRC     := src/main.c src/ui_widgets.c src/ui_map.c src/ui_tabs_war.c src/ui_tabs_state.c src/ui_screens.c src/ui_net.c src/net.c src/sound.c $(SIM)
 
 ifeq ($(OS),Windows_NT)
     TARGET := $(TARGET).exe
-    PLATFORM_LIBS := -lopengl32 -lgdi32 -lwinmm
+    PLATFORM_LIBS := -lopengl32 -lgdi32 -lwinmm -lws2_32
 else
     UNAME := $(shell uname -s)
     ifeq ($(UNAME),Darwin)
@@ -43,7 +44,7 @@ else
     endif
 endif
 
-.PHONY: all run sim test clean ui-test ui-ref
+.PHONY: all run sim test clean ui-test ui-ref net-test
 
 all: $(TARGET)
 
@@ -82,3 +83,9 @@ ui-test: $(TARGET) $(BUILD)/ui_compare
 ui-ref: $(TARGET)
 	mkdir -p tests/ui
 	./$(TARGET) --ui-test tests/ui
+
+$(BUILD)/net_test: $(SIM) src/net.c src/net.h tools/net_test.c | $(BUILD)
+	$(CC) $(CFLAGS) $(SIM) src/net.c tools/net_test.c -o $@ -lm
+
+net-test: $(BUILD)/net_test
+	./$(BUILD)/net_test

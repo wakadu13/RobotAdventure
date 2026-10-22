@@ -48,7 +48,7 @@
 #define TUTO_COUNT ((int)(sizeof(TUTO) / sizeof(TUTO[0])))
 #define SETTINGS_FILE "bouclier2050.cfg"
 
-typedef enum { SCR_TITLE, SCR_HELP, SCR_GAME, SCR_END, SCR_HOTSEAT } Screen;
+typedef enum { SCR_TITLE, SCR_HELP, SCR_GAME, SCR_END, SCR_HOTSEAT, SCR_NET } Screen;
 typedef enum {
     TAB_PROVINCE, TAB_ARMEE, TAB_ETATMAJOR, TAB_NATIONS, TAB_DEFENSE, TAB_HYBRIDE,
     TAB_SOCIETE, TAB_ECONOMIE, TAB_POLITIQUE, TAB_PROJETS, TAB_COUNT
@@ -220,6 +220,16 @@ void UpdateView(void);
 void DrawNavBar(void);
 
 const char *LogText(const LogEntry *e);
+/* ui_net.c : partie en reseau */
+extern bool netPlaying;
+extern int  localNation;
+bool NetDo(const Command *cmd);
+void NetUpdate(void);
+void NetBanner(void);
+void NetLeave(void);
+void DrawNetLobby(void);
+void NetHostStart(void);
+bool NetJoin(const char *addr, int nation);
 extern const char *uiTestDir;   /* mode test d'interface : dossier des captures (NULL sinon) */
 
 #endif

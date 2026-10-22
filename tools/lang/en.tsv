@@ -1966,3 +1966,34 @@ PAGE 2 >	PAGE 2 >
 Le gouvernement	Government
 Ouvrez l'onglet POLIT., vue « Gouvernement et opinion » : popularité, lobbies à ménager et ministres à remanier.	Open the POLIT. tab, \"Government and opinion\" view: approval, lobbies to keep happy and ministers to reshuffle.
 Inflation : %.1f %%/an	Inflation: %.1f%%/yr
+Ce n'est pas votre phase.	It is not your phase.
+RÉSEAU	NETWORK
+Partie à plusieurs en réseau local ou par Internet : l'hôte dirige la France, chaque autre joueur une nation.	Multiplayer over a local network or the Internet: the host leads France, each other player a nation.
+Winsock indisponible	Winsock unavailable
+Impossible de créer le socket	Cannot create the socket
+Port %d indisponible	Port %d unavailable
+Adresse inconnue : %s	Unknown address: %s
+Connexion refusée par %s	Connection refused by %s
+Version différente de celle de l'hôte.	Version differs from the host's.
+Nation déjà prise ou partie commencée.	Nation already taken or game already started.
+Connecté. En attente du lancement par l'hôte.	Connected. Waiting for the host to start.
+Un joueur a quitté la partie : sa nation revient à l'IA.	A player left the game: their nation returns to the AI.
+L'hôte a quitté la partie.	The host left the game.
+Connexion établie, en attente de l'hôte...	Connected, waiting for the host...
+DÉSYNCHRONISATION au tour %d : les parties divergent, relancez.	DESYNC at turn %d: the games diverge, restart.
+Réseau : à vous de jouer.	Network: your turn.
+Réseau : phase de %s, en attente...	Network: %s's phase, waiting...
+PARTIE EN RÉSEAU	NETWORK GAME
+L'hôte dirige la France ; jusqu'à trois joueurs le rejoignent, chacun avec une nation (armée, guerre, paix, alliances), comme en hot-seat. Chacun joue sa phase à son tour sur sa propre machine. Réseau local ou Internet (port TCP 27050 ouvert chez l'hôte). Tous les joueurs doivent avoir la même version du jeu.	The host leads France; up to three players join, each with a nation (army, war, peace, alliances), as in hot-seat. Each plays their phase in turn on their own machine. Local network or Internet (TCP port 27050 open on the host). All players need the same game version.
+HÉBERGER	HOST
+Partie hébergée : en attente de joueurs sur le port 27050.	Game hosted: waiting for players on port 27050.
+Rejoindre l'adresse :	Join address:
+REJOINDRE	JOIN
+Nation souhaitée (pour rejoindre) :	Desired nation (to join):
+Joueurs connectés :	Connected players:
+Joueur %d : %s	Player %d: %s
+en cours de connexion	connecting
+Aucun joueur pour l'instant.	No players yet.
+Difficulté : %s - scénario : %s (réglages du menu)	Difficulty: %s - scenario: %s (menu settings)
+Connecté à %s. Votre nation : %s.	Connected to %s. Your nation: %s.
+en attente de confirmation	awaiting confirmation

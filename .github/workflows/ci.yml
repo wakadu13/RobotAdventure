@@ -27,6 +27,8 @@ jobs:
           SIM=$(grep '^SIM' Makefile | sed 's/SIM *:= *//')
           gcc -std=c99 -O1 -g -fsanitize=address,undefined -fno-sanitize-recover=all $SIM tools/tests.c -lm -o tests_san
           ./tests_san
+      - name: Partie en reseau (hote et client sur la boucle locale)
+        run: make net-test
       - name: Banc d'essai (5 parties)
         run: make build/autoplay && ./build/autoplay 5 1
 

@@ -50,7 +50,7 @@ int      handoffFor = -1;     /* ecran de passage de l'appareil au joueur suivan
 int      cmdrScroll;
 
 /* joueur dont c'est le tour : la France, ou un commandant en hot-seat */
-int Me(void) { return game.activePlayer; }
+int Me(void) { return netPlaying ? localNation : game.activePlayer; }   /* en reseau : la nation de cette machine */
 
 bool HotSeat(void)
 {
@@ -73,8 +73,14 @@ float      navH;
 bool Do(int type, int a, int b, int c, float f)
 {
     Command cmd = { (unsigned char)type, (signed char)game.activePlayer, (short)a, (short)b, (short)c, f };
-    bool ok = Cmd_Apply(&game, &cmd);
-    if (ok) Replay_Record(&session, &cmd);
+    bool ok;
+    if (netPlaying) {
+        if (game.activePlayer != localNation) { Toast("Ce n'est pas votre phase."); return false; }
+        ok = NetDo(&cmd);   /* l'hote applique et diffuse ; un client envoie a l'hote */
+    } else {
+        ok = Cmd_Apply(&game, &cmd);
+        if (ok) Replay_Record(&session, &cmd);
+    }
     if (ok && type == CMD_DECLARE_WAR) Snd_Play(SFX_WAR);
     if (ok && (type == CMD_STRIKE || type == CMD_TACTICAL)) Snd_Play(SFX_NUKE);
     return ok;
@@ -129,6 +135,7 @@ void ResetUi(void)
 
 void NewGame(void)
 {
+    if (netPlaying) NetLeave();
     unsigned seed = uiTestDir ? 2030u : (unsigned)time(NULL);   /* graine fixe pour les tests d'interface */
     Game_Init(&game, seed, newDifficulty);
     handoffFor = -1;
@@ -189,8 +196,8 @@ void DrawTitle(void)
         if (Button((Rectangle){ bx, y, 280, 38 }, "SAUVEGARDER", true, 20)) SaveGame();
         y += 46;
     }
-    if (Button((Rectangle){ bx, y, 136, 38 }, "CHARGER", FileExists(SAVE_FILE), 20)) LoadGame(SAVE_FILE);
-    if (Button((Rectangle){ bx + 144, y, 136, 38 }, "AUTO", FileExists(AUTOSAVE_FILE), 20)) LoadGame(AUTOSAVE_FILE);
+    if (Button((Rectangle){ bx, y, 136, 38 }, "CHARGER", FileExists(SAVE_FILE) && !netPlaying, 20)) LoadGame(SAVE_FILE);
+    if (Button((Rectangle){ bx + 144, y, 136, 38 }, "AUTO", FileExists(AUTOSAVE_FILE) && !netPlaying, 20)) LoadGame(AUTOSAVE_FILE);
     Tooltip((Rectangle){ bx + 144, y, 136, 38 }, "Sauvegarde automatique (tous les 4 tours).");
     y += 46;
     if (Button((Rectangle){ bx, y, 182, 38 }, "NOUVELLE PARTIE", true, 20)) { NewGame(); tutorial = -1; }
@@ -222,11 +229,14 @@ void DrawTitle(void)
         SaveSettings();
     }
     y += 38;
-    if (Button((Rectangle){ bx, y, 88, 38 }, "AIDE", true, 20)) screen = SCR_HELP;
-    Rectangle hr = { bx + 96, y, 88, 38 };
+    if (Button((Rectangle){ bx, y, 64, 38 }, "AIDE", true, 10)) screen = SCR_HELP;
+    Rectangle hr = { bx + 72, y, 64, 38 };
     if (Button(hr, "HOT-SEAT", true, 10)) screen = SCR_HOTSEAT;
     Tooltip(hr, "Partie à plusieurs sur le même appareil : la France et jusqu'à trois nations dirigées par d'autres joueurs.");
-    if (Button((Rectangle){ bx + 192, y, 88, 38 }, "QUITTER", true, 20)) quitRequested = true;
+    Rectangle nr = { bx + 144, y, 64, 38 };
+    if (Button(nr, "RÉSEAU", true, 10)) screen = SCR_NET;
+    Tooltip(nr, "Partie à plusieurs en réseau local ou par Internet : l'hôte dirige la France, chaque autre joueur une nation.");
+    if (Button((Rectangle){ bx + 216, y, 64, 38 }, "QUITTER", true, 10)) quitRequested = true;
 
     const char *dom = "Terre - Mer - Air - Espace - Cyber - Informationnel - Electromagnétique";
     Text(dom, VW / 2 - TextW(dom, 10) / 2, 660, 10, C_DIM);
@@ -422,7 +432,7 @@ Rectangle CurrentRegion(void)
 {
     if (!bigUi) return REGIONS[VR_ALL];
     if (screen == SCR_TITLE) return (Rectangle){ 320, 40, 640, 660 };
-    if (screen == SCR_HOTSEAT) return (Rectangle){ 180, 40, 920, 640 };
+    if (screen == SCR_HOTSEAT || screen == SCR_NET) return (Rectangle){ 180, 40, 920, 640 };
     if (screen != SCR_GAME) return REGIONS[VR_ALL];
     if (handoffFor >= 0) return REGIONS[VR_MODAL];
     bool modal = game.pendingDilemma >= 0 || treatyOpen || (game.reportReady && showReports && game.state == GAME_RUNNING);
@@ -521,6 +531,7 @@ int main(int argc, char **argv)
         timeAcc += dt;
         if (toastTime > 0) toastTime -= dt;
         UpdateView();
+        NetUpdate();
         if (uiTestDir) {   /* rendu deterministe : pas d'animation, souris hors champ */
             timeAcc = 0;
             mouse = (Vector2){ -1000, -1000 };
@@ -539,6 +550,7 @@ int main(int argc, char **argv)
         case SCR_GAME:  DrawGame(); break;
         case SCR_END:   DrawEnd(); break;
         case SCR_HOTSEAT: DrawHotseatSetup(); break;
+        case SCR_NET:   DrawNetLobby(); break;
         }
         DrawTooltip();
         EndTextureMode();
@@ -555,6 +567,7 @@ int main(int argc, char **argv)
     }
     UnloadTexture(mapTex);
     UnloadRenderTexture(target);
+    NetLeave();
     Snd_Close();
     CloseWindow();
     return 0;

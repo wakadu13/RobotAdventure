@@ -284,6 +284,15 @@ deux joueurs et chacun ne voit que son propre brouillard de guerre. Une paix ent
 exige que chacun la propose ; une paix proposée à la France lui est présentée comme une offre de
 traité.
 
+**En réseau** : bouton `RÉSEAU` du menu. L'hôte dirige la France (port TCP 27050, à ouvrir sur sa box pour
+jouer par Internet) ; jusqu'à trois joueurs le rejoignent par son adresse, chacun avec une nation, comme en
+hot-seat, mais chacun sur sa machine et avec son propre brouillard de guerre. L'hôte applique les commandes
+des clients puis les diffuse à tous : toutes les machines déroulent la même partie, ce que vérifie une somme
+de contrôle à chaque tour (un bandeau signale toute désynchronisation). Un joueur qui part rend sa nation à
+l'IA. Tous doivent avoir la même version du jeu ; la simulation est compilée sans contraction FMA
+(`-ffp-contract=off`) et n'utilise que des opérations flottantes exactes, pour des calculs identiques sur
+Windows, Linux, macOS et Android. `make net-test` joue une partie hôte-client sur la boucle locale.
+
 Toutes les actions de l'interface passent par des commandes sérialisables et validées, la
 simulation est déterministe et vérifiable par somme de contrôle, et une partie peut être rejouée :
 c'est la base d'un futur jeu en réseau. Voir [docs/MULTIJOUEUR.md](docs/MULTIJOUEUR.md).
@@ -320,12 +329,15 @@ src/ui_map.c        carte zoomable, sélection et ordres, barre supérieure
 src/ui_tabs_war.c   onglets province, armée, état-major, nations, négociations
 src/ui_tabs_state.c onglets défense, hybride, société, économie, politique, gouvernement, projets
 src/ui_screens.c    journal, modales, tutoriel, écrans titre/aide/fin/hot-seat
+src/ui_net.c        partie en réseau : salon, diffusion des commandes, contrôle de synchronisation
+src/net.c/.h        transport TCP non bloquant (POSIX et Winsock)
 src/lang.c, lang_en.c traduction (table anglaise générée)
 src/sound.c         sons synthétisés (effets et ambiance)
 tools/gen_save_fields.py générateur du registre de sauvegarde
 tools/gen_map.py    générateur de la carte depuis un GeoJSON des pays
 tools/autoplay.c    banc d'essai d'équilibrage
 tools/tests.c       tests des mécaniques
+tools/net_test.c    partie en réseau hôte-client sur la boucle locale
 tools/ui_compare.c  comparaison des captures d'interface aux références (tests/ui)
 tools/lang_*.py     extraction et génération des traductions
 tools/release/      paquets Windows, Linux, macOS et Android
