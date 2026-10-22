@@ -14,7 +14,7 @@ ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 SRC = os.path.join(ROOT, "src")
 SKIP = {"lang.c", "lang_en.c", "save_fields.c", "sound.c"}
 LIT = r'"((?:[^"\\\n]|\\.)*)"'
-IGNORE = re.compile(r'^(B2050\w*|bouclier2050\.\w+|.*\.(sav|cfg|replay|png|h)|grande_interface=.*|/data/.*|fr\.bouclier2050.*)$')
+IGNORE = re.compile(r'^(\d\d_\w+|--[\w-]+|B2050\w*|bouclier2050\.\w+|.*\.(sav|cfg|replay|png|h)|grande_interface=.*|/data/.*|fr\.bouclier2050.*)$')
 
 
 def strings_of(path):

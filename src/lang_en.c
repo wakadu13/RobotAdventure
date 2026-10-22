@@ -1812,6 +1812,8 @@ const LangPair LANG_TABLE_EN[] = {
       "Impossible" },
     { "Impossible au sein du marché unique européen",
       "Not possible within the EU single market" },
+    { "Impossible d'ouvrir la fenêtre (pas d'écran ?)\n",
+      "Cannot open the window (no display?)\n" },
     { "Impôt x%.2f  Mobil. %.2f  Répression %.2f  Qualité x%.2f  Influence %+.1f",
       "Tax x%.2f  Mobil. %.2f  Repression %.2f  Quality x%.2f  Influence %+.1f" },
     { "Impôts et réquisitions",
@@ -3899,4 +3901,4 @@ const LangPair LANG_TABLE_EN[] = {
     { "élites",
       "elites" },
 };
-const int LANG_TABLE_EN_COUNT = 1948;
+const int LANG_TABLE_EN_COUNT = 1949;

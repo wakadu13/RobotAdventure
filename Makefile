@@ -5,6 +5,8 @@
 #   make sim                  banc d'essai d'equilibrage sans interface
 #   make test                 tests des mecaniques (nucleaire, decrets, elections...)
 #   make run                  compile et lance
+#   make ui-test              tests d'interface : captures comparees a tests/ui (xvfb-run sans ecran)
+#   make ui-ref               regenere les captures de reference apres un changement voulu de l'interface
 #
 # Windows (MinGW/w64devkit) : make RAYLIB_PATH=C:/raylib/raylib/src
 
@@ -12,8 +14,8 @@ CC      ?= gcc
 CFLAGS  ?= -std=c99 -O2 -Wall -Wextra
 BUILD   := build
 TARGET  := $(BUILD)/bouclier2050
-SIM     := src/game.c src/world.c src/society.c src/war.c src/military.c src/ops.c src/resources.c src/intl.c src/command.c src/economy.c src/politics.c src/nuclear.c src/map_data.c src/save_fields.c src/events.c src/cabinet.c src/lang.c src/lang_en.c
-SRC     := src/main.c src/sound.c $(SIM)
+SIM     := src/game.c src/world.c src/society.c src/war.c src/war_ai.c src/war_diplo.c src/war_logistics.c src/military.c src/ops.c src/resources.c src/intl.c src/command.c src/economy.c src/politics.c src/nuclear.c src/map_data.c src/save_fields.c src/events.c src/cabinet.c src/lang.c src/lang_en.c
+SRC     := src/main.c src/ui_widgets.c src/ui_map.c src/ui_tabs_war.c src/ui_tabs_state.c src/ui_screens.c src/sound.c $(SIM)
 
 ifeq ($(OS),Windows_NT)
     TARGET := $(TARGET).exe
@@ -41,11 +43,11 @@ else
     endif
 endif
 
-.PHONY: all run sim test clean
+.PHONY: all run sim test clean ui-test ui-ref
 
 all: $(TARGET)
 
-$(TARGET): $(SRC) src/sound.h src/game.h src/game_internal.h src/map_data.h | $(BUILD)
+$(TARGET): $(SRC) src/ui.h src/sound.h src/game.h src/game_internal.h src/map_data.h | $(BUILD)
 	$(CC) $(CFLAGS) $(RAYLIB_CFLAGS) $(SRC) -o $@ $(RAYLIB_LIBS) -lm
 
 $(BUILD)/autoplay: $(SIM) src/game.h src/game_internal.h src/map_data.h tools/autoplay.c | $(BUILD)
@@ -68,3 +70,15 @@ sim: $(BUILD)/autoplay
 
 clean:
 	rm -rf $(BUILD)
+
+$(BUILD)/ui_compare: tools/ui_compare.c | $(BUILD)
+	$(CC) $(CFLAGS) $(RAYLIB_CFLAGS) tools/ui_compare.c -o $@ $(RAYLIB_LIBS) -lm
+
+ui-test: $(TARGET) $(BUILD)/ui_compare
+	mkdir -p $(BUILD)/ui $(BUILD)/ui-diff
+	./$(TARGET) --ui-test $(BUILD)/ui
+	./$(BUILD)/ui_compare tests/ui $(BUILD)/ui $(BUILD)/ui-diff
+
+ui-ref: $(TARGET)
+	mkdir -p tests/ui
+	./$(TARGET) --ui-test tests/ui

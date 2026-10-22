@@ -15,12 +15,12 @@ ROOT=$(cd "$(dirname "$0")/../.." && pwd)
 VERSION=${VERSION:-$(git -C "$ROOT" describe --tags --always 2>/dev/null || echo dev)}
 DIST="$ROOT/dist"
 WORK="$ROOT/build/release-$TARGET"
-SIM="game world society war military ops resources intl command economy politics nuclear map_data save_fields events cabinet lang lang_en"
+SIM="game world society war war_ai war_diplo war_logistics military ops resources intl command economy politics nuclear map_data save_fields events cabinet lang lang_en"
 RL_SRC="rcore rshapes rtextures rtext rmodels raudio utils"
 mkdir -p "$DIST" "$WORK"
 
 sources() {
-    printf '%s ' "$ROOT/src/main.c" "$ROOT/src/sound.c"
+    for f in main ui_widgets ui_map ui_tabs_war ui_tabs_state ui_screens sound; do printf '%s ' "$ROOT/src/$f.c"; done
     for f in $SIM; do printf '%s ' "$ROOT/src/$f.c"; done
 }
 

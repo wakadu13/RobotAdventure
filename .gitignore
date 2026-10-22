@@ -3,3 +3,4 @@ build/
 *.sav
 dist/
 tools/lang/strings.txt
+!tests/ui/*.png

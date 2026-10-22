@@ -30,6 +30,27 @@ jobs:
       - name: Banc d'essai (5 parties)
         run: make build/autoplay && ./build/autoplay 5 1
 
+  interface:
+    needs: tests
+    runs-on: ubuntu-22.04
+    steps:
+      - uses: actions/checkout@v4
+      - name: Dépendances
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y xvfb libx11-dev libxrandr-dev libxinerama-dev libxcursor-dev libxi-dev libgl1-mesa-dev libgl1-mesa-dri
+      - run: git clone --depth 1 --branch "$RAYLIB_TAG" https://github.com/raysan5/raylib.git "$RUNNER_TEMP/raylib"
+      - name: raylib
+        run: make -C "$RUNNER_TEMP/raylib/src" PLATFORM=PLATFORM_DESKTOP -j4
+      - name: Tests d'interface (captures comparees aux references)
+        run: xvfb-run -s "-screen 0 1400x800x24" make ui-test RAYLIB_PATH="$RUNNER_TEMP/raylib/src"
+      - uses: actions/upload-artifact@v4
+        if: failure()
+        with:
+          name: captures-interface
+          path: build/ui*
+          retention-days: 7
+
   build:
     needs: tests
     strategy:

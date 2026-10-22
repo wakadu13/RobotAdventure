@@ -247,7 +247,12 @@ Machines anciennes : compilez raylib en OpenGL 2.1
   parapluie européen, traités et contre-propositions, défaite à Paris, généraux, technologies, embargo,
   cultures, opérations ciblées, ressources stratégiques, montée des eaux, ravitaillement et encerclement,
   brouillard, fortifications, groupes d'armées, missions navales, dette et plan de sauvetage, ONU,
-  article 5, offres de paix, commandes et rejeu déterministe, sauvegarde.
+  article 5, offres de paix, commandes et rejeu déterministe, sauvegarde versionnée, hot-seat, événements,
+  scénario 2040, main-d'œuvre et vétérance, missions aériennes, routes commerciales, inflation,
+  gouvernement et lobbies, propositions de l'IA.
+- `make ui-test` (sous `xvfb-run` sans écran) rend dix écrans scriptés (graine fixe, animations figées)
+  et les compare aux captures de référence de `tests/ui` ; `make ui-ref` régénère ces références après
+  un changement voulu de l'interface. La CI lance ces tests à chaque push.
 - `make sim` (ou `./build/autoplay [parties] [difficulté 0-2] [scénario 0-1]`) joue des parties
   automatiques sans interface.
 
@@ -295,7 +300,11 @@ src/game.c          tour de jeu, guerre hybride M2MC, projets, dilemmes, score, 
 src/society.c       climat, montée des eaux, population, strates, cultures, migrations, révoltes, régimes
 src/economy.c       production, emploi, stocks, marché mondial, embargos, blocus, impôts, usines, trésor des IA
 src/politics.c      courants par strate, élections, décrets, vie politique des IA
-src/war.c           unités, batailles, ravitaillement, brouillard, forts, groupes, missions navales, IA, traités
+src/war.c           unités, puissance, main-d'œuvre, vétérance, ordres, batailles, guerre navale, tour militaire
+src/war_ai.c        IA militaire : offensives par front, réserves, aviation, flottes, recrutement
+src/war_diplo.c     guerres, alliances, diplomatie, traités, routes commerciales, commandants du hot-seat
+src/war_logistics.c ravitaillement, dépôts, forts, brouillard, groupes d'armées, missions navales et aériennes
+src/war_internal.h  outils partagés entre les modules de la guerre
 src/military.c      généraux et technologies militaires
 src/ops.c           opérations cyber, informationnelles, spatiales et électromagnétiques
 src/resources.c     ressources stratégiques (terres rares, uranium, semi-conducteurs)
@@ -304,12 +313,21 @@ src/intl.c          ONU, OTAN, sanctions
 src/command.c       commandes, phases du hot-seat, somme de contrôle et rejeu
 src/save_fields.c/.h registre des champs sauvegardés (généré)
 src/map_data.c/.h   carte générée (grille 0,125°, 130 régions, adjacences, cultures, religions)
-src/main.c          interface raylib
+src/main.c          interface raylib : état, boucle principale, mode test d'interface
+src/ui.h            état et outils partagés par les modules de l'interface
+src/ui_widgets.c    palette et primitives (texte, boutons, infobulles)
+src/ui_map.c        carte zoomable, sélection et ordres, barre supérieure
+src/ui_tabs_war.c   onglets province, armée, état-major, nations, négociations
+src/ui_tabs_state.c onglets défense, hybride, société, économie, politique, gouvernement, projets
+src/ui_screens.c    journal, modales, tutoriel, écrans titre/aide/fin/hot-seat
+src/lang.c, lang_en.c traduction (table anglaise générée)
 src/sound.c         sons synthétisés (effets et ambiance)
 tools/gen_save_fields.py générateur du registre de sauvegarde
 tools/gen_map.py    générateur de la carte depuis un GeoJSON des pays
 tools/autoplay.c    banc d'essai d'équilibrage
 tools/tests.c       tests des mécaniques
+tools/ui_compare.c  comparaison des captures d'interface aux références (tests/ui)
+tools/lang_*.py     extraction et génération des traductions
 tools/release/      paquets Windows, Linux, macOS et Android
 docs/MULTIJOUEUR.md architecture prévue pour le multijoueur
 ```
