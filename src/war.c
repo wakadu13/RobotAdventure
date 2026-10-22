@@ -1027,12 +1027,23 @@ static void AiOrders(Game *g, int n)
     memset(used, 0, sizeof(used));
     float aggro = NATIONS[n].aggressiveness;
 
-    /* 1. le point le plus menace */
+    /* 1. les points menaces (jusqu'a trois, un par front) */
     float worst = 0;
+    int threats[3] = { -1, -1, -1 };
+    float tval[3] = { 0, 0, 0 };
     for (int f = 0; f < PROV_COUNT; f++) {
         if (g->prov[f].ctrl != n) continue;
         float t = FrontThreat(g, n, f, NULL);
+        if (t <= 0) continue;
         if (t > worst) { worst = t; na->aiThreat = (short)f; }
+        /* un point par secteur : une province voisine d'un point retenu le remplace si elle est plus menacee */
+        int slot = -1;
+        for (int k = 0; k < 3; k++) if (threats[k] >= 0 && IsAdjacent(threats[k], f)) slot = k;
+        if (slot < 0) {
+            slot = 0;   /* sinon l'emplacement libre ou le moins menace */
+            for (int k = 1; k < 3; k++) if (tval[k] < tval[slot]) slot = k;
+        }
+        if (t > tval[slot]) { threats[slot] = f; tval[slot] = t; }
     }
 
     /* 2. offensive principale : la cible la plus rentable, preparee si besoin */
@@ -1051,6 +1062,27 @@ static void AiOrders(Game *g, int n)
             }
     }
     float need = 0.62f - aggro * 0.2f;   /* les nations agressives prennent plus de risques */
+    /* fronts secondaires : la meilleure cible chez chaque autre ennemi, pour mener des campagnes paralleles */
+    for (int foe = 0; foe < N_COUNT; foe++) {
+        if (!g->war[n][foe] || !g->nat[foe].alive) continue;
+        bool covered = false;
+        for (int k = 0; k < 3; k++) if (cand[k] >= 0 && g->prov[cand[k]].ctrl == foe) covered = true;
+        if (covered) continue;
+        int best = -1;
+        float bsc = 0;
+        for (int e = 0; e < PROV_COUNT; e++) {
+            if (g->prov[e].ctrl != foe || !CanAttack(g, n, e)) continue;
+            float att = StagedAttack(g, n, e, used, true);
+            if (att <= 0) continue;
+            float sc = att / DefensePower(g, e, n) * sqrtf(TargetValue(g, n, e));
+            if (sc > bsc) { bsc = sc; best = e; }
+        }
+        if (best < 0) continue;
+        /* remplace la candidate la plus faible : chaque front garde sa campagne */
+        int weakest = 0;
+        for (int k = 1; k < 3; k++) if (cand[k] < 0 || cscore[k] < cscore[weakest]) weakest = k;
+        if (cand[weakest] < 0 || bsc > cscore[weakest] * 0.5f) { cand[weakest] = best; cscore[weakest] = bsc; }
+    }
     for (int k = 0; k < 3; k++) {
         int e = cand[k];
         if (e < 0) continue;
@@ -1062,16 +1094,17 @@ static void AiOrders(Game *g, int n)
         if (odds >= need) {
             LaunchAttack(g, n, e, used);
             if (na->aiTarget < 0) na->aiTarget = (short)e;
-        } else if (k == 0) {
+        } else if (k == 0 || g->prov[e].ctrl != g->prov[cand[0] >= 0 ? cand[0] : e].ctrl) {
+            /* on prepare l'offensive principale et celle de chaque autre front */
             Stage(g, n, e, used);
-            na->aiTarget = (short)e;
+            if (na->aiTarget < 0) na->aiTarget = (short)e;
         }
     }
 
     /* 3. reserves : vers le point menace, sinon vers le front */
     bool src[PROV_COUNT] = { false };
     int distThreat[PROV_COUNT], distFront[PROV_COUNT];
-    if (na->aiThreat >= 0) src[na->aiThreat] = true;
+    for (int k = 0; k < 3; k++) if (threats[k] >= 0) src[threats[k]] = true;   /* reserves vers le point menace le plus proche */
     FriendlyBfs(g, n, src, distThreat);
     for (int p = 0; p < PROV_COUNT; p++) {
         src[p] = false;
@@ -1086,7 +1119,7 @@ static void AiOrders(Game *g, int n)
         if (!u->active || u->owner != n || u->training || used[i] || u->target >= 0) continue;
         UnitDomain dom = UNIT_TYPES[u->type].domain;
         if (dom != DOM_LAND) continue;
-        if (na->aiThreat >= 0 && worst > 0 && sent < 6 && distThreat[u->prov] > 0 && distThreat[u->prov] <= 4) {
+        if (na->aiThreat >= 0 && worst > 0 && sent < 9 && distThreat[u->prov] > 0 && distThreat[u->prov] <= 4) {
             StepToward(g, u, distThreat);
             sent++;
         } else {
