@@ -1889,3 +1889,7 @@ Bombardement stratégique	Strategic bombing
 Appuie les batailles terrestres à portée : plein effet au sol.	Supports land battles in range: full effect on the ground.
 Chasse l'aviation ennemie à portée : réduit son appui au sol et protège nos bombardiers, mais appui au sol réduit de moitié.	Hunts enemy aircraft in range: cuts their ground support and shields our bombers, but our own ground support is halved.
 Frappe l'industrie et les infrastructures ennemies à portée, chaque tour de guerre ; pas d'appui au sol, pertes face à la DCA et aux chasseurs.	Strikes enemy industry and infrastructure in range every turn of war; no ground support, losses to air defense and fighters.
+Route commerciale coupée	Trade route cut
+Route commerciale terrestre	Overland trade route
+Route commerciale maritime : %.0f%%	Sea trade route: %.0f%%
+Les excédents d'une nation ne nous parviennent que par une route : par la terre à travers des pays qui ne nous combattent pas, ou par la mer entre deux ports, au gré du blocus et de la guerre au commerce.	A nation's surpluses only reach us along a route: overland through countries not fighting us, or by sea between two ports, subject to blockades and commerce raiding.

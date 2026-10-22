@@ -128,6 +128,8 @@ const SaveField SAVE_FIELDS[] = {
     { "visible", offsetof(Game, visible), sizeof(((Game *)0)->visible[0]), PROV_COUNT, 0, sizeof(((Game *)0)->visible[0]) },
     { "supply", offsetof(Game, supply), sizeof(((Game *)0)->supply[0]), N_COUNT, 0, sizeof(((Game *)0)->supply[0]) },
     { "aggressor", offsetof(Game, aggressor), sizeof(((Game *)0)->aggressor[0]), N_COUNT, 0, sizeof(((Game *)0)->aggressor[0]) },
+    { "route", offsetof(Game, route), sizeof(((Game *)0)->route[0]), N_COUNT, 0, sizeof(((Game *)0)->route[0]) },
+    { "routeKind", offsetof(Game, routeKind), sizeof(((Game *)0)->routeKind[0]), N_COUNT, 0, sizeof(((Game *)0)->routeKind[0]) },
     { "natoCohesion", offsetof(Game, natoCohesion), sizeof(((Game *)0)->natoCohesion), 1, 0, sizeof(((Game *)0)->natoCohesion) },
     { "unCooldown", offsetof(Game, unCooldown), sizeof(((Game *)0)->unCooldown), 1, 0, sizeof(((Game *)0)->unCooldown) },
     { "debt", offsetof(Game, debt), sizeof(((Game *)0)->debt), 1, 0, sizeof(((Game *)0)->debt) },

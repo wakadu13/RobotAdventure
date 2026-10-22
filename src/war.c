@@ -2341,6 +2341,49 @@ void War_Turn(Game *g)
 }
 
 /* ------------------------------------------------------------------ */
+/* Routes commerciales                                                 */
+/* ------------------------------------------------------------------ */
+/*
+ * Une nation commerce avec la France par voie de terre si une chaine de pays
+ * voisins non hostiles les relie, sinon par la mer si toutes deux ont un port :
+ * la route maritime souffre alors du blocus et de la guerre au commerce.
+ */
+void War_UpdateTradeRoutes(Game *g)
+{
+    bool adj[N_COUNT][N_COUNT] = { { false } };
+    for (int p = 0; p < PROV_COUNT; p++)
+        for (int k = 0; k < MAX_ADJ && PROVINCE_ADJ[p][k] >= 0; k++) {
+            int a = g->prov[p].ctrl, b = g->prov[PROVINCE_ADJ[p][k]].ctrl;
+            if (a != b && !Map_SeaLink(p, PROVINCE_ADJ[p][k])) adj[a][b] = adj[b][a] = true;
+        }
+    /* parcours terrestre depuis la France a travers les pays qui ne la combattent pas */
+    bool land[N_COUNT] = { false };
+    int queue[N_COUNT], head = 0, tail = 0;
+    land[N_FRANCE] = true;
+    queue[tail++] = N_FRANCE;
+    while (head < tail) {
+        int a = queue[head++];
+        for (int b = 0; b < N_COUNT; b++) {
+            if (land[b] || !adj[a][b] || !g->nat[b].alive || War_AtWar(g, N_FRANCE, b) || g->nat[b].embargoFrance) continue;
+            land[b] = true;
+            queue[tail++] = b;
+        }
+    }
+    bool frPort = CoastalBase(g, N_FRANCE) >= 0;
+    float frSea = (1 - 0.7f * g->nat[N_FRANCE].blockade) * (1 - g->nat[N_FRANCE].raid);
+    for (int n = 0; n < N_COUNT; n++) {
+        g->route[n] = 0;
+        g->routeKind[n] = 0;
+        if (!g->nat[n].alive) continue;
+        if (land[n]) { g->route[n] = 1; g->routeKind[n] = 1; continue; }
+        if (frPort && CoastalBase(g, n) >= 0) {
+            g->route[n] = Clampf(frSea * (1 - 0.5f * g->nat[n].blockade), 0, 1);
+            g->routeKind[n] = 2;
+        }
+    }
+}
+
+/* ------------------------------------------------------------------ */
 /* Commandants : nations dirigees par d'autres joueurs (hot-seat)      */
 /* ------------------------------------------------------------------ */
 /*

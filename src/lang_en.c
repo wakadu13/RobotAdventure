@@ -2110,6 +2110,8 @@ const LangPair LANG_TABLE_EN[] = {
       "Medical deserts spread; provincial hospitals close wards." },
     { "Les escadres se redéploient vers une province amie",
       "Wings redeploy to a friendly province" },
+    { "Les excédents d'une nation ne nous parviennent que par une route : par la terre à travers des pays qui ne nous combattent pas, ou par la mer entre deux ports, au gré du blocus et de la guerre au commerce.",
+      "A nation's surpluses only reach us along a route: overland through countries not fighting us, or by sea between two ports, subject to blockades and commerce raiding." },
     { "Les flottes rejoignent un port ami",
       "Fleets join a friendly port" },
     { "Les fonds spéculatifs parient contre la dette française. Les taux s'envolent.",
@@ -2954,6 +2956,12 @@ const LangPair LANG_TABLE_EN[] = {
       "Romanian" },
     { "Roumanie",
       "Romania" },
+    { "Route commerciale coupée",
+      "Trade route cut" },
+    { "Route commerciale maritime : %.0f%%",
+      "Sea trade route: %.0f%%" },
+    { "Route commerciale terrestre",
+      "Overland trade route" },
     { "Rouvrir les mines (10 Md)",
       "Reopen the mines (10 bn)" },
     { "Royaume-Uni",
@@ -3779,4 +3787,4 @@ const LangPair LANG_TABLE_EN[] = {
     { "élites",
       "elites" },
 };
-const int LANG_TABLE_EN_COUNT = 1888;
+const int LANG_TABLE_EN_COUNT = 1892;

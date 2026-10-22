@@ -219,7 +219,7 @@ static void WorldMarket(Game *g)
         float allowed = 0, partner = 0;
         for (int n = 1; n < N_COUNT; n++) {
             if (!Eco_TradeAllowed(g, n)) continue;
-            float b = g->eco[n].supply[k] - g->eco[n].demand[k];
+            float b = (g->eco[n].supply[k] - g->eco[n].demand[k]) * g->route[n];   /* ce que la route laisse passer */
             if (b <= 0) continue;
             allowed += b;
             if (g->nat[n].trade) partner += b * 0.5f;
@@ -552,6 +552,7 @@ void Eco_Turn(Game *g)
     }
 
     Employment(g);
+    War_UpdateTradeRoutes(g);
     WorldMarket(g);
     AiEconomy(g);
 

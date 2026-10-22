@@ -1681,6 +1681,16 @@ static void DrawNationsTab(void)
     snprintf(buf, sizeof(buf), Tr("Armée %.1f (%d unités), trésor %.0f"), na->army, War_UnitCount(&game, n), na->treasury);
     Text(buf, dx, dy, 10, C_TEXT); dy += 13;
     if (na->blockade > 0.05f) { snprintf(buf, sizeof(buf), Tr("Côtes sous blocus : %.0f%%"), na->blockade * 100); Text(buf, dx, dy, 10, C_WARN); dy += 13; }
+    {
+        static const char *ROUTES[3] = { "Route commerciale coupée", "Route commerciale terrestre", "Route commerciale maritime : %.0f%%" };
+        int rk = game.routeKind[n];
+        snprintf(buf, sizeof(buf), Tr(ROUTES[rk]), game.route[n] * 100);
+        Rectangle rr = { dx, dy, bw, 12 };
+        Text(buf, dx, dy, 10, rk == 0 ? C_BAD : game.route[n] < 0.6f ? C_WARN : C_DIM);
+        Tooltip(rr, "Les excédents d'une nation ne nous parviennent que par une route : par la terre à travers des pays qui ne "
+                    "nous combattent pas, ou par la mer entre deux ports, au gré du blocus et de la guerre au commerce.");
+        dy += 13;
+    }
     /* alliances et guerres */
     int len = snprintf(buf, sizeof(buf), "%s", Tr("Alliés :"));
     int cnt = 0;

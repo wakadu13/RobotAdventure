@@ -469,6 +469,8 @@ typedef struct {
     bool visible[PROV_COUNT];                 /* brouillard de guerre (vue francaise) */
     unsigned char supply[N_COUNT][PROV_COUNT]; /* ravitaillement 0-100 */
     bool aggressor[N_COUNT][N_COUNT];         /* a a attaque b */
+    float route[N_COUNT];                     /* qualite de la route commerciale vers la France (0-1) */
+    unsigned char routeKind[N_COUNT];         /* 0 coupee, 1 terrestre, 2 maritime */
 
     /* organisations internationales et dette */
     float natoCohesion;
@@ -711,6 +713,7 @@ void        War_SetGroupOrder(Game *g, int group, int mode, int target);
 const char *War_MissionBlocked(const Game *g, int unit, int mission);
 bool        War_SetMission(Game *g, int unit, int mission);
 bool        War_PortFlooded(const Game *g, int p);
+void        War_UpdateTradeRoutes(Game *g);
 
 /* war.c : commandants (nations dirigees par d'autres joueurs en hot-seat) */
 int         War_NextPlayer(const Game *g, int after);   /* -1 : plus personne apres */
