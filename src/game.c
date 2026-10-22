@@ -200,14 +200,93 @@ void Game_Init(Game *g, unsigned seed, int difficulty)
     War_UpdateIntel(g);
 }
 
-/* scenario de depart en crise : 2040, a appliquer juste apres Game_Init */
+/* historique rempli jusqu'au tour de depart, et premieres mesures du brouillard */
+static void ScenarioFinish(Game *g)
+{
+    for (int t = 0; t <= g->turn; t++) {
+        g->histPop[t] = Soc_NationPop(g, N_FRANCE);
+        g->histCohesion[t] = g->res[R_COHESION];
+        g->histTemp[t] = g->temp;
+        g->histScore[t] = (float)Game_Score(g, NULL);
+        for (int n = 0; n < N_COUNT; n++) {
+            g->histNatPop[n][t] = Soc_NationPop(g, n);
+            g->histNatArmy[n][t] = g->nat[n].army;
+            g->histNatRel[n][t] = g->nat[n].relation;
+        }
+    }
+    War_UpdateSupply(g);
+    War_UpdateIntel(g);
+}
+
+static void ScenarioClimate(Game *g, int turn, float temp)
+{
+    g->turn = g->startTurn = turn;
+    g->temp = temp;
+    g->seaLevel = 0.2f + 0.45f * (g->temp - 1.5f);
+    for (int p = 0; p < PROV_COUNT; p++) g->prov[p].hab = Soc_Habitability(g, p);
+}
+
+/* scenarios de depart, a appliquer juste apres Game_Init : 1 crise de 2040, 2 guerre des Balkans (2035),
+   3 effondrement du Sahel (2050) */
 bool Game_ApplyScenario(Game *g, int scenario)
 {
-    if (scenario != 1 || g->turn != 0 || g->startTurn != 0) return false;
-    g->scenario = 1;
-    g->turn = g->startTurn = 40;
-    g->temp = 2.05f;
-    g->seaLevel = 0.2f + 0.45f * (g->temp - 1.5f);
+    if (scenario < 1 || scenario >= SCENARIO_COUNT || g->turn != 0 || g->startTurn != 0) return false;
+    g->scenario = scenario;
+    if (scenario == 2) {
+        ScenarioClimate(g, 20, 1.75f);
+        g->res[R_BUDGET] = 28;
+        g->res[R_COHESION] = 56;
+        g->res[R_INFLUENCE] = 50;
+        g->debt += 40;
+        g->inflation = 4;
+        g->priceLevel = 1.12f;
+        AddFac(g, F_BOREALE, 10, 8);
+        AddFac(g, F_SABLES, 5, 5);
+        for (int d = D_ESPACE; d <= D_EM; d++) g->capacity[d] += 1;
+        for (int i = 0; i < 2; i++) SpawnThreatFor(g, Rand(g) % F_COUNT);
+        AddAiRel(g, N_BALKANS, N_BOREALE, 40);
+        ScenarioFinish(g);
+        Game_Log(g, EV_EVENT, "Janvier 2035. +1,75°C. Les Balkans, armés par la Fédération Boréale, franchissent la frontière grecque.");
+        War_StartWar(g, N_BALKANS, N_GRECE, true);
+        return true;
+    }
+    if (scenario == 3) {
+        ScenarioClimate(g, 80, 2.6f);
+        g->res[R_BUDGET] = 14;
+        g->res[R_ENERGIE] = 46;
+        g->res[R_EAU] = 40;
+        g->res[R_ALIM] = 47;
+        g->res[R_COHESION] = 40;
+        g->res[R_INFLUENCE] = 36;
+        g->res[R_SOUVERAINETE] = 55;
+        g->debt += 160;
+        g->inflation = 7;
+        g->priceLevel = 1.7f;
+        g->credibility = 55;
+        /* vingt ans d'adaptation : capacites, projets d'eau et d'agriculture */
+        for (int d = D_ESPACE; d <= D_EM; d++) g->capacity[d] += 3;
+        g->proj[P_DESSAL].state = 2;
+        g->proj[P_AGRO].state = 2;
+        static const NationId FAILED[3] = { N_LIBYE, N_ALGERIE, N_TUNISIE };
+        for (int k = 0; k < 3; k++) {
+            g->nat[FAILED[k]].failed = true;
+            g->nat[FAILED[k]].regime = RG_JUNTE;
+            AddRelation(g, FAILED[k], -20);
+        }
+        g->nat[N_EGYPTE].nukeStatus = 1;
+        g->nat[N_EGYPTE].nukeProgress = 0.5f;
+        AddFac(g, F_SABLES, 50, 55);
+        AddFac(g, F_HYDRA, 15, 20);
+        AddFac(g, F_NEBULA, 10, 15);
+        AddImmigrants(g, 1.5f);
+        for (int p = 0; p < PROV_COUNT; p++)
+            if (g->prov[p].owner == N_FRANCE) for (int s = 0; s < S_COUNT; s++) g->prov[p].mil[s] += 1.5f;
+        for (int i = 0; i < 6; i++) SpawnThreatFor(g, i % 2 ? F_SABLES : Rand(g) % F_COUNT);
+        ScenarioFinish(g);
+        Game_Log(g, EV_EVENT, "Janvier 2050. +2,6°C. Le Maghreb s'effondre et des millions de déplacés marchent vers le nord.");
+        return true;
+    }
+    ScenarioClimate(g, 40, 2.05f);
     g->res[R_BUDGET] = 15;
     g->res[R_ENERGIE] = 48;
     g->res[R_EAU] = 45;
@@ -226,7 +305,6 @@ bool Game_ApplyScenario(Game *g, int scenario)
     for (int p = 0; p < PROV_COUNT; p++) {
         Province *pr = &g->prov[p];
         if (pr->owner == N_FRANCE) for (int s = 0; s < S_COUNT; s++) pr->mil[s] += 1.5f;
-        pr->hab = Soc_Habitability(g, p);
     }
     Nation *ly = &g->nat[N_LIBYE];
     ly->failed = true;
@@ -235,22 +313,10 @@ bool Game_ApplyScenario(Game *g, int scenario)
     g->nat[N_ALGERIE].nukeProgress = 0.45f;
     for (int n = N_MAROC; n <= N_EGYPTE; n++) AddRelation(g, n, -15);
     for (int i = 0; i < 4; i++) SpawnThreatFor(g, Rand(g) % F_COUNT);
-    for (int t = 0; t <= g->turn; t++) {
-        g->histPop[t] = Soc_NationPop(g, N_FRANCE);
-        g->histCohesion[t] = g->res[R_COHESION];
-        g->histTemp[t] = g->temp;
-        g->histScore[t] = (float)Game_Score(g, NULL);
-        for (int n = 0; n < N_COUNT; n++) {
-            g->histNatPop[n][t] = Soc_NationPop(g, n);
-            g->histNatArmy[n][t] = g->nat[n].army;
-            g->histNatRel[n][t] = g->nat[n].relation;
-        }
-    }
+    ScenarioFinish(g);
     Game_Log(g, EV_EVENT, "Janvier 2040. +2°C. Le Président vous rappelle aux affaires : le pays est au bord du gouffre.");
     Game_Log(g, EV_WAR, "La Fédération Boréale franchit la frontière balte.");
     War_StartWar(g, N_BOREALE, N_BALTES, true);
-    War_UpdateSupply(g);
-    War_UpdateIntel(g);
     return true;
 }
 

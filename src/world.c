@@ -263,11 +263,15 @@ const float MIGRATION_ACCEPT[3] = { 0.9f, 0.5f, 0.15f };
 
 const char *VET_RANKS[4] = { "Recrues", "Aguerris", "Vétérans", "Élite" };
 
-const char *SCENARIO_NAMES[2] = { "Janvier 2030", "La crise de 2040" };
-const char *SCENARIO_DESC[2] = {
+const char *SCENARIO_NAMES[SCENARIO_COUNT] = { "Janvier 2030", "La crise de 2040", "La guerre des Balkans (2035)", "L'effondrement du Sahel (2050)" };
+const char *SCENARIO_DESC[SCENARIO_COUNT] = {
     "+1,5°C. Le monde bascule, mais la France a encore des marges : vingt ans pour se préparer.",
     "+2°C, la mer a monté de 45 cm. La Fédération Boréale envahit les pays baltes, la Libye s'est effondrée, "
     "l'Algérie se dote de la bombe. Trésor vide, dette record, pays fracturé : vingt ans à tenir.",
+    "+1,75°C. Soutenus en sous-main par la Fédération Boréale, les Balkans envahissent la Grèce : l'OTAN est sommée "
+    "d'agir et les réfugiés affluent. Vingt-cinq ans à tenir.",
+    "+2,6°C, la mer a monté de 70 cm. Le Maghreb s'effondre : Libye, Algérie et Tunisie sont des États faillis, "
+    "l'Égypte vise la bombe et la Ligue des Sables pousse des millions de déplacés vers l'Europe. Dix ans à tenir.",
 };
 
 const char *ALERT_LEVELS[3] = { "Vigilance", "Alerte renforcée", "Urgence attentat" };

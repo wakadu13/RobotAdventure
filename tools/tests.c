@@ -220,6 +220,10 @@ int main(void){ int fails=0; Game g;
  /* mods : evenements charges depuis un fichier texte */
  { int before=EVENT_COUNT; int n=Ev_LoadMods("docs/exemple_evenements.txt"); CHECK(n==2 && EVENT_COUNT==before+2);
    const DilemmaDef *d=Ev_Dilemma(before); CHECK(d && strcmp(d->title,"Crue centennale de la Seine")==0 && strstr(d->effA,"Budget")!=NULL); }
+ /* scenarios 2035 et 2050 */
+ { Game_Init(&g, 121, 1); Command sc={ CMD_SCENARIO, N_FRANCE, 2,0,0,0 }; CHECK(Cmd_Apply(&g,&sc) && g.turn==20 && g.war[N_BALKANS][N_GRECE]);
+   Game_Init(&g, 122, 1); Command s3={ CMD_SCENARIO, N_FRANCE, 3,0,0,0 }; CHECK(Cmd_Apply(&g,&s3) && g.turn==80 && g.nat[N_ALGERIE].failed && g.temp>2.5f);
+   for(int k=0;k<4;k++){ g.pendingDilemma=-1; Game_EndTurn(&g); } CHECK(g.turn==84 || g.state!=GAME_RUNNING); }
  /* sauvegarde */
  Game_Init(&g, 47, 1); for(int i=0;i<6;i++){ g.pendingDilemma=-1; Game_EndTurn(&g);} 
  { static Game h; CHECK(Game_Save(&g, "build/test.sav")); CHECK(Game_Load(&h, "build/test.sav")); CHECK(memcmp(&g,&h,sizeof g)==0);

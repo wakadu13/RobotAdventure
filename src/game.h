@@ -270,9 +270,10 @@ extern const ActionDef   ACTIONS[A_COUNT];
 extern const DilemmaDef  DILEMMAS[];
 extern const int         DILEMMA_COUNT;
 extern const DilemmaDef  DYN_DILEMMAS[9];
-extern const char       *SCENARIO_NAMES[2];
+#define SCENARIO_COUNT 4
+extern const char       *SCENARIO_NAMES[SCENARIO_COUNT];
 extern const char       *VET_RANKS[4];
-extern const char       *SCENARIO_DESC[2];
+extern const char       *SCENARIO_DESC[SCENARIO_COUNT];
 extern const RegimeDef   REGIMES[RG_COUNT];
 extern const NationDef   NATIONS[N_COUNT];
 extern const ProvinceDef PROVINCES[PROV_COUNT];

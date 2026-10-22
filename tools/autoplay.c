@@ -1,6 +1,6 @@
 /*
  * Banc d'essai d'equilibrage : joue des parties automatiques sans interface.
- *   make sim && ./build/autoplay [nombre de parties] [difficulte 0-2] [scenario 0-1]
+ *   make sim && ./build/autoplay [nombre de parties] [difficulte 0-2] [scenario 0-3]
  */
 #include "../src/game.h"
 
@@ -312,7 +312,8 @@ int main(int argc, char **argv)
     int games = argc > 1 ? atoi(argv[1]) : 100;
     int diff = argc > 2 ? atoi(argv[2]) : DIFF_NORMAL;
     scenario = argc > 3 ? atoi(argv[3]) : 0;
-    printf("Difficulté : %s, scénario : %s, %d parties par stratégie\n", DIFFICULTY_NAMES[diff], SCENARIO_NAMES[scenario != 0], games);
+    if (scenario < 0 || scenario >= SCENARIO_COUNT) scenario = 0;
+    printf("Difficulté : %s, scénario : %s, %d parties par stratégie\n", DIFFICULTY_NAMES[diff], SCENARIO_NAMES[scenario], games);
     if (argc > 4) { trace = true; Run("stratege", PlayStrategist, games, diff); return 0; }
     Run("passive", PlayPassive, games, diff);
     Run("gestionnaire", Manage, games, diff);
