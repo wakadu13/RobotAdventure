@@ -139,6 +139,12 @@ belli. Les autres nations y recourent aussi, entre elles comme contre la France.
   (température, guerre, régime, dette, chômage, factions, voisins...). Ils sont décrits par des données
   dans `src/events.c` : le texte de leurs effets est généré à partir de ce qui est appliqué.
 
+### Langues
+- Français et anglais (bouton du menu, réglage conservé). Toutes les chaînes passent par `Tr()` ;
+  la table anglaise est tenue dans `tools/lang/en.tsv` (une ligne par chaîne : français, tabulation,
+  anglais). `python3 tools/lang_extract.py` liste les chaînes non traduites,
+  `python3 tools/lang_build.py` vérifie les formats (`%d`, `%s`...) et régénère `src/lang_en.c`.
+
 ### Son
 - Effets sonores (boutons, fin de tour, alertes, batailles, frappes nucléaires, victoire, défaite) et
   nappe d'ambiance synthétisés au lancement par `src/sound.c` : aucun fichier audio. Activable ou

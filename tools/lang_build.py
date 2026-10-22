@@ -14,7 +14,7 @@ import sys
 ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 TSV = os.path.join(ROOT, "tools", "lang", "en.tsv")
 OUT = os.path.join(ROOT, "src", "lang_en.c")
-FMT = re.compile(r"%[-+ #0-9.]*[a-zA-Z%]")
+FMT = re.compile(r"%[-+#0-9.]*[a-zA-Z%]")
 
 
 ESC = {"n": b"\n", "t": b"\t", '"': b'"', "\\": b"\\"}

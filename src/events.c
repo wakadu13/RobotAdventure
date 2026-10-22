@@ -467,7 +467,7 @@ static int EffectText(const EvTerm *e, char *buf, int len)
     case EE_FAC:      return snprintf(buf, len, Tr("%s : hostilité %+d"), Tr(FACTIONS[a].name), v);
     case EE_FACCAP:   return snprintf(buf, len, Tr("%s : capacité %+d"), Tr(FACTIONS[a].name), v);
     case EE_REL:      return snprintf(buf, len, Tr("relations avec %s %+d"), Tr(NATIONS[a].name), v);
-    case EE_RELGROUP: return snprintf(buf, len, Tr("relations avec %s %+d"), GROUPS[a], v);
+    case EE_RELGROUP: return snprintf(buf, len, Tr("relations avec %s %+d"), Tr(GROUPS[a]), v);
     case EE_CAP:      return snprintf(buf, len, Tr("capacité %s %+d"), Tr(DOMAIN_NAMES[a]), v);
     case EE_IMMIG:    return snprintf(buf, len, Tr("+%d 000 habitants à intégrer"), v * 10);
     case EE_DEBT:     return snprintf(buf, len, Tr("dette %+d Md"), v);
