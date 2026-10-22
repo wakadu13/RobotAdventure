@@ -701,6 +701,7 @@ static void ResolveThreats(Game *g)
             t->active = false;
             g->statNeutralized++;
             AddRes(g, R_SOUVERAINETE, 0.4f);
+            AddFac(g, t->faction, 0, -0.5f);   /* chaque reseau demantele use la faction */
             Game_Log(g, EV_GOOD, "%s neutralisé(e) - %s.", Tr(td->name), Tr(THEATERS[t->theater].name));
             continue;
         }
@@ -765,10 +766,13 @@ static void FactionsTurn(Game *g)
         g->fac[f].actedThisTurn = false;
     }
 
-    float escalation = 1.0f + 1.4f * g->turn / (float)TOTAL_TURNS;
+    float escalation = 1.0f + 1.25f * g->turn / (float)TOTAL_TURNS;
     for (int f = 0; f < F_COUNT; f++) {
         float h = g->fac[f].hostility / 100.0f, c = g->fac[f].capability / 100.0f;
-        float expected = (0.08f + 1.1f * h * c) * escalation * DiffThreat(g);
+        /* une faction deja engagee sur de nombreux fronts a moins de moyens pour en ouvrir d'autres */
+        int active = 0;
+        for (int i = 0; i < MAX_THREATS; i++) if (g->threats[i].active && g->threats[i].faction == f) active++;
+        float expected = (0.08f + 1.1f * h * c) * escalation * DiffThreat(g) / (1 + active / 9.0f);
         int n = (int)expected;
         if (Randf(g) < expected - n) n++;
         for (int k = 0; k < n; k++) SpawnThreatFor(g, f);

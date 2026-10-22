@@ -256,10 +256,10 @@ Taux de victoire indicatifs des bots (qui jouent leur stratégie sans erreur) :
 | Stratégie | Facile | Normale | Difficile |
 |---|---|---|---|
 | Passive (ne fait rien) | 0 % | 0 %, effondrement vers 2041 | 0 % |
-| Gestionnaire défensif | 100 % | 100 % | 20 % |
-| Stratège (régime autoritaire, groupes d'armées, opérations, guerres choisies) | 100 % | 30 % | 0 % |
-| Gestionnaire, crise de 2040 | 100 % | 60 % | 40 % |
-| Stratège, crise de 2040 | 100 % | 40 % | 10 % |
+| Gestionnaire défensif | 100 % | 100 % | 56 % |
+| Stratège (régime autoritaire, groupes d'armées, opérations, guerres choisies) | 100 % | 80 % | 0 % |
+| Gestionnaire, crise de 2040 | 100 % | 65 % | 20 % |
+| Stratège, crise de 2040 | 90 % | 50 % | 10 % |
 | Conquérant total (junte, guerres en chaîne) | 0 % | 0 % : coalitions, révoltes, faillite | 0 % |
 
 Le stratège utilise les groupes d'armées, les généraux, la reconnaissance et le brouillage, la guerre
