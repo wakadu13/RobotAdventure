@@ -206,6 +206,12 @@ int main(void){ int fails=0; Game g;
    Command tax={ CMD_CMDR_TAX, N_ITALIE, 2,0,0,0 }; CHECK(Cmd_Apply(&g,&tax) && g.nat[N_ITALIE].taxLevel==2);
    g.nat[N_ITALIE].treasury=20; float w=g.nat[N_ITALIE].waterBonus;
    Command inv={ CMD_CMDR_INVEST, N_ITALIE, 0,-1,0,0 }; CHECK(Cmd_Apply(&g,&inv) && g.nat[N_ITALIE].waterBonus>w && g.nat[N_ITALIE].treasury<20); }
+ /* traite entre joueurs : la France propose, le commandant repond */
+ { Game_Init(&g, 101, 1); Command add={ CMD_ADD_PLAYER, N_FRANCE, N_ALLEMAGNE,0,0,0 }; CHECK(Cmd_Apply(&g,&add));
+   War_StartWar(&g, N_FRANCE, N_ALLEMAGNE, false); g.warSince[N_FRANCE][N_ALLEMAGNE]=g.warSince[N_ALLEMAGNE][N_FRANCE]=(short)(g.turn-6);
+   War_TreatyDraft(&g, N_ALLEMAGNE); CHECK(War_Negotiate(&g)==3 && g.treaty.pendingHuman);
+   g.pendingDilemma=-1; Command end={ CMD_END_TURN, N_FRANCE, 0,0,0,0 }; CHECK(Cmd_Apply(&g,&end) && g.activePlayer==N_ALLEMAGNE);
+   Command yes={ CMD_CMDR_TREATY, N_ALLEMAGNE, 1,0,0,0 }; CHECK(Cmd_Apply(&g,&yes) && !g.war[N_FRANCE][N_ALLEMAGNE]); }
  /* sauvegarde */
  Game_Init(&g, 47, 1); for(int i=0;i<6;i++){ g.pendingDilemma=-1; Game_EndTurn(&g);} 
  { static Game h; CHECK(Game_Save(&g, "build/test.sav")); CHECK(Game_Load(&h, "build/test.sav")); CHECK(memcmp(&g,&h,sizeof g)==0);

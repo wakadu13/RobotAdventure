@@ -859,8 +859,9 @@ void DrawTreaty(void)
                      "la limite de son score et de sa lassitude ; sinon il fait une contre-proposition, à accepter telle quelle "
                      "ou à amender.")) {
         Do(CMD_NEGOTIATE, 0, 0, 0, 0);
-        int r = !game.treaty.active ? 1 : game.treaty.countered ? 2 : 0;
-        if (r == 1) { treatyOpen = false; Toast("Traité signé."); }
+        int r = !game.treaty.active ? 1 : game.treaty.pendingHuman ? 3 : game.treaty.countered ? 2 : 0;
+        if (r == 3) { treatyOpen = false; Toast("Traité transmis : le commandant adverse doit répondre."); }
+        else if (r == 1) { treatyOpen = false; Toast("Traité signé."); }
         else if (r == 2) snprintf(negoMsg, sizeof(negoMsg), Tr("Contre-proposition de %s : conditions modifiées ci-contre. Proposez-les pour signer."), Tr(NATIONS[n].name));
         else snprintf(negoMsg, sizeof(negoMsg), "%s", Tr("Négociations rompues pour ce trimestre."));
     }

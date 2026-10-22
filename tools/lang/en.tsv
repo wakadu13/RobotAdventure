@@ -2011,3 +2011,9 @@ Usine ici (8 Md)	Factory here (8 bn)
 Réseaux et réservoirs : couverture des besoins en eau.	Networks and reservoirs: covers water needs.
 Irrigation et stocks : couverture alimentaire.	Irrigation and stocks: covers food needs.
 Une usine dans la province sélectionnée : emplois et production (4 tours).	A factory in the selected province: jobs and output (4 turns).
+La France propose la paix : vous cédez %d province(s), réparations %.0f Md/tour.	France offers peace: you cede %d province(s), reparations %.0f bn/turn.
+La France propose la paix : elle vous cède %d province(s), réparations %.0f Md/tour.	France offers peace: it cedes you %d province(s), reparations %.0f bn/turn.
+Accepter la paix	Accept peace
+Traité transmis : le commandant adverse doit répondre.	Treaty sent: the enemy commander must respond.
+Traité transmis à %s : en attente de la réponse de son commandant.	Treaty sent to %s: awaiting its commander's answer.
+%s rejette le traité proposé par la France.	%s rejects the treaty proposed by France.

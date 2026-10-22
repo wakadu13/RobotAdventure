@@ -153,6 +153,7 @@ const SaveField SAVE_FIELDS[] = {
     { "treaty.reparations", offsetof(Game, treaty), sizeof(Treaty), 1, offsetof(Treaty, reparations), sizeof(((Treaty *)0)->reparations) },
     { "treaty.reparationTurns", offsetof(Game, treaty), sizeof(Treaty), 1, offsetof(Treaty, reparationTurns), sizeof(((Treaty *)0)->reparationTurns) },
     { "treaty.countered", offsetof(Game, treaty), sizeof(Treaty), 1, offsetof(Treaty, countered), sizeof(((Treaty *)0)->countered) },
+    { "treaty.pendingHuman", offsetof(Game, treaty), sizeof(Treaty), 1, offsetof(Treaty, pendingHuman), sizeof(((Treaty *)0)->pendingHuman) },
     { "eco.supply", offsetof(Game, eco), sizeof(NationEconomy), N_COUNT, offsetof(NationEconomy, supply), sizeof(((NationEconomy *)0)->supply) },
     { "eco.demand", offsetof(Game, eco), sizeof(NationEconomy), N_COUNT, offsetof(NationEconomy, demand), sizeof(((NationEconomy *)0)->demand) },
     { "eco.imports", offsetof(Game, eco), sizeof(NationEconomy), N_COUNT, offsetof(NationEconomy, imports), sizeof(((NationEconomy *)0)->imports) },

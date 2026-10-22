@@ -337,6 +337,21 @@ void DrawCommanderPanel(void)
         for (int i = 0; i < MAX_UNITS; i++) if (uiSel[i]) { Do(CMD_DISBAND, i, 0, 0, 0); uiSel[i] = false; }
     y += 30;
 
+    /* traite propose par la France : au commandant de repondre */
+    const Treaty *tr = &game.treaty;
+    if (tr->active && tr->pendingHuman && tr->other == n) {
+        int ceded = 0;
+        for (int p = 0; p < PROV_COUNT; p++) if (tr->cede[p]) ceded++;
+        Rectangle box = { x - 4, y - 2, RP_W - 12, 50 };
+        DrawRectangleRec(box, (Color){ 60, 40, 30, 255 });
+        DrawRectangleLinesEx(box, 1, C_WAR);
+        if (tr->winner == N_FRANCE) snprintf(buf, sizeof(buf), Tr("La France propose la paix : vous cédez %d province(s), réparations %.0f Md/tour."), ceded, tr->reparations);
+        else snprintf(buf, sizeof(buf), Tr("La France propose la paix : elle vous cède %d province(s), réparations %.0f Md/tour."), ceded, tr->reparations);
+        Text(buf, x + 2, y + 4, 10, C_TEXT);
+        if (Button((Rectangle){ x + 2, y + 22, 160, 20 }, "Accepter la paix", true, 10)) Do(CMD_CMDR_TREATY, 1, 0, 0, 0);
+        if (Button((Rectangle){ x + 170, y + 22, 160, 20 }, "Refuser", true, 10)) Do(CMD_CMDR_TREATY, 0, 0, 0, 0);
+        y += 56;
+    }
     /* economie de la nation : impots et investissements */
     {
         const Nation *na = &game.nat[n];

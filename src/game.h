@@ -444,6 +444,7 @@ typedef struct {
     float reparations;
     int reparationTurns;
     bool countered;            /* contre-proposition de l'IA */
+    bool pendingHuman;         /* transmis a la nation d'un joueur, qui doit repondre */
 } Treaty;
 
 typedef struct {
@@ -760,6 +761,7 @@ bool        Cmdr_Peace(Game *g, int n, int t);
 const char *Cmdr_AllyBlocked(const Game *g, int n, int t);
 bool        Cmdr_Ally(Game *g, int n, int t);
 bool        Cmdr_SetTax(Game *g, int n, int level);
+bool        Cmdr_AnswerTreaty(Game *g, int n, bool accept);
 float       Cmdr_InvestCost(int kind);
 const char *Cmdr_InvestBlocked(const Game *g, int n, int kind, int p);
 bool        Cmdr_Invest(Game *g, int n, int kind, int p);   /* 0 eau, 1 alimentation, 2 usine en p */
@@ -823,7 +825,7 @@ typedef enum {
     CMD_FAB, CMD_MINE, CMD_STRIKE, CMD_TACTICAL, CMD_ULTIMATUM, CMD_NUKE_POSTURE, CMD_UMBRELLA, CMD_PROMOTE,
     CMD_ASSIGN, CMD_RESEARCH_BUDGET, CMD_TREATY_DRAFT, CMD_TREATY_CEDE, CMD_TREATY_REPARATIONS, CMD_NEGOTIATE,
     CMD_NATO, CMD_EMBARGO, CMD_COUNTER, CMD_WARNING, CMD_CULTURE, CMD_TARIFF, CMD_STRAT_BUY, CMD_REGIME,
-    CMD_DECREE, CMD_MIGRATION, CMD_ALERT, CMD_ADD_PLAYER, CMD_PEACE, CMD_SCENARIO, CMD_MINISTER, CMD_DROP_PLAYER, CMD_CMDR_TAX, CMD_CMDR_INVEST,
+    CMD_DECREE, CMD_MIGRATION, CMD_ALERT, CMD_ADD_PLAYER, CMD_PEACE, CMD_SCENARIO, CMD_MINISTER, CMD_DROP_PLAYER, CMD_CMDR_TAX, CMD_CMDR_INVEST, CMD_CMDR_TREATY,
     CMD_COUNT
 } CmdType;
 

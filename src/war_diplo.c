@@ -391,6 +391,12 @@ int War_Negotiate(Game *g)
     }
     if (na->negoRounds == 0) g->commandPoints--;
     na->negoRounds++;
+    if (g->human[n]) {
+        /* une nation dirigee par un joueur : c'est lui qui accepte ou refuse */
+        t->pendingHuman = true;
+        Game_Log(g, EV_WAR, "Traité transmis à %s : en attente de la réponse de son commandant.", (NATIONS[n].name));
+        return 3;
+    }
     float s = War_Score(g, N_FRANCE, n), ex = War_Exhaustion(g, n), cost = War_TreatyCost(g, t);
     bool frWins = t->winner == N_FRANCE;
     /* ce que l'ennemi accepte : nos exigences dans la limite du score et de sa lassitude ;
@@ -660,6 +666,20 @@ const char *Cmdr_AllyBlocked(const Game *g, int n, int t)
     if (g->nat[n].actedThisTurn) return "Déjà une décision diplomatique ce tour";
     if (g->airel[n][t] < 50) return "Relations insuffisantes (50)";
     return NULL;
+}
+
+bool Cmdr_AnswerTreaty(Game *g, int n, bool accept)
+{
+    Treaty *t = &g->treaty;
+    if (!t->active || !t->pendingHuman || t->other != n || !g->war[N_FRANCE][n]) return false;
+    t->pendingHuman = false;
+    if (accept) {
+        War_SignTreaty(g, t);
+        return true;
+    }
+    t->active = false;
+    Game_Log(g, EV_WAR, "%s rejette le traité proposé par la France.", (NATIONS[n].name));
+    return true;
 }
 
 bool Cmdr_SetTax(Game *g, int n, int level)
