@@ -2103,3 +2103,14 @@ Cohésion et popularité	Zusammenhalt und Beliebtheit
 Lobbies (satisfaction)	Lobbys (Zufriedenheit)
 Dette (Md)	Schulden (Mrd)
 FERMER	SCHLIESSEN
+coupée	unterbrochen
+terrestre	auf dem Landweg
+maritime	auf dem Seeweg
+%s\nBlocus de nos côtes : %.0f%%, raids sur nos convois : %.0f%%	%s\nBlockade unserer Küsten: %.0f%%, Angriffe auf unsere Konvois: %.0f%%
+%s (%s)\nRoute commerciale %s : %.0f%%\nBlocus subi : %.0f%%%s	%s (%s)\nHandelsroute %s: %.0f%%\nBlockade: %.0f%%%s
+\nEmbargo contre la France	\nEmbargo gegen Frankreich
+%s (%s)\nDégâts : %.0f%%\nContamination : %.0f%%\nHabitabilité : %.0f	%s (%s)\nSchäden: %.0f%%\nVerseuchung: %.0f%%\nBewohnbarkeit: %.0f
+COMMERCE	HANDEL
+DÉGÂTS	SCHÄDEN
+Routes commerciales vers la France : vert = terrestre, bleu pointillé = maritime, rouge = menacée, gris = coupée.	Handelsrouten nach Frankreich: grün = Landweg, blau gepunktet = Seeweg, rot = bedroht, grau = unterbrochen.
+Dégâts (combats, bombardements, frappes) : jaune = légers, rouge = ruines ; points verts = contamination.	Schäden (Kämpfe, Bombardierungen, Angriffe): gelb = leicht, rot = Ruinen; grüne Punkte = Verseuchung.

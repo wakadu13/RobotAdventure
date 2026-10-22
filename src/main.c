@@ -415,12 +415,14 @@ static void ShotGraphs(void)
     game.reportReady = false;
     graphsOpen = true;
 }
+static void ShotTrade(void)    { graphsOpen = false; mapMode = MAP_COMMERCE; }
+static void ShotDamage(void)   { mapMode = MAP_DEGATS; }
 
 static const UiShot UI_SHOTS[] = {
     { "01_titre", ShotTitle }, { "02_carte", ShotMap }, { "03_armee", ShotArmy }, { "04_nations", ShotNations },
     { "05_economie", ShotEconomy }, { "06_gouvernement", ShotCabinet }, { "07_evenement", ShotEvent },
     { "08_rapport", ShotReport }, { "09_hotseat", ShotHotseat }, { "10_anglais", ShotEnglish }, { "11_espagnol", ShotSpanish }, { "12_allemand", ShotGerman }, { "13_aide", ShotHelp },
-    { "14_courbes", ShotGraphs },
+    { "14_courbes", ShotGraphs }, { "15_commerce", ShotTrade }, { "16_degats", ShotDamage },
 };
 #define UI_SHOT_COUNT ((int)(sizeof(UI_SHOTS) / sizeof(UI_SHOTS[0])))
 

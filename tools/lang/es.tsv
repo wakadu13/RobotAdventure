@@ -2103,3 +2103,14 @@ Cohésion et popularité	Cohesión y popularidad
 Lobbies (satisfaction)	Lobbies (satisfacción)
 Dette (Md)	Deuda (mil M)
 FERMER	CERRAR
+coupée	cortada
+terrestre	terrestre
+maritime	marítima
+%s\nBlocus de nos côtes : %.0f%%, raids sur nos convois : %.0f%%	%s\nBloqueo de nuestras costas: %.0f%%, ataques a nuestros convoyes: %.0f%%
+%s (%s)\nRoute commerciale %s : %.0f%%\nBlocus subi : %.0f%%%s	%s (%s)\nRuta comercial %s: %.0f%%\nBloqueo sufrido: %.0f%%%s
+\nEmbargo contre la France	\nEmbargo contra Francia
+%s (%s)\nDégâts : %.0f%%\nContamination : %.0f%%\nHabitabilité : %.0f	%s (%s)\nDaños: %.0f%%\nContaminación: %.0f%%\nHabitabilidad: %.0f
+COMMERCE	COMERCIO
+DÉGÂTS	DAÑOS
+Routes commerciales vers la France : vert = terrestre, bleu pointillé = maritime, rouge = menacée, gris = coupée.	Rutas comerciales hacia Francia: verde = terrestre, azul punteado = marítima, rojo = amenazada, gris = cortada.
+Dégâts (combats, bombardements, frappes) : jaune = légers, rouge = ruines ; points verts = contamination.	Daños (combates, bombardeos, ataques): amarillo = leves, rojo = ruinas; puntos verdes = contaminación.

@@ -2103,3 +2103,14 @@ Cohésion et popularité	Cohesion and popularity
 Lobbies (satisfaction)	Lobbies (satisfaction)
 Dette (Md)	Debt (bn)
 FERMER	CLOSE
+coupée	cut
+terrestre	overland
+maritime	maritime
+%s\nBlocus de nos côtes : %.0f%%, raids sur nos convois : %.0f%%	%s\nBlockade of our coasts: %.0f%%, raids on our convoys: %.0f%%
+%s (%s)\nRoute commerciale %s : %.0f%%\nBlocus subi : %.0f%%%s	%s (%s)\nTrade route %s: %.0f%%\nUnder blockade: %.0f%%%s
+\nEmbargo contre la France	\nEmbargo against France
+%s (%s)\nDégâts : %.0f%%\nContamination : %.0f%%\nHabitabilité : %.0f	%s (%s)\nDamage: %.0f%%\nContamination: %.0f%%\nHabitability: %.0f
+COMMERCE	TRADE
+DÉGÂTS	DAMAGE
+Routes commerciales vers la France : vert = terrestre, bleu pointillé = maritime, rouge = menacée, gris = coupée.	Trade routes to France: green = overland, dotted blue = maritime, red = threatened, grey = cut.
+Dégâts (combats, bombardements, frappes) : jaune = légers, rouge = ruines ; points verts = contamination.	Damage (fighting, bombing, strikes): yellow = light, red = ruins; green dots = contamination.

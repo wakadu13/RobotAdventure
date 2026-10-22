@@ -218,6 +218,22 @@ Color ProvinceBaseColor(int p)
         if (best < 0) return (Color){ 60, 64, 72, 255 };
         return Shade(rc[best], 0.6f + 0.3f * fminf(1, amount));
     }
+    case MAP_COMMERCE: {
+        int o = pr->owner;
+        if (o == N_FRANCE) return (Color){ 70, 120, 220, 255 };
+        if (War_AtWar(&game, N_FRANCE, o)) return (Color){ 120, 30, 30, 255 };
+        if (game.nat[o].embargoFrance) return (Color){ 130, 50, 120, 255 };
+        if (game.routeKind[o] == 0) return (Color){ 70, 74, 82, 255 };
+        Color top = game.routeKind[o] == 1 ? (Color){ 70, 170, 90, 255 } : (Color){ 60, 170, 220, 255 };
+        return Lerp3((Color){ 190, 40, 40, 255 }, (Color){ 220, 190, 70, 255 }, top, game.route[o]);
+    }
+    case MAP_DEGATS: {
+        if (pr->damage < 0.02f) {   /* intact : gris teinte de la couleur du proprietaire */
+            Color n = NationColor(pr->owner);
+            return (Color){ (unsigned char)(50 + n.r / 6), (unsigned char)(54 + n.g / 6), (unsigned char)(62 + n.b / 6), 255 };
+        }
+        return Lerp3((Color){ 220, 200, 80, 255 }, (Color){ 230, 130, 40, 255 }, (Color){ 200, 30, 30, 255 }, pr->damage);
+    }
     default: {
         Color c = NationColor(pr->owner);
         return pr->owner != N_FRANCE ? Shade(c, 0.8f) : c;
@@ -237,7 +253,14 @@ Color PatternColor(int p, Color c, int px, int py)
         if (pr->core != pr->owner && pr->ctrl == pr->owner && (px + py) % 7 == 0) return Shade(NationColor(pr->core), 0.7f);
         return c;
     case MAP_CLIMAT:
+    case MAP_DEGATS:
         if (pr->fallout > 0.2f && (px + py) % 3 == 0) return (Color){ 120, 220, 60, 255 };
+        if (mapMode == MAP_DEGATS && pr->ctrl != pr->owner && ((px + py) / 3) % 2 == 0) return Shade(NationColor(pr->ctrl), 0.7f);
+        return c;
+    case MAP_COMMERCE:
+        /* routes maritimes : points clairs ; nations sous blocus : rayures sombres */
+        if (pr->owner != N_FRANCE && game.routeKind[pr->owner] == 2 && px % 4 == 0 && py % 4 == 0) return (Color){ 220, 240, 250, 255 };
+        if (game.nat[pr->owner].blockade > 0.2f && ((px - py) / 2) % 4 == 0) return Shade(c, 0.5f);
         return c;
     case MAP_MILITANCE:
         if (pr->revolt && ((px - py) / 3) % 2 == 0) return (Color){ 150, 40, 160, 255 };
@@ -541,6 +564,19 @@ void DrawMap(void)
                 if (d > 0) l2 += snprintf(res + l2, sizeof(res) - l2, Tr("\n%s : %.1f par tour"), Tr(STRATS[r].name), d);
             }
             snprintf(tooltip, sizeof(tooltip), "%s (%s)%s", Tr(PROVINCE_NAMES[hoverProvince]), Tr(NATIONS[pr->owner].name), l2 ? res : "\nAucune ressource stratégique");
+        } else if (!tooltip[0] && mapMode == MAP_COMMERCE) {
+            int o = pr->owner;
+            static const char *kinds[3] = { "coupée", "terrestre", "maritime" };
+            if (o == N_FRANCE)
+                snprintf(tooltip, sizeof(tooltip), Tr("%s\nBlocus de nos côtes : %.0f%%, raids sur nos convois : %.0f%%"), Tr(PROVINCE_NAMES[hoverProvince]),
+                         game.nat[N_FRANCE].blockade * 100, game.nat[N_FRANCE].raid * 100);
+            else
+                snprintf(tooltip, sizeof(tooltip), Tr("%s (%s)\nRoute commerciale %s : %.0f%%\nBlocus subi : %.0f%%%s"), Tr(PROVINCE_NAMES[hoverProvince]),
+                         Tr(NATIONS[o].name), Tr(kinds[game.routeKind[o]]), game.route[o] * 100, game.nat[o].blockade * 100,
+                         game.nat[o].embargoFrance ? Tr("\nEmbargo contre la France") : "");
+        } else if (!tooltip[0] && mapMode == MAP_DEGATS) {
+            snprintf(tooltip, sizeof(tooltip), Tr("%s (%s)\nDégâts : %.0f%%\nContamination : %.0f%%\nHabitabilité : %.0f"), Tr(PROVINCE_NAMES[hoverProvince]),
+                     Tr(NATIONS[pr->owner].name), pr->damage * 100, pr->fallout * 100, pr->hab);
         }
         if (!tooltip[0]) {
             char occ[96] = "";
@@ -575,9 +611,11 @@ void DrawMap(void)
     if (!IsMouseButtonDown(MOUSE_BUTTON_LEFT) && !IsMouseButtonDown(MOUSE_BUTTON_MIDDLE)) mapPressed = mapDragging = false;
     if (clicked && InMap(mouse)) clicked = false;
 
-    static const char *modes[MAP_MODE_COUNT] = { "POLITIQUE", "CLIMAT", "MILITANCE", "POPULAT.", "CULTURES", "RELATIONS", "LOGISTIQUE", "RESSOURC." };
+    static const char *modes[MAP_MODE_COUNT] = { "POLITIQUE", "CLIMAT", "MILITANCE", "POPULAT.", "CULTURES", "RELATIONS", "LOGISTIQUE",
+                                                 "RESSOURC.", "COMMERCE", "DÉGÂTS" };
+    float mw = (MAP_VW - 62) / (float)MAP_MODE_COUNT;
     for (int i = 0; i < MAP_MODE_COUNT; i++) {
-        Rectangle r = { MAP_X + 4 + i * 74, MAP_Y + MAP_VH - 24, 71, 18 };
+        Rectangle r = { MAP_X + 4 + i * mw, MAP_Y + MAP_VH - 24, mw - 2, 18 };
         bool sel = mapMode == (MapMode)i;
         DrawRectangleRec(r, sel ? (Color){ 44, 66, 96, 240 } : (Color){ 16, 22, 30, 220 });
         DrawRectangleLinesEx(r, 1, sel ? C_ACCENT : C_BORDER);
@@ -624,6 +662,8 @@ void DrawMap(void)
         "Relations avec la France : rouge = hostile, vert = amical, cyan = allié, bordeaux = en guerre. Pointillés : hors de vue.",
         "Ravitaillement français : vert = assuré, rouge = coupé (encerclement). Carrés : forts ; triangles : dépôts.",
         "Ressources stratégiques : violet = terres rares, vert = uranium, bleu = semi-conducteurs.",
+        "Routes commerciales vers la France : vert = terrestre, bleu pointillé = maritime, rouge = menacée, gris = coupée.",
+        "Dégâts (combats, bombardements, frappes) : jaune = légers, rouge = ruines ; points verts = contamination.",
     };
     DrawRectangle(MAP_X, MAP_Y, MAP_VW, 18, Fade((Color){ 10, 14, 20, 255 }, 0.6f));
     Text(legend[mapMode], MAP_X + 6, MAP_Y + 4, 10, (Color){ 230, 230, 230, 220 });

@@ -55,7 +55,7 @@ typedef enum {
 } Tab;
 typedef enum {
     MAP_POLITIQUE, MAP_CLIMAT, MAP_MILITANCE, MAP_POPULATION, MAP_CULTURES, MAP_RELATIONS, MAP_LOGISTIQUE, MAP_RESSOURCES,
-    MAP_MODE_COUNT
+    MAP_COMMERCE, MAP_DEGATS, MAP_MODE_COUNT
 } MapMode;
 typedef enum { VR_ALL, VR_MAP, VR_PANEL, VR_LOWER, VR_LOG, VR_TOPBAR, VR_MODAL, VR_COUNT } ViewRegion;
 typedef struct { const char *title; const char *text; } TutoStep;
