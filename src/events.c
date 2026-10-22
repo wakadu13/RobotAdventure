@@ -8,6 +8,7 @@
  * evenement revient a ajouter une entree dans EVENTS[].
  */
 #include "game_internal.h"
+#include "lang.h"
 
 #include <stdio.h>
 #include <string.h>
@@ -460,26 +461,26 @@ static int EffectText(const EvTerm *e, char *buf, int len)
     int a = e->a, v = e->v;
     static const char *GROUPS[3] = { "l'Union européenne", "le Maghreb et l'Égypte", "l'OTAN" };
     switch (e->type) {
-    case EE_RES:      return snprintf(buf, len, "%+d %s", v, RESOURCE_NAMES[a]);
-    case EE_MIL:      return a < 0 ? snprintf(buf, len, "militance générale %+.1f", v / 10.0)
-                                   : snprintf(buf, len, "militance (%s) %+.1f", STRATA_NAMES[a], v / 10.0);
-    case EE_FAC:      return snprintf(buf, len, "%s : hostilité %+d", FACTIONS[a].name, v);
-    case EE_FACCAP:   return snprintf(buf, len, "%s : capacité %+d", FACTIONS[a].name, v);
-    case EE_REL:      return snprintf(buf, len, "relations avec %s %+d", NATIONS[a].name, v);
-    case EE_RELGROUP: return snprintf(buf, len, "relations avec %s %+d", GROUPS[a], v);
-    case EE_CAP:      return snprintf(buf, len, "capacité %s %+d", DOMAIN_NAMES[a], v);
-    case EE_IMMIG:    return snprintf(buf, len, "+%d 000 habitants à intégrer", v * 10);
-    case EE_DEBT:     return snprintf(buf, len, "dette %+d Md", v);
-    case EE_STRAT:    return snprintf(buf, len, "%s %+d", STRATS[a].name, v);
-    case EE_THREAT:   return snprintf(buf, len, "%d menace(s) de %s", v, FACTIONS[a].name);
-    case EE_NATO:     return snprintf(buf, len, "cohésion de l'OTAN %+d", v);
-    case EE_CRED:     return snprintf(buf, len, "crédibilité de la dissuasion %+d", v);
-    case EE_AGGRO:    return snprintf(buf, len, "réputation d'agresseur %+d", v);
-    case EE_RESEARCH: return snprintf(buf, len, "recherche militaire %+d", v);
-    case EE_MITIG:    return snprintf(buf, len, "atténuation du réchauffement %+d", v);
-    case EE_CON:      return a < 0 ? snprintf(buf, len, "conscience politique %+.1f", v / 10.0)
-                                   : snprintf(buf, len, "conscience politique (%s) %+.1f", STRATA_NAMES[a], v / 10.0);
-    case EE_PROSP:    return snprintf(buf, len, "prospérité %+d%%", v);
+    case EE_RES:      return snprintf(buf, len, "%+d %s", v, Tr(RESOURCE_NAMES[a]));
+    case EE_MIL:      return a < 0 ? snprintf(buf, len, Tr("militance générale %+.1f"), v / 10.0)
+                                   : snprintf(buf, len, Tr("militance (%s) %+.1f"), Tr(STRATA_NAMES[a]), v / 10.0);
+    case EE_FAC:      return snprintf(buf, len, Tr("%s : hostilité %+d"), Tr(FACTIONS[a].name), v);
+    case EE_FACCAP:   return snprintf(buf, len, Tr("%s : capacité %+d"), Tr(FACTIONS[a].name), v);
+    case EE_REL:      return snprintf(buf, len, Tr("relations avec %s %+d"), Tr(NATIONS[a].name), v);
+    case EE_RELGROUP: return snprintf(buf, len, Tr("relations avec %s %+d"), GROUPS[a], v);
+    case EE_CAP:      return snprintf(buf, len, Tr("capacité %s %+d"), Tr(DOMAIN_NAMES[a]), v);
+    case EE_IMMIG:    return snprintf(buf, len, Tr("+%d 000 habitants à intégrer"), v * 10);
+    case EE_DEBT:     return snprintf(buf, len, Tr("dette %+d Md"), v);
+    case EE_STRAT:    return snprintf(buf, len, "%s %+d", Tr(STRATS[a].name), v);
+    case EE_THREAT:   return snprintf(buf, len, Tr("%d menace(s) de %s"), v, Tr(FACTIONS[a].name));
+    case EE_NATO:     return snprintf(buf, len, Tr("cohésion de l'OTAN %+d"), v);
+    case EE_CRED:     return snprintf(buf, len, Tr("crédibilité de la dissuasion %+d"), v);
+    case EE_AGGRO:    return snprintf(buf, len, Tr("réputation d'agresseur %+d"), v);
+    case EE_RESEARCH: return snprintf(buf, len, Tr("recherche militaire %+d"), v);
+    case EE_MITIG:    return snprintf(buf, len, Tr("atténuation du réchauffement %+d"), v);
+    case EE_CON:      return a < 0 ? snprintf(buf, len, Tr("conscience politique %+.1f"), v / 10.0)
+                                   : snprintf(buf, len, Tr("conscience politique (%s) %+.1f"), Tr(STRATA_NAMES[a]), v / 10.0);
+    case EE_PROSP:    return snprintf(buf, len, Tr("prospérité %+d%%"), v);
     default:          return 0;
     }
 }

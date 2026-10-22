@@ -3,6 +3,7 @@
  * (theatres M2MC, menaces, factions), projets, dilemmes, enchainement du tour.
  */
 #include "game_internal.h"
+#include "lang.h"
 #include "save_fields.h"
 
 #include <stdarg.h>
@@ -39,7 +40,7 @@ void Game_Log(Game *g, LogKind kind, const char *fmt, ...)
     LogEntry *e = &g->log[g->logCount++];
     va_list ap;
     va_start(ap, fmt);
-    vsnprintf(e->text, LOG_LEN, fmt, ap);
+    vsnprintf(e->text, LOG_LEN, Tr(fmt), ap);
     va_end(ap);
     e->turn = g->turn;
     e->kind = kind;
@@ -47,7 +48,7 @@ void Game_Log(Game *g, LogKind kind, const char *fmt, ...)
 
 void Game_DateString(int turn, char *buf, int len)
 {
-    snprintf(buf, len, "T%d %d", turn % 4 + 1, START_YEAR + turn / 4);
+    snprintf(buf, len, Tr("T%d %d"), turn % 4 + 1, START_YEAR + turn / 4);
 }
 
 /* ------------------------------------------------------------------ */
@@ -248,7 +249,7 @@ bool Game_InvestCapacity(Game *g, Domain d)
     g->res[R_BUDGET] -= c;
     g->pendingCap[d] = 2;
     g->pendingTurns[d] = 2;
-    Game_Log(g, EV_INFO, "Montée en puissance %s lancée (+2 capacité dans 2 tours).", DOMAIN_NAMES[d]);
+    Game_Log(g, EV_INFO, "Montée en puissance %s lancée (+2 capacité dans 2 tours).", Tr(DOMAIN_NAMES[d]));
     return true;
 }
 
@@ -344,7 +345,7 @@ bool Game_FactionAction(Game *g, int f, int a)
     g->res[R_BUDGET] -= ad->budget;
     g->res[R_INFLUENCE] -= ad->influence;
     g->fac[f].actedThisTurn = true;
-    const char *fn = FACTIONS[f].name;
+    const char *fn = Tr(FACTIONS[f].name);
 
     switch (a) {
     case A_DIPLO:
@@ -399,7 +400,7 @@ bool Game_StartProject(Game *g, int p)
     g->res[R_BUDGET] -= c;
     g->proj[p].state = 1;
     g->proj[p].turnsLeft = PROJECTS[p].turns;
-    Game_Log(g, EV_INFO, "Lancement du projet : %s (%d tours).", PROJECTS[p].name, PROJECTS[p].turns);
+    Game_Log(g, EV_INFO, "Lancement du projet : %s (%d tours).", Tr(PROJECTS[p].name), PROJECTS[p].turns);
     return true;
 }
 
@@ -408,14 +409,14 @@ void Game_SetMigrationDoctrine(Game *g, int d)
     if (d == g->migrationDoctrine) return;
     g->migrationDoctrine = d;
     AddRes(g, R_COHESION, -2);
-    Game_Log(g, EV_INFO, "Nouvelle doctrine migratoire : %s.", MIGRATION_DOCTRINES[d]);
+    Game_Log(g, EV_INFO, "Nouvelle doctrine migratoire : %s.", Tr(MIGRATION_DOCTRINES[d]));
 }
 
 void Game_SetAlertLevel(Game *g, int a)
 {
     if (a == g->alertLevel) return;
     g->alertLevel = a;
-    Game_Log(g, EV_INFO, "Niveau d'alerte : %s.", ALERT_LEVELS[a]);
+    Game_Log(g, EV_INFO, "Niveau d'alerte : %s.", Tr(ALERT_LEVELS[a]));
 }
 
 /* ------------------------------------------------------------------ */
@@ -512,13 +513,13 @@ void Game_ResolveDilemma(Game *g, int c)
             AddRelation(g, victim, 30);
             AddRes(g, R_INFLUENCE, 5);
             War_StartWar(g, N_FRANCE, prm, false);
-            Game_Log(g, EV_WAR, "La France entre en guerre contre %s pour défendre %s.", NATIONS[prm].name, NATIONS[victim].name);
+            Game_Log(g, EV_WAR, "La France entre en guerre contre %s pour défendre %s.", Tr(NATIONS[prm].name), Tr(NATIONS[victim].name));
         } else if (!A) {
             AddRes(g, R_INFLUENCE, -4);
             AddRelation(g, victim, -15);
             if (g->ally[N_FRANCE][victim]) {
                 g->ally[N_FRANCE][victim] = g->ally[victim][N_FRANCE] = false;
-                Game_Log(g, EV_BAD, "La France abandonne son allié %s : l'alliance est rompue.", NATIONS[victim].name);
+                Game_Log(g, EV_BAD, "La France abandonne son allié %s : l'alliance est rompue.", Tr(NATIONS[victim].name));
             }
         }
     } break;
@@ -528,7 +529,7 @@ void Game_ResolveDilemma(Game *g, int c)
             g->treaty.active = false;
             g->nat[prm].peaceRefusals++;
             g->nat[prm].peaceCooldown = 4;
-            Game_Log(g, EV_WAR, "La France rejette l'offre de paix de %s. Elle reviendra avec d'autres conditions.", NATIONS[prm].name);
+            Game_Log(g, EV_WAR, "La France rejette l'offre de paix de %s. Elle reviendra avec d'autres conditions.", Tr(NATIONS[prm].name));
         }
         break;
     case DLM_COUP_LEGAL:
@@ -558,7 +559,7 @@ void Game_ResolveDilemma(Game *g, int c)
         break;
     }
     if (d < DLM_ALLY_CALL || d >= DLM_EVENT)
-        Game_Log(g, EV_EVENT, "%s : %s.", dd->title, A ? dd->optA : dd->optB);
+        Game_Log(g, EV_EVENT, "%s : %s.", Tr(dd->title), A ? Tr(dd->optA) : Tr(dd->optB));
 }
 
 /* ------------------------------------------------------------------ */
@@ -660,7 +661,7 @@ static void ResolveThreats(Game *g)
             t->active = false;
             g->statNeutralized++;
             AddRes(g, R_SOUVERAINETE, 0.4f);
-            Game_Log(g, EV_GOOD, "%s neutralisé(e) - %s.", td->name, THEATERS[t->theater].name);
+            Game_Log(g, EV_GOOD, "%s neutralisé(e) - %s.", Tr(td->name), Tr(THEATERS[t->theater].name));
             continue;
         }
 
@@ -678,7 +679,7 @@ static void ResolveThreats(Game *g)
         if (td->migration && g->migrationDoctrine == 2 && Randf(g) < 0.15f) {
             AddRes(g, R_INFLUENCE, -4);
             Game_Log(g, EV_BAD, "Drame humanitaire à la frontière (%s) : indignation internationale.",
-                     THEATERS[t->theater].name);
+                     Tr(THEATERS[t->theater].name));
         }
         g->tension[t->theater] += dmg;
         g->statSuffered++;
@@ -693,7 +694,7 @@ static void ResolveThreats(Game *g)
 
         if (--t->turnsLeft <= 0) {
             t->active = false;
-            Game_Log(g, EV_BAD, "%s (%s) a frappé sans être stoppé(e).", td->name, THEATERS[t->theater].name);
+            Game_Log(g, EV_BAD, "%s (%s) a frappé sans être stoppé(e).", Tr(td->name), Tr(THEATERS[t->theater].name));
         }
     }
 }
@@ -833,14 +834,14 @@ void Game_EndTurn(Game *g)
     for (int p = 0; p < P_COUNT; p++) {
         if (g->proj[p].state == 1 && --g->proj[p].turnsLeft <= 0) {
             g->proj[p].state = 2;
-            Game_Log(g, EV_GOOD, "Projet opérationnel : %s.", PROJECTS[p].name);
+            Game_Log(g, EV_GOOD, "Projet opérationnel : %s.", Tr(PROJECTS[p].name));
         }
     }
     for (int d = 0; d < D_COUNT; d++) {
         if (g->pendingTurns[d] > 0 && --g->pendingTurns[d] == 0) {
             g->capacity[d] += g->pendingCap[d];
             g->pendingCap[d] = 0;
-            Game_Log(g, EV_GOOD, "Nouvelles capacités %s disponibles.", DOMAIN_NAMES[d]);
+            Game_Log(g, EV_GOOD, "Nouvelles capacités %s disponibles.", Tr(DOMAIN_NAMES[d]));
         }
     }
 

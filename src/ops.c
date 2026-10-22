@@ -7,6 +7,7 @@
  * chaque operation peut etre attribuee a son auteur.
  */
 #include "game_internal.h"
+#include "lang.h"
 
 #include <stdio.h>
 
@@ -66,7 +67,7 @@ const char *Ops_Blocked(const Game *g, int n, int op)
     if (na->opsThisTurn) return "Déjà une opération contre elle ce tour";
     if (g->commandPoints < 1) return "Plus de points de commandement";
     if (g->capacity[o->domain] < o->capacity) {
-        snprintf(buf, sizeof(buf), "Capacité %s insuffisante (%d requis)", DOMAIN_NAMES[o->domain], o->capacity);
+        snprintf(buf, sizeof(buf), Tr("Capacité %s insuffisante (%d requis)"), Tr(DOMAIN_NAMES[o->domain]), o->capacity);
         return buf;
     }
     if (o->needWar && !War_AtWar(g, N_FRANCE, n) && na->relation > -40) return "Réservée à un ennemi (guerre ou relation < -40)";
@@ -102,7 +103,7 @@ static bool Visible(const Game *g, int a, int t)
 static void Apply(Game *g, int a, int t, int op)
 {
     Nation *na = &g->nat[t];
-    const char *nm = NATIONS[t].name;
+    const char *nm = Tr(NATIONS[t].name);
     bool fr = a == N_FRANCE, us = t == N_FRANCE, show = Visible(g, a, t);
     switch (op) {
     case OP_RESEAU:
@@ -121,14 +122,14 @@ static void Apply(Game *g, int a, int t, int op)
             if (best >= 0) {
                 Mil_SetResearch(g, best);
                 g->researchProgress += Mil_TechCost(g, best) * 0.6f;
-                Game_Log(g, EV_GOOD, "Nos services dérobent les plans de %s : %s progresse.", nm, TECHS[best].name);
+                Game_Log(g, EV_GOOD, "Nos services dérobent les plans de %s : %s progresse.", nm, Tr(TECHS[best].name));
             } else {
                 g->researchProgress += 6;
                 Game_Log(g, EV_GOOD, "Intrusion réussie chez %s, mais leurs laboratoires ont peu à nous apprendre.", nm);
             }
         } else if (best >= 0) {
             g->nat[a].tech[best]++;
-            if (us) Game_Log(g, EV_BAD, "Espionnage : %s dérobe nos travaux en %s.", NATIONS[a].name, TECHS[best].name);
+            if (us) Game_Log(g, EV_BAD, "Espionnage : %s dérobe nos travaux en %s.", Tr(NATIONS[a].name), Tr(TECHS[best].name));
         }
         break;
     }
@@ -146,8 +147,8 @@ static void Apply(Game *g, int a, int t, int op)
             for (int s = 0; s < S_COUNT; s++) { pr->ideo[s][ideo] += 0.07f; Normalize(pr->ideo[s]); }
         }
         if (IsDemocratic(na->regime) && na->nextElection > g->turn + 1) na->nextElection = g->turn + 1;
-        if (fr) { AddRelation(g, t, 4); Game_Log(g, EV_GOOD, "Campagne d'influence chez %s : les %s progressent dans l'opinion.", nm, IDEOLOGY_NAMES[ideo]); }
-        else if (us) Game_Log(g, EV_BAD, "Ingérence étrangère : une campagne de %s fait progresser les %s.", NATIONS[a].name, IDEOLOGY_NAMES[ideo]);
+        if (fr) { AddRelation(g, t, 4); Game_Log(g, EV_GOOD, "Campagne d'influence chez %s : les %s progressent dans l'opinion.", nm, Tr(IDEOLOGY_NAMES[ideo])); }
+        else if (us) Game_Log(g, EV_BAD, "Ingérence étrangère : une campagne de %s fait progresser les %s.", Tr(NATIONS[a].name), Tr(IDEOLOGY_NAMES[ideo]));
         break;
     }
     case OP_DESTAB:
@@ -160,7 +161,7 @@ static void Apply(Game *g, int a, int t, int op)
             }
         }
         if (fr) Game_Log(g, EV_GOOD, "Manifestations et émeutes se multiplient chez %s.", nm);
-        else if (us) Game_Log(g, EV_BAD, "Déstabilisation : des réseaux liés à %s attisent les colères sociales.", NATIONS[a].name);
+        else if (us) Game_Log(g, EV_BAD, "Déstabilisation : des réseaux liés à %s attisent les colères sociales.", Tr(NATIONS[a].name));
         else if (show) Game_Log(g, EV_EVENT, "%s est en proie à des troubles attisés de l'étranger.", nm);
         break;
     case OP_RECON:
@@ -173,7 +174,7 @@ static void Apply(Game *g, int a, int t, int op)
         break;
     case OP_ASAT:
         na->asat = (short)OPS[op].duration;
-        Game_Log(g, us ? EV_BAD : EV_WAR, "Tir antisatellite de %s : la constellation militaire de %s est détruite.", NATIONS[a].name, nm);
+        Game_Log(g, us ? EV_BAD : EV_WAR, "Tir antisatellite de %s : la constellation militaire de %s est détruite.", Tr(NATIONS[a].name), nm);
         /* les debris menacent tout le monde */
         for (int k = 1; k < N_COUNT; k++) if (k != a && g->nat[k].alive) AddAiRel(g, a, k, -8);
         if (fr) AddRes(g, R_INFLUENCE, -8);
@@ -194,18 +195,18 @@ static void Attribution(Game *g, int a, int t, int op)
         g->aggressionMemory = Clampf(g->aggressionMemory + 5, 0, 100);
     }
     if (Visible(g, a, t))
-        Game_Log(g, a == N_FRANCE ? EV_BAD : EV_EVENT, "%s attribue publiquement l'opération « %s » à %s.", NATIONS[t].name, OPS[op].name,
-                 a == N_FRANCE ? "la France" : NATIONS[a].name);
+        Game_Log(g, a == N_FRANCE ? EV_BAD : EV_EVENT, "%s attribue publiquement l'opération « %s » à %s.", Tr(NATIONS[t].name), Tr(OPS[op].name),
+                 a == N_FRANCE ? "la France" : Tr(NATIONS[a].name));
     if (War_AtWar(g, a, t)) return;
     Nation *nt = &g->nat[t];
     float rel = Relation(g, t, a);
     if (t != N_FRANCE && rel < -60 && War_Adjacent(g, t, a) && Randf(g) < 0.25f * NATIONS[t].aggressiveness * 2 * DiffAggro(g)
         && !IsAlly(g, t, a) && g->truce[t][a] == 0 && !(a == N_FRANCE && nt->deterred)) {
         War_StartWar(g, t, a, true);
-        if (Visible(g, a, t)) Game_Log(g, EV_WAR, "Casus belli : %s déclare la guerre à %s !", NATIONS[t].name, a == N_FRANCE ? "la France" : NATIONS[a].name);
+        if (Visible(g, a, t)) Game_Log(g, EV_WAR, "Casus belli : %s déclare la guerre à %s !", Tr(NATIONS[t].name), a == N_FRANCE ? "la France" : Tr(NATIONS[a].name));
     } else if (t != N_FRANCE && AvgWealth(g, t) > 0.2f && Randf(g) < 0.5f) {
         g->nat[a].outage = 2;
-        if (a == N_FRANCE) Game_Log(g, EV_BAD, "Riposte cyber de %s : notre réseau électrique est touché.", NATIONS[t].name);
+        if (a == N_FRANCE) Game_Log(g, EV_BAD, "Riposte cyber de %s : notre réseau électrique est touché.", Tr(NATIONS[t].name));
     }
 }
 
@@ -213,8 +214,8 @@ static bool Execute(Game *g, int a, int t, int op)
 {
     bool ok = Randf(g) < Chance(g, a, t, op);
     if (ok) Apply(g, a, t, op);
-    else if (a == N_FRANCE) Game_Log(g, EV_BAD, "Échec de l'opération « %s » contre %s.", OPS[op].name, NATIONS[t].name);
-    else if (t == N_FRANCE) Game_Log(g, EV_GOOD, "Nos défenses déjouent une opération « %s » de %s.", OPS[op].name, NATIONS[a].name);
+    else if (a == N_FRANCE) Game_Log(g, EV_BAD, "Échec de l'opération « %s » contre %s.", Tr(OPS[op].name), Tr(NATIONS[t].name));
+    else if (t == N_FRANCE) Game_Log(g, EV_GOOD, "Nos défenses déjouent une opération « %s » de %s.", Tr(OPS[op].name), Tr(NATIONS[a].name));
     float risk = ok ? OPS[op].risk : OPS[op].risk + 0.3f;
     if (t == N_FRANCE) risk += 0.05f * g->capacity[D_CYBER];   /* nos services remontent la piste */
     if (Randf(g) < risk) Attribution(g, a, t, op);

@@ -5,6 +5,7 @@
  * la dissuasion, l'energie nucleaire, la recherche et l'industrie.
  */
 #include "game_internal.h"
+#include "lang.h"
 
 #include <math.h>
 #include <stdio.h>
@@ -162,7 +163,7 @@ bool Strat_BuildFab(Game *g, int p)
     if (Strat_FabBlocked(g, p)) return false;
     g->res[R_BUDGET] -= 15;
     g->prov[p].fabBuild = 6;
-    Game_Log(g, EV_INFO, "Construction d'une fonderie de semi-conducteurs en %s (6 tours).", PROVINCE_NAMES[p]);
+    Game_Log(g, EV_INFO, "Construction d'une fonderie de semi-conducteurs en %s (6 tours).", Tr(PROVINCE_NAMES[p]));
     return true;
 }
 
@@ -183,7 +184,7 @@ bool Strat_OpenMine(Game *g, int p)
     /* une mine n'est jamais bien accueillie */
     for (int s = 0; s < S_COUNT; s++) g->prov[p].mil[s] = Clampf(g->prov[p].mil[s] + 0.8f, 0, 10);
     AddRes(g, R_SOUVERAINETE, 2);
-    Game_Log(g, EV_GOOD, "Réouverture des mines de %s : souveraineté accrue, riverains mécontents.", PROVINCE_NAMES[p]);
+    Game_Log(g, EV_GOOD, "Réouverture des mines de %s : souveraineté accrue, riverains mécontents.", Tr(PROVINCE_NAMES[p]));
     return true;
 }
 
@@ -192,7 +193,7 @@ const char *Strat_RecruitBlocked(const Game *g, int n, int type)
     static char buf[96];
     for (int r = 0; r < SR_COUNT; r++) {
         if (UNIT_STRAT[type][r] && g->nat[n].strat[r] < UNIT_STRAT[type][r]) {
-            snprintf(buf, sizeof(buf), "%s insuffisant(e)s (%d requis)", STRATS[r].name, UNIT_STRAT[type][r]);
+            snprintf(buf, sizeof(buf), Tr("%s insuffisant(e)s (%d requis)"), Tr(STRATS[r].name), UNIT_STRAT[type][r]);
             return buf;
         }
     }
@@ -225,7 +226,7 @@ static void Shocks(Game *g)
     static const int length[SR_COUNT] = { 8, 6, 10 };
     for (int r = 0; r < SR_COUNT; r++) {
         if (g->stratShock[r] > 0) {
-            if (--g->stratShock[r] == 0) Game_Log(g, EV_INFO, "Fin de la crise des %s.", STRATS[r].name);
+            if (--g->stratShock[r] == 0) Game_Log(g, EV_INFO, "Fin de la crise des %s.", Tr(STRATS[r].name));
             continue;
         }
         if (g->turn > 6 && Randf(g) < 0.012f) {
@@ -243,7 +244,7 @@ void Strat_Turn(Game *g)
         if (pr->fabBuild > 0 && --pr->fabBuild == 0) {
             if (pr->owner == N_FRANCE) {
                 pr->fabs += 0.6f;
-                Game_Log(g, EV_GOOD, "Nouvelle fonderie de semi-conducteurs en service en %s.", PROVINCE_NAMES[p]);
+                Game_Log(g, EV_GOOD, "Nouvelle fonderie de semi-conducteurs en service en %s.", Tr(PROVINCE_NAMES[p]));
             }
         }
     }
@@ -263,5 +264,5 @@ void Strat_Turn(Game *g)
     /* alertes francaises */
     for (int r = 0; r < SR_COUNT; r++)
         if (Strat_Sat(g, N_FRANCE, r) < 0.99f && g->nat[N_FRANCE].strat[r] < 0.5f)
-            Game_Log(g, EV_BAD, "Pénurie de %s : les besoins ne sont plus couverts.", STRATS[r].name);
+            Game_Log(g, EV_BAD, "Pénurie de %s : les besoins ne sont plus couverts.", Tr(STRATS[r].name));
 }

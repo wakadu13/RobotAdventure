@@ -5,6 +5,7 @@
  * douane, usines, reparations, tresor et investissements des IA.
  */
 #include "game_internal.h"
+#include "lang.h"
 
 #include <math.h>
 #include <stdio.h>
@@ -172,14 +173,14 @@ bool Eco_ToggleEmbargo(Game *g, int n)
     if (na->embargo) {
         na->embargo = false;
         AddRelation(g, n, 10);
-        Game_Log(g, EV_INFO, "Levée de l'embargo contre %s.", NATIONS[n].name);
+        Game_Log(g, EV_INFO, "Levée de l'embargo contre %s.", Tr(NATIONS[n].name));
         return true;
     }
     g->commandPoints--;
     na->embargo = true;
     na->trade = false;
     AddRelation(g, n, -25);
-    Game_Log(g, EV_WAR, "La France décrète un embargo commercial contre %s.", NATIONS[n].name);
+    Game_Log(g, EV_WAR, "La France décrète un embargo commercial contre %s.", Tr(NATIONS[n].name));
     return true;
 }
 
@@ -489,7 +490,7 @@ bool Eco_BuildFactory(Game *g, int p)
     if (Eco_FactoryBlocked(g, p)) return false;
     g->res[R_BUDGET] -= Eco_FactoryCost(g);
     g->prov[p].factoryBuild = 4;
-    Game_Log(g, EV_INFO, "Construction d'une usine en %s (4 tours).", PROVINCE_NAMES[p]);
+    Game_Log(g, EV_INFO, "Construction d'une usine en %s (4 tours).", Tr(PROVINCE_NAMES[p]));
     return true;
 }
 
@@ -546,7 +547,7 @@ void Eco_Turn(Game *g)
         Province *pr = &g->prov[p];
         if (pr->factoryBuild > 0 && --pr->factoryBuild == 0) {
             pr->industry += 1;
-            if (pr->owner == N_FRANCE) Game_Log(g, EV_GOOD, "Nouvelle usine en service en %s.", PROVINCE_NAMES[p]);
+            if (pr->owner == N_FRANCE) Game_Log(g, EV_GOOD, "Nouvelle usine en service en %s.", Tr(PROVINCE_NAMES[p]));
         }
     }
 
@@ -559,17 +560,17 @@ void Eco_Turn(Game *g)
         Nation *na = &g->nat[n];
         if (na->reparationTurns > 0 && --na->reparationTurns == 0) {
             na->reparations = 0;
-            Game_Log(g, EV_INFO, "Fin des réparations de guerre avec %s.", NATIONS[n].name);
+            Game_Log(g, EV_INFO, "Fin des réparations de guerre avec %s.", Tr(NATIONS[n].name));
         }
         if (!na->alive) { na->embargoFrance = false; continue; }
         if (!na->embargoFrance && (na->relation < -55 || (na->embargo && na->relation < -30)) && Randf(g) < 0.1f
             && !(na->eu && g->nat[N_FRANCE].eu)) {
             na->embargoFrance = true;
             na->trade = false;
-            Game_Log(g, EV_BAD, "%s décrète un embargo contre la France.", NATIONS[n].name);
+            Game_Log(g, EV_BAD, "%s décrète un embargo contre la France.", Tr(NATIONS[n].name));
         } else if (na->embargoFrance && na->relation > -20 && !na->embargo) {
             na->embargoFrance = false;
-            Game_Log(g, EV_INFO, "%s lève son embargo contre la France.", NATIONS[n].name);
+            Game_Log(g, EV_INFO, "%s lève son embargo contre la France.", Tr(NATIONS[n].name));
         }
     }
 

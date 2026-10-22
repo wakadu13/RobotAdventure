@@ -4,6 +4,7 @@
  * regime ; vie politique des autres nations (elections, revolutions, coups).
  */
 #include "game_internal.h"
+#include "lang.h"
 
 #include <math.h>
 #include <stdio.h>
@@ -155,15 +156,15 @@ static void Election(Game *g)
         return;
     }
     if (win != g->nat[N_FRANCE].government)
-        Game_Log(g, EV_EVENT, "Élections : les %s forment le gouvernement (%.0f%% des voix).", IDEOLOGY_NAMES[win], nat[win] * 100);
+        Game_Log(g, EV_EVENT, "Élections : les %s forment le gouvernement (%.0f%% des voix).", Tr(IDEOLOGY_NAMES[win]), nat[win] * 100);
     else
-        Game_Log(g, EV_EVENT, "Élections : les %s sont reconduits (%.0f%% des voix).", IDEOLOGY_NAMES[win], nat[win] * 100);
+        Game_Log(g, EV_EVENT, "Élections : les %s sont reconduits (%.0f%% des voix).", Tr(IDEOLOGY_NAMES[win]), nat[win] * 100);
     g->nat[N_FRANCE].government = win;
 }
 
 const char *Pol_GovernmentEffect(int ideology)
 {
-    return ideology >= 0 ? IDEOLOGY_DESC[ideology] : "Pas de gouvernement partisan.";
+    return ideology >= 0 ? Tr(IDEOLOGY_DESC[ideology]) : "Pas de gouvernement partisan.";
 }
 
 /* ------------------------------------------------------------------ */
@@ -185,10 +186,10 @@ static void AiSetRegime(Game *g, int n, Regime r)
     na->nextElection = IsDemocratic(r) ? g->turn + 16 : -1;
     if (!IsDemocratic(r) && na->eu) {
         na->eu = false;
-        Game_Log(g, EV_EVENT, "L'Union européenne suspend %s.", NATIONS[n].name);
+        Game_Log(g, EV_EVENT, "L'Union européenne suspend %s.", Tr(NATIONS[n].name));
     } else if (IsDemocratic(r) && !na->eu && NATIONS[n].eu && !na->failed) {
         na->eu = true;
-        Game_Log(g, EV_EVENT, "%s réintègre l'Union européenne.", NATIONS[n].name);
+        Game_Log(g, EV_EVENT, "%s réintègre l'Union européenne.", Tr(NATIONS[n].name));
     }
     for (int p = 0; p < PROV_COUNT; p++)
         if (g->prov[p].owner == n)
@@ -217,12 +218,12 @@ static void AiPolitics(Game *g)
         if (IsDemocratic(na->regime) && na->nextElection >= 0 && g->turn >= na->nextElection) {
             na->nextElection = g->turn + 16;
             if (top == I_AUTOR && ideo[top] > 0.3f) {
-                Game_Log(g, EV_EVENT, "%s : les Autoritaires gagnent les élections et suspendent la démocratie.", NATIONS[n].name);
+                Game_Log(g, EV_EVENT, "%s : les Autoritaires gagnent les élections et suspendent la démocratie.", Tr(NATIONS[n].name));
                 AiSetRegime(g, n, RG_AUTORITAIRE);
             } else if (top != na->government) {
                 na->government = top;
                 if (na->relation > 30 || na->eu)
-                    Game_Log(g, EV_INFO, "Élections en %s : victoire des %s.", NATIONS[n].name, IDEOLOGY_NAMES[top]);
+                    Game_Log(g, EV_INFO, "Élections en %s : victoire des %s.", Tr(NATIONS[n].name), Tr(IDEOLOGY_NAMES[top]));
             }
             continue;
         }
@@ -233,21 +234,21 @@ static void AiPolitics(Game *g)
         if (mil > 6.2f && sup < 0.4f && Randf(g) < 0.08f) {
             Regime r = RevolutionRegime(top);
             if (r == na->regime) r = na->regime >= RG_AUTORITAIRE ? RG_DEMOCRATIE : RG_AUTORITAIRE;
-            Game_Log(g, EV_EVENT, "Révolution en %s : %s (%s).", NATIONS[n].name, REGIMES[r].name, IDEOLOGY_NAMES[top]);
+            Game_Log(g, EV_EVENT, "Révolution en %s : %s (%s).", Tr(NATIONS[n].name), Tr(REGIMES[r].name), Tr(IDEOLOGY_NAMES[top]));
             AiSetRegime(g, n, r);
             if (na->failed && r != RG_JUNTE) na->failed = false;
             continue;
         }
         /* coup d'Etat militaire dans un pays en guerre ou en crise */
         if (na->regime != RG_JUNTE && (War_AtWarAny(g, n) || na->failed) && mil > 5 && Randf(g) < 0.015f) {
-            Game_Log(g, EV_EVENT, "Coup d'État militaire en %s : une junte prend le pouvoir.", NATIONS[n].name);
+            Game_Log(g, EV_EVENT, "Coup d'État militaire en %s : une junte prend le pouvoir.", Tr(NATIONS[n].name));
             AiSetRegime(g, n, RG_JUNTE);
             continue;
         }
         /* une dictature apaisee peut se liberaliser */
         if (na->regime >= RG_AUTORITAIRE && !na->failed && mil < 3 && ideo[I_LIBERAL] + ideo[I_SOCIAL] > 0.45f
             && !War_AtWarAny(g, n) && Randf(g) < 0.01f) {
-            Game_Log(g, EV_EVENT, "Transition démocratique en %s.", NATIONS[n].name);
+            Game_Log(g, EV_EVENT, "Transition démocratique en %s.", Tr(NATIONS[n].name));
             AiSetRegime(g, n, RG_DEMOCRATIE);
         }
     }
@@ -286,7 +287,7 @@ const char *Pol_DecreeBlocked(const Game *g, int k)
     const DecreeDef *d = &DECREES[g->nat[N_FRANCE].regime][k];
     if (g->state != GAME_RUNNING) return "Partie terminée";
     if (g->decreeCooldown[k] > 0) {
-        snprintf(buf, sizeof(buf), "Disponible dans %d tours", g->decreeCooldown[k]);
+        snprintf(buf, sizeof(buf), Tr("Disponible dans %d tours"), g->decreeCooldown[k]);
         return buf;
     }
     if (g->commandPoints < 1) return "Plus de points de commandement";
@@ -368,6 +369,6 @@ bool Pol_Decree(Game *g, int k)
         break;
     case RG_TOTALITAIRE * 2 + 1: g->propagandaTurns = 12; AddRes(g, R_INFLUENCE, -6); break;
     }
-    Game_Log(g, EV_EVENT, "Décret : %s.", d->name);
+    Game_Log(g, EV_EVENT, "Décret : %s.", Tr(d->name));
     return true;
 }

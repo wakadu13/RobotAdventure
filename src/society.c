@@ -5,6 +5,7 @@
  * secessions, integration et changements de regime.
  */
 #include "game_internal.h"
+#include "lang.h"
 
 #include <math.h>
 #include <stdio.h>
@@ -147,7 +148,7 @@ void Soc_SetCulturePolicy(Game *g, int policy)
     if (Soc_CulturePolicyBlocked(g, policy)) return;
     g->culturePolicy = policy;
     AddRes(g, R_COHESION, -3);
-    Game_Log(g, EV_EVENT, "Politique culturelle : %s.", CULTURE_POLICY_NAMES[policy]);
+    Game_Log(g, EV_EVENT, "Politique culturelle : %s.", Tr(CULTURE_POLICY_NAMES[policy]));
 }
 
 /* ------------------------------------------------------------------ */
@@ -170,7 +171,7 @@ const char *Soc_RegimeBlocked(const Game *g, int r)
     static char buf[96];
     if ((int)g->nat[N_FRANCE].regime == r) return "Régime actuel";
     if (g->regimeCooldown > 0) {
-        snprintf(buf, sizeof(buf), "Le pays se remet du dernier bouleversement (%d tours)", g->regimeCooldown);
+        snprintf(buf, sizeof(buf), Tr("Le pays se remet du dernier bouleversement (%d tours)"), g->regimeCooldown);
         return buf;
     }
     if (g->res[R_COHESION] <= Soc_RegimeChangeCost(g, r)) return "Cohésion insuffisante pour un tel bouleversement";
@@ -212,9 +213,9 @@ bool Soc_ChangeRegime(Game *g, int r)
     }
     if (dist >= 3) {
         AddRes(g, R_SOUVERAINETE, -5);
-        Game_Log(g, EV_EVENT, "Révolution : la France bascule vers un nouveau régime, %s.", REGIMES[r].name);
+        Game_Log(g, EV_EVENT, "Révolution : la France bascule vers un nouveau régime, %s.", Tr(REGIMES[r].name));
     } else {
-        Game_Log(g, EV_EVENT, "Changement de régime : %s.", REGIMES[r].name);
+        Game_Log(g, EV_EVENT, "Changement de régime : %s.", Tr(REGIMES[r].name));
     }
     Soc_SetRegime(g, (Regime)r);
     g->regimeCooldown = 12;
@@ -245,7 +246,7 @@ static void SeaLevel(Game *g)
             for (int k = 0; k < 3; k++)
                 if (before < steps[k] && pr->flooded >= steps[k] && (pr->owner == N_FRANCE || exp >= 0.3f))
                     Game_Log(g, pr->owner == N_FRANCE ? EV_BAD : EV_CLIMATE, "Montée des eaux : %.0f%% des terres de %s sont submergées.",
-                             steps[k] * 100, PROVINCE_NAMES[p]);
+                             steps[k] * 100, Tr(PROVINCE_NAMES[p]));
         }
         /* submersions marines lors des tempetes */
         if (Randf(g) < exp * g->seaLevel * 0.03f * DiffClimate(g)) {
@@ -254,7 +255,7 @@ static void SeaLevel(Game *g)
             pr->pop *= 1 - 0.004f * k;
             if (pr->owner == N_FRANCE || exp >= 0.3f)
                 Game_Log(g, pr->owner == N_FRANCE ? EV_BAD : EV_CLIMATE, "Submersion marine en %s : digues rompues, quartiers évacués.",
-                         PROVINCE_NAMES[p]);
+                         Tr(PROVINCE_NAMES[p]));
         }
     }
 }
@@ -480,7 +481,7 @@ static void Revolts(Game *g, int p)
     if (pr->owner != N_FRANCE) {
         int c = Claimant(g, p);
         if (c >= 0 && mil > 7.5f && !War_AtWar(g, pr->owner, c) && Randf(g) < 0.06f) {
-            Game_Log(g, EV_WAR, "Soulèvement : %s se libère et rejoint %s.", PROVINCE_NAMES[p], NATIONS[c].name);
+            Game_Log(g, EV_WAR, "Soulèvement : %s se libère et rejoint %s.", Tr(PROVINCE_NAMES[p]), Tr(NATIONS[c].name));
             War_Annex(g, p, c);
             pr->core = c;
             pr->integration = 100;
@@ -493,7 +494,7 @@ static void Revolts(Game *g, int p)
         if (mil > thr && Randf(g) < (mil - thr + 0.5f) * 0.08f) {
             pr->revolt = 1;
             AddRes(g, R_COHESION, -3);
-            Game_Log(g, EV_BAD, "Révolte en %s ! La province échappe au contrôle de l'État.", PROVINCE_NAMES[p]);
+            Game_Log(g, EV_BAD, "Révolte en %s ! La province échappe au contrôle de l'État.", Tr(PROVINCE_NAMES[p]));
         }
         return;
     }
@@ -513,13 +514,13 @@ static void Revolts(Game *g, int p)
         pr->pop *= 1 - rg->repression * 0.01f;
         Game_Log(g, rg->repression >= 0.5f ? EV_BAD : EV_GOOD,
                  rg->repression >= 0.5f ? "Révolte écrasée dans le sang en %s." : "L'ordre est rétabli en %s.",
-                 PROVINCE_NAMES[p]);
+                 Tr(PROVINCE_NAMES[p]));
         return;
     }
     if (pr->revolt > 8) {
         int c = Claimant(g, p);
         if (c >= 0) {
-            Game_Log(g, EV_WAR, "Sécession : %s rejoint %s.", PROVINCE_NAMES[p], NATIONS[c].name);
+            Game_Log(g, EV_WAR, "Sécession : %s rejoint %s.", Tr(PROVINCE_NAMES[p]), Tr(NATIONS[c].name));
             War_Annex(g, p, c);
             pr->core = c;
             pr->integration = 100;
@@ -603,7 +604,7 @@ void Soc_Turn(Game *g)
             if (pr->integration >= 100) {
                 pr->core = o;
                 if (o == N_FRANCE)
-                    Game_Log(g, EV_GOOD, "%s est désormais pleinement intégrée à la France.", PROVINCE_NAMES[p]);
+                    Game_Log(g, EV_GOOD, "%s est désormais pleinement intégrée à la France.", Tr(PROVINCE_NAMES[p]));
             }
         }
         /* assimilation des cultures non acceptees vers la culture principale du proprietaire */
