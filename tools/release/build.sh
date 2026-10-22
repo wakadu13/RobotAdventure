@@ -15,7 +15,7 @@ ROOT=$(cd "$(dirname "$0")/../.." && pwd)
 VERSION=${VERSION:-$(git -C "$ROOT" describe --tags --always 2>/dev/null || echo dev)}
 DIST="$ROOT/dist"
 WORK="$ROOT/build/release-$TARGET"
-SIM="game world society war war_ai war_diplo war_logistics military ops resources intl command economy politics nuclear map_data save_fields events cabinet lang lang_en"
+SIM="game world society war war_ai war_diplo war_logistics military ops resources intl command economy politics nuclear map_data save_fields events cabinet lang lang_en lang_es lang_de"
 RL_SRC="rcore rshapes rtextures rtext rmodels raudio utils"
 mkdir -p "$DIST" "$WORK"
 

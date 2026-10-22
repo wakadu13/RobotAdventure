@@ -36,7 +36,7 @@ def strings_of(path):
 def all_strings():
     seen, order = set(), []
     for f in sorted(os.listdir(SRC)):
-        if not f.endswith(".c") or f in SKIP:
+        if not f.endswith(".c") or f in SKIP or f.startswith("lang_"):
             continue
         for t in strings_of(os.path.join(SRC, f)):
             if t not in seen:
@@ -60,11 +60,13 @@ if __name__ == "__main__":
     strings = all_strings()
     os.makedirs(os.path.join(ROOT, "tools", "lang"), exist_ok=True)
     open(os.path.join(ROOT, "tools", "lang", "strings.txt"), "w", encoding="utf-8").write("\n".join(strings) + "\n")
-    tr = load_tsv(os.path.join(ROOT, "tools", "lang", "en.tsv"))
-    bad = [s for s in strings if any(ord(ch) > 255 for ch in s)] + [v for v in tr.values() if any(ord(ch) > 255 for ch in v)]
-    if bad:
-        sys.exit("caracteres absents de la police (hors Latin-1) : " + " | ".join(bad[:5]))
-    missing = [s for s in strings if s not in tr]
-    print("%d chaines, %d traduites, %d manquantes" % (len(strings), len(strings) - len(missing), len(missing)))
-    if len(sys.argv) > 2 and sys.argv[1] == "--todo":
-        open(sys.argv[2], "w", encoding="utf-8").write("\n".join(missing) + "\n")
+    status = 0
+    for code in ("en", "es", "de"):
+        tr = load_tsv(os.path.join(ROOT, "tools", "lang", code + ".tsv"))
+        bad = [s for s in strings if any(ord(ch) > 255 for ch in s)] + [v for v in tr.values() if any(ord(ch) > 255 for ch in v)]
+        if bad:
+            sys.exit("caracteres absents de la police (hors Latin-1) : " + " | ".join(bad[:5]))
+        missing = [s for s in strings if s not in tr]
+        print("%s : %d chaines, %d traduites, %d manquantes" % (code, len(strings), len(strings) - len(missing), len(missing)))
+        if len(sys.argv) > 2 and sys.argv[1] == "--todo" and code == (sys.argv[3] if len(sys.argv) > 3 else "en"):
+            open(sys.argv[2], "w", encoding="utf-8").write("\n".join(missing) + "\n")

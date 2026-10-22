@@ -19,7 +19,7 @@ jobs:
       - name: Registre de sauvegarde a jour
         run: python3 tools/gen_save_fields.py && git diff --exit-code src/save_fields.c
       - name: Table de traduction a jour
-        run: python3 tools/lang_build.py && git diff --exit-code src/lang_en.c && python3 tools/lang_extract.py
+        run: python3 tools/lang_build.py && git diff --exit-code src/lang_*.c && python3 tools/lang_extract.py
       - name: Tests
         run: make test
       - name: Tests avec AddressSanitizer et UBSan

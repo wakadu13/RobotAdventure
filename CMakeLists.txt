@@ -18,7 +18,7 @@ if (NOT raylib_FOUND)
     FetchContent_MakeAvailable(raylib)
 endif()
 
-set(SIM_SOURCES src/game.c src/world.c src/society.c src/war.c src/war_ai.c src/war_diplo.c src/war_logistics.c src/military.c src/ops.c src/resources.c src/intl.c src/command.c src/economy.c src/politics.c src/nuclear.c src/map_data.c src/save_fields.c src/events.c src/cabinet.c src/lang.c src/lang_en.c)
+set(SIM_SOURCES src/game.c src/world.c src/society.c src/war.c src/war_ai.c src/war_diplo.c src/war_logistics.c src/military.c src/ops.c src/resources.c src/intl.c src/command.c src/economy.c src/politics.c src/nuclear.c src/map_data.c src/save_fields.c src/events.c src/cabinet.c src/lang.c src/lang_en.c src/lang_es.c src/lang_de.c)
 if(NOT MSVC)
     add_compile_options(-ffp-contract=off)   # memes calculs flottants partout (jeu en reseau)
 endif()

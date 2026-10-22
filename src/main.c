@@ -104,7 +104,7 @@ void LoadSettings(void)
         bigUi = big != 0;
         showReports = rep != 0;
         Snd_SetEnabled(snd != 0);
-        gLang = lang == LANG_EN ? LANG_EN : LANG_FR;
+        gLang = lang >= 0 && lang < LANG_COUNT ? lang : LANG_FR;
     }
     fclose(f);
 }
@@ -216,15 +216,15 @@ void DrawTitle(void)
     y += 38;
     snprintf(buf, sizeof(buf), Tr("Scénario : %s"), Tr(SCENARIO_NAMES[newScenario]));
     Rectangle scr = { bx, y, 182, 30 };
-    if (Button(scr, buf, true, 10)) newScenario = (newScenario + 1) % 2;
+    if (Button(scr, buf, true, 10)) newScenario = (newScenario + 1) % SCENARIO_COUNT;
     Tooltip(scr, Tr(SCENARIO_DESC[newScenario]));
     Rectangle sor = { bx + 188, y, 92, 30 };
     if (Button(sor, Snd_Enabled() ? "Son : activé" : "Son : coupé", true, 10)) { Snd_SetEnabled(!Snd_Enabled()); SaveSettings(); }
     Tooltip(sor, "Effets sonores et nappe d'ambiance, synthétisés par le jeu (aucun fichier audio).");
     y += 38;
     Rectangle lr = { bx, y, 280, 30 };
-    if (Button(lr, gLang == LANG_EN ? "Language: English" : "Langue : français", true, 10)) {
-        gLang = gLang == LANG_EN ? LANG_FR : LANG_EN;
+    if (Button(lr, LANG_LABELS[gLang], true, 10)) {
+        gLang = (gLang + 1) % LANG_COUNT;
         mapSignature = 0;
         SaveSettings();
     }
@@ -398,12 +398,14 @@ static void ShotEvent(void)    { polView = 0; game.pendingDilemma = DLM_EVENT; }
 static void ShotReport(void)   { game.pendingDilemma = -1; game.reportReady = true; }
 static void ShotHotseat(void)  { game.reportReady = false; hotseatPick[N_ALLEMAGNE] = true; screen = SCR_HOTSEAT; }
 static void ShotEnglish(void)  { hotseatPick[N_ALLEMAGNE] = false; gLang = LANG_EN; screen = SCR_GAME; tab = TAB_DEFENSE; }
+static void ShotSpanish(void)  { gLang = LANG_ES; screen = SCR_GAME; tab = TAB_ECONOMIE; }
+static void ShotGerman(void)   { gLang = LANG_DE; tab = TAB_ARMEE; }
 static void ShotHelp(void)     { gLang = LANG_FR; screen = SCR_HELP; helpPage = 1; }
 
 static const UiShot UI_SHOTS[] = {
     { "01_titre", ShotTitle }, { "02_carte", ShotMap }, { "03_armee", ShotArmy }, { "04_nations", ShotNations },
     { "05_economie", ShotEconomy }, { "06_gouvernement", ShotCabinet }, { "07_evenement", ShotEvent },
-    { "08_rapport", ShotReport }, { "09_hotseat", ShotHotseat }, { "10_anglais", ShotEnglish }, { "11_aide", ShotHelp },
+    { "08_rapport", ShotReport }, { "09_hotseat", ShotHotseat }, { "10_anglais", ShotEnglish }, { "11_espagnol", ShotSpanish }, { "12_allemand", ShotGerman }, { "13_aide", ShotHelp },
 };
 #define UI_SHOT_COUNT ((int)(sizeof(UI_SHOTS) / sizeof(UI_SHOTS[0])))
 

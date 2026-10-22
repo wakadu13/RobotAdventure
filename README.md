@@ -140,10 +140,12 @@ belli. Les autres nations y recourent aussi, entre elles comme contre la France.
   dans `src/events.c` : le texte de leurs effets est généré à partir de ce qui est appliqué.
 
 ### Langues
-- Français et anglais (bouton du menu, réglage conservé). Toutes les chaînes passent par `Tr()` ;
-  la table anglaise est tenue dans `tools/lang/en.tsv` (une ligne par chaîne : français, tabulation,
-  anglais). `python3 tools/lang_extract.py` liste les chaînes non traduites,
-  `python3 tools/lang_build.py` vérifie les formats (`%d`, `%s`...) et régénère `src/lang_en.c`.
+- Français, anglais, espagnol et allemand (bouton du menu, réglage conservé). Toutes les chaînes
+  passent par `Tr()` ; chaque table est tenue dans `tools/lang/<code>.tsv` (une ligne par chaîne :
+  français, tabulation, traduction). `python3 tools/lang_extract.py` liste les chaînes non traduites
+  (`--todo FICHIER CODE` les écrit dans un fichier à compléter), `python3 tools/lang_build.py` vérifie
+  les formats (`%d`, `%s`...) et régénère `src/lang_<code>.c`. La police ne couvrant que le Latin-1,
+  l'extracteur refuse les autres caractères. Le journal est retraduit à l'affichage.
 
 ### Son
 - Effets sonores (boutons, fin de tour, alertes, batailles, frappes nucléaires, victoire, défaite) et
@@ -153,7 +155,12 @@ belli. Les autres nations y recourent aussi, entre elles comme contre la France.
 ### Scénarios
 - **Janvier 2030** : +1,5°C, trente ans à tenir.
 - **La crise de 2040** : +2°C, mer +45 cm, invasion boréale des pays baltes, Libye effondrée, Algérie
-  au seuil nucléaire, trésor vide et dette record ; vingt ans à tenir. À choisir dans le menu.
+  au seuil nucléaire, trésor vide et dette record ; vingt ans à tenir.
+- **La guerre des Balkans (2035)** : la Serbie, soutenue par Moscou, attaque la Grèce ; inflation et
+  cohésion fragiles, deux menaces déjà actives ; vingt-cinq ans à tenir.
+- **L'effondrement du Sahel (2050)** : +2,6°C, Maghreb aux mains de juntes, Égypte proche de la bombe,
+  exode climatique, dette écrasante et inflation à 7 % ; dix ans à tenir.
+- Le scénario se choisit dans le menu.
 
 ### Score et victoire
 - Score détaillé en neuf catégories : survie, population, prospérité, territoire, stabilité,
@@ -253,7 +260,7 @@ Machines anciennes : compilez raylib en OpenGL 2.1
 - `make ui-test` (sous `xvfb-run` sans écran) rend dix écrans scriptés (graine fixe, animations figées)
   et les compare aux captures de référence de `tests/ui` ; `make ui-ref` régénère ces références après
   un changement voulu de l'interface. La CI lance ces tests à chaque push.
-- `make sim` (ou `./build/autoplay [parties] [difficulté 0-2] [scénario 0-1]`) joue des parties
+- `make sim` (ou `./build/autoplay [parties] [difficulté 0-2] [scénario 0-3]`) joue des parties
   automatiques sans interface.
 
 Taux de victoire indicatifs des bots, sur 100 parties par case. Les bots évaluent chaque dilemme en simulant
@@ -332,7 +339,7 @@ src/ui_tabs_state.c onglets défense, hybride, société, économie, politique, 
 src/ui_screens.c    journal, modales, tutoriel, écrans titre/aide/fin/hot-seat
 src/ui_net.c        partie en réseau : salon, diffusion des commandes, contrôle de synchronisation
 src/net.c/.h        transport TCP non bloquant (POSIX et Winsock)
-src/lang.c, lang_en.c traduction (table anglaise générée)
+src/lang.c, lang_*.c traduction (tables anglaise, espagnole et allemande générées)
 src/sound.c         sons synthétisés (effets et ambiance)
 tools/gen_save_fields.py générateur du registre de sauvegarde
 tools/gen_map.py    générateur de la carte depuis un GeoJSON des pays
