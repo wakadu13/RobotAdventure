@@ -278,7 +278,8 @@ Machines anciennes : compilez raylib en OpenGL 2.1
   et les compare aux captures de référence de `tests/ui` ; `make ui-ref` régénère ces références après
   un changement voulu de l'interface. La CI lance ces tests à chaque push.
 - `make sim` (ou `./build/autoplay [parties] [difficulté 0-2] [scénario 0-3]`) joue des parties
-  automatiques sans interface.
+  automatiques sans interface. Avec `couverture` en quatrième argument, il compte les parties où chaque
+  événement est sorti et liste ceux qui ne sortent jamais (conditions trop strictes).
 
 Taux de victoire indicatifs des bots, sur 100 parties par case. Les bots évaluent chaque dilemme en simulant
 ses deux options, ce qu'un joueur ne peut pas faire : ces chiffres sont un plafond plutôt qu'une moyenne.

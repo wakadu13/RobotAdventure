@@ -267,6 +267,7 @@ static void PlayConqueror(Game *g)
 
 static int scenario;
 static bool trace;   /* detail de chaque partie du stratege */
+static int fired[EVENT_MAX];   /* couverture : nombre de parties ou chaque evenement est sorti */
 
 static void Run(const char *label, void (*strat)(Game *), int games, int diff)
 {
@@ -282,6 +283,7 @@ static void Run(const char *label, void (*strat)(Game *), int games, int diff)
             Game_EndTurn(&g);
         }
         causes[g.state]++;
+        for (int k = 0; k < EVENT_COUNT && k < EVENT_MAX; k++) fired[k] += g.eventUsed[k];
         if (trace) {
             int wars = 0, threats = Game_ActiveThreats(&g);
             for (int n = 0; n < N_COUNT; n++) wars += g.war[N_FRANCE][n];
@@ -314,6 +316,19 @@ int main(int argc, char **argv)
     scenario = argc > 3 ? atoi(argv[3]) : 0;
     if (scenario < 0 || scenario >= SCENARIO_COUNT) scenario = 0;
     printf("Difficulté : %s, scénario : %s, %d parties par stratégie\n", DIFFICULTY_NAMES[diff], SCENARIO_NAMES[scenario], games);
+    if (argc > 4 && strcmp(argv[4], "couverture") == 0) {
+        /* evenements jamais tires : conditions trop strictes ou mal formees */
+        Run("gestionnaire", Manage, games, diff);
+        Run("stratege", PlayStrategist, games, diff);
+        int never = 0;
+        for (int k = 0; k < EVENT_COUNT; k++) {
+            const DilemmaDef *d = Ev_Dilemma(k);
+            printf("COUV %4d %s\n", fired[k], d->title);
+            never += fired[k] == 0;
+        }
+        printf("%d evenement(s) sur %d jamais sortis\n", never, EVENT_COUNT);
+        return 0;
+    }
     if (argc > 4) { trace = true; Run("stratege", PlayStrategist, games, diff); return 0; }
     Run("passive", PlayPassive, games, diff);
     Run("gestionnaire", Manage, games, diff);
