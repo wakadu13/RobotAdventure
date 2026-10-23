@@ -57,7 +57,7 @@ static bool ArgsValid(const Command *c)
     case CMD_RECRUIT:        return IN(a, U_TYPE_COUNT) && IN(b, PROV_COUNT);
     case CMD_ORDER:          return IN(a, MAX_UNITS) && IN(b, PROV_COUNT);
     case CMD_DISBAND:        return IN(a, MAX_UNITS);
-    case CMD_DECLARE_WAR:    case CMD_EMBARGO: case CMD_RESOLUTION: case CMD_WARNING: case CMD_PEACE: case CMD_ADD_PLAYER: case CMD_DROP_PLAYER: return IN(a, N_COUNT);
+    case CMD_DECLARE_WAR:    case CMD_EMBARGO: case CMD_RESOLUTION: case CMD_WARNING: case CMD_PEACE: case CMD_ADD_PLAYER: case CMD_DROP_PLAYER: case CMD_JOIN_PLAYER: return IN(a, N_COUNT);
     case CMD_DIPLOMACY:      return IN(a, N_COUNT) && IN(b, 3);
     case CMD_OPERATION:      return IN(a, N_COUNT) && IN(b, OP_COUNT);
     case CMD_COUNTER:        return IN(a, N_COUNT) && IN(b, 2);
@@ -90,6 +90,12 @@ bool Cmd_Apply(Game *g, const Command *c)
             War_UpdateIntel(g);
             if (next < 0) Game_EndTurn(g);
         }
+        return true;
+    }
+    /* un joueur rejoint une partie en cours : sa nation passe sous son commandement (emis par l'hote) */
+    if (c->type == CMD_JOIN_PLAYER) {
+        if (c->player != N_FRANCE || c->a <= 0 || !g->nat[c->a].alive || g->human[c->a]) return false;
+        g->human[c->a] = true;
         return true;
     }
     if (c->player != g->activePlayer) return false;   /* ce n'est pas son tour */

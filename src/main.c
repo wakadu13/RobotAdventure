@@ -457,7 +457,9 @@ static void ShotDamage(void)   { mapMode = MAP_DEGATS; }
 static void ShotSaves(void)    { mapMode = MAP_POLITIQUE; SavesTestSetup(true); OpenSaves(); }
 static void ShotOptions(void)  { SavesTestSetup(false); screen = SCR_OPTIONS; }
 static void ShotColorBlind(void) { SetColorBlind(true); screen = SCR_GAME; mapMode = MAP_RELATIONS; tab = TAB_SOCIETE; }
-static void ShotAchievements(void) { SetColorBlind(false); achUnlocked[ACH_WIN] = achUnlocked[ACH_CHRONICLER] = true; screen = SCR_ACHIEVEMENTS; }
+static void ShotItalian(void)  { gLang = LANG_IT; screen = SCR_GAME; tab = TAB_NATIONS; }
+static void ShotPortuguese(void) { gLang = LANG_PT; tab = TAB_POLITIQUE; polView = 0; }
+static void ShotAchievements(void) { gLang = LANG_FR;  SetColorBlind(false); achUnlocked[ACH_WIN] = achUnlocked[ACH_CHRONICLER] = true; screen = SCR_ACHIEVEMENTS; }
 
 static const UiShot UI_SHOTS[] = {
     { "01_titre", ShotTitle }, { "02_carte", ShotMap }, { "03_armee", ShotArmy }, { "04_nations", ShotNations },
@@ -465,7 +467,7 @@ static const UiShot UI_SHOTS[] = {
     { "08_rapport", ShotReport }, { "09_hotseat", ShotHotseat }, { "10_anglais", ShotEnglish }, { "11_espagnol", ShotSpanish }, { "12_allemand", ShotGerman }, { "13_aide", ShotHelp },
     { "14_courbes", ShotGraphs }, { "15_commerce", ShotTrade }, { "16_degats", ShotDamage },
     { "17_parties", ShotSaves }, { "18_options", ShotOptions }, { "19_daltonien", ShotColorBlind },
-    { "20_succes", ShotAchievements },
+    { "20_italien", ShotItalian }, { "21_portugais", ShotPortuguese }, { "22_succes", ShotAchievements },
 };
 #define UI_SHOT_COUNT ((int)(sizeof(UI_SHOTS) / sizeof(UI_SHOTS[0])))
 

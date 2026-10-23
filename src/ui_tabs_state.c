@@ -94,7 +94,7 @@ void DrawDefenseTab(void)
         Text(buf, r.x + 160, r.y + 5, 10, C_DIM);
         int n = Game_ThreatCount(&game, i);
         if (n) {
-            snprintf(buf, sizeof(buf), Tr("%d menace%s"), n, n > 1 ? "s" : "");
+            snprintf(buf, sizeof(buf), Tr(n > 1 ? "%d menaces" : "%d menace"), n);
             Text(buf, r.x + 196, r.y + 5, 10, C_BAD);
         }
         if (h && clicked) { selTheater = i; clicked = false; }

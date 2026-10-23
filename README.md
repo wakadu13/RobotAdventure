@@ -142,7 +142,7 @@ belli. Les autres nations y recourent aussi, entre elles comme contre la France.
   dans `src/events.c` : le texte de leurs effets est généré à partir de ce qui est appliqué.
 
 ### Langues
-- Français, anglais, espagnol et allemand (bouton du menu, réglage conservé). Toutes les chaînes
+- Français, anglais, espagnol, allemand, italien et portugais (bouton du menu, réglage conservé). Toutes les chaînes
   passent par `Tr()` ; chaque table est tenue dans `tools/lang/<code>.tsv` (une ligne par chaîne :
   français, tabulation, traduction). `python3 tools/lang_extract.py` liste les chaînes non traduites
   (`--todo FICHIER CODE` les écrit dans un fichier à compléter), `python3 tools/lang_build.py` vérifie
@@ -162,7 +162,8 @@ belli. Les autres nations y recourent aussi, entre elles comme contre la France.
   cohésion fragiles, deux menaces déjà actives ; vingt-cinq ans à tenir.
 - **L'effondrement du Sahel (2050)** : +2,6°C, Maghreb aux mains de juntes, Égypte proche de la bombe,
   exode climatique, dette écrasante et inflation à 7 % ; dix ans à tenir.
-- Le scénario se choisit dans le menu.
+- Le scénario se choisit dans le menu. Chacun des trois scénarios tardifs a ses propres événements (douze
+  par scénario, dont des chaînes) : front grec, pays baltes, bombe algérienne, villes-camps, missile égyptien...
 
 ### Événements inspirés de la Red Team Défense
 Quarante événements s'inspirent librement des thèmes explorés par la
@@ -361,7 +362,7 @@ src/ui_tabs_state.c onglets défense, hybride, société, économie, politique, 
 src/ui_screens.c    journal, modales, tutoriel, écrans titre/aide/fin/hot-seat
 src/ui_net.c        partie en réseau : salon, diffusion des commandes, contrôle de synchronisation
 src/net.c/.h        transport TCP non bloquant (POSIX et Winsock)
-src/lang.c, lang_*.c traduction (tables anglaise, espagnole et allemande générées)
+src/lang.c, lang_*.c traduction (tables anglaise, espagnole, allemande, italienne et portugaise générées)
 src/sound.c         sons synthétisés (effets et ambiance)
 tools/gen_save_fields.py générateur du registre de sauvegarde
 tools/gen_map.py    générateur de la carte depuis un GeoJSON des pays

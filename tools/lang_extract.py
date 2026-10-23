@@ -61,7 +61,7 @@ if __name__ == "__main__":
     os.makedirs(os.path.join(ROOT, "tools", "lang"), exist_ok=True)
     open(os.path.join(ROOT, "tools", "lang", "strings.txt"), "w", encoding="utf-8").write("\n".join(strings) + "\n")
     status = 0
-    for code in ("en", "es", "de"):
+    for code in ("en", "es", "de", "it", "pt"):
         tr = load_tsv(os.path.join(ROOT, "tools", "lang", code + ".tsv"))
         bad = [s for s in strings if any(ord(ch) > 255 for ch in s)] + [v for v in tr.values() if any(ord(ch) > 255 for ch in v)]
         if bad:

@@ -674,7 +674,6 @@ Neutralisation %d%% (x0,35 tant que non détectée)	Neutralization %d%% (x0.35 w
 Aucune menace détectée.	No threats detected.
 Les divisions stationnées dans la province visée aident à neutraliser l'insurrection (forces spéciales surtout).	Divisions stationed in the target province help neutralize the insurgency (special forces most of all).
 THÉÂTRES (cliquer pour sélectionner)	THEATERS (click to select)
-%d menace%s	%d threat%s
 Points de commandement : %d / %d (partagés avec la diplomatie, la guerre et les décrets)	Command points: %d / %d (shared with diplomacy, war and decrees)
 Renseignement : %d tour(s)	Intelligence: %d turn(s)
 Hostilité	Hostility
@@ -3318,3 +3317,144 @@ Atteindre un score de 2500.	Reach a score of 2500.
 Succès débloqué : %s	Achievement unlocked: %s
 %d sur %d débloqués	%d of %d unlocked
 OK	OK
+%d menace	%d threat
+%d menaces	%d threats
+Le front de Thessalonique	The Thessaloniki front
+Les colonnes balkaniques ne sont plus qu'à quarante kilomètres de Thessalonique. Athènes supplie Paris d'envoyer des blindés.	Balkan columns are only forty kilometres from Thessaloniki. Athens begs Paris to send armour.
+Envoyer une brigade blindée	Send an armoured brigade
+Livrer seulement des munitions	Deliver only ammunition
+Nos blindés sous le feu boréal	Our armour under Boreal fire
+Des drones fournis par la Fédération Boréale frappent notre brigade en Macédoine grecque. Douze soldats français sont tués.	Drones supplied by the Boreal Federation strike our brigade in Greek Macedonia. Twelve French soldiers are killed.
+Renforcer la défense antiaérienne	Reinforce air defences
+Replier la brigade vers Athènes	Pull the brigade back to Athens
+Embargo sur le régime des Balkans	Embargo on the Balkan regime
+Bruxelles prépare des sanctions contre l'agresseur balkanique. Paris doit choisir entre un embargo total et des mesures ciblées.	Brussels is preparing sanctions against the Balkan aggressor. Paris must choose between a full embargo and targeted measures.
+Embargo européen total	Full European embargo
+Sanctions ciblées sur les oligarques	Targeted sanctions on oligarchs
+L'embargo contourné par l'Adriatique	The embargo bypassed via the Adriatic
+Le Cartel Hydra fait passer carburant et munitions vers les Balkans par de petits ports adriatiques. L'embargo prend l'eau.	The Hydra Cartel smuggles fuel and ammunition to the Balkans through small Adriatic ports. The embargo is leaking.
+Blocus naval de l'Adriatique	Naval blockade of the Adriatic
+Fermer les yeux sur les ports	Turn a blind eye to the ports
+Réfugiés grecs au port de Marseille	Greek refugees at the port of Marseille
+Quatre-vingt mille Grecs fuient les combats du nord. Les ferries débarquent chaque jour des familles épuisées à Marseille.	Eighty thousand Greeks are fleeing the fighting in the north. Ferries land exhausted families in Marseille every day.
+Plan d'accueil d'urgence	Emergency reception plan
+Exiger une répartition européenne	Demand European burden-sharing
+Gaz boréal contre neutralité	Boreal gas for neutrality
+La Fédération Boréale offre son gaz à moitié prix si la France reste neutre dans la guerre des Balkans.	The Boreal Federation offers its gas at half price if France stays neutral in the Balkan war.
+Accepter le gaz à prix cassé	Accept the discounted gas
+Athènes invoque l'article 5	Athens invokes Article 5
+La Grèce réclame la défense collective de l'OTAN. Les alliés se divisent et attendent la position de la France.	Greece calls for NATO collective defence. The allies are divided and await France's position.
+Plaider pour l'engagement collectif	Argue for collective engagement
+Proposer une médiation française	Offer French mediation
+Escadre alliée en mer Égée	Allied squadron in the Aegean
+Une escadre de l'OTAN se rassemble en mer Égée. Un sous-marin boréal la suit de près et les alliés cherchent un chef.	A NATO squadron gathers in the Aegean. A Boreal submarine shadows it closely and the allies need a commander.
+Laisser la Turquie diriger	Let Turkey lead
+Pourparlers balkaniques à Genève	Balkan talks in Geneva
+Le régime des Balkans accepte de négocier à Genève, mais veut garder les villages grecs conquis. Athènes crie à la trahison.	The Balkan regime agrees to negotiate in Geneva but wants to keep the Greek villages it conquered. Athens cries betrayal.
+Cessez-le-feu sur la ligne actuelle	Ceasefire on the current line
+Exiger le retour aux frontières	Demand a return to the borders
+Volontaires français en Épire	French volunteers in Epirus
+Des centaines de jeunes Français rejoignent les bataillons grecs. Certains reviennent armés et radicalisés.	Hundreds of young French people are joining Greek battalions. Some return armed and radicalised.
+Interdire les départs	Ban departures
+Les encadrer officiellement	Supervise them officially
+Le port du Pirée paralysé	The port of Piraeus paralysed
+Le Réseau Nebula, payé par la Fédération Boréale, bloque les logiciels du Pirée. Les renforts alliés restent à quai.	The Nebula Network, paid by the Boreal Federation, cripples the software at Piraeus. Allied reinforcements are stuck at the quay.
+Envoyer nos cyberdéfenseurs	Send our cyber defenders
+Protéger d'abord nos réseaux	Protect our own networks first
+Reconstruire la Macédoine grecque	Rebuilding Greek Macedonia
+Les combats s'éloignent, laissant villes et ponts en ruine. Athènes lance un appel d'offres pour la reconstruction.	The fighting moves away, leaving towns and bridges in ruins. Athens opens a tender for reconstruction.
+Consortium français de reconstruction	French reconstruction consortium
+Laisser agir les fonds européens	Let European funds handle it
+Riga sous occupation boréale	Riga under Boreal occupation
+Les blindés boréaux tiennent Riga et Tallinn. Varsovie demande des avions de combat français pour protéger son ciel.	Boreal armour holds Riga and Tallinn. Warsaw asks for French fighter jets to protect its skies.
+Déployer nos Rafale en Pologne	Deploy our Rafales to Poland
+Sanctions et aide humanitaire	Sanctions and humanitarian aid
+Duel aérien au-dessus de Vilnius	Air duel over Vilnius
+Un Rafale français abat un drone boréal au-dessus de la Lituanie. La Fédération parle d'acte de guerre.	A French Rafale shoots down a Boreal drone over Lithuania. The Federation calls it an act of war.
+Revendiquer le tir	Claim the shoot-down
+Taire l'incident	Hush up the incident
+Le Trésor face à une adjudication ratée	The Treasury faces a failed auction
+Pour la première fois, une émission d'obligations françaises ne trouve pas preneur. Les caisses de l'État sont vides.	For the first time, a French bond issue finds no buyers. The state's coffers are empty.
+Prêt d'urgence de la BCE	Emergency ECB loan
+Coupes claires dans la dépense	Deep spending cuts
+Les milices de Syrte lancent les bateaux	The Sirte militias launch the boats
+Dans la Libye effondrée, les milices côtières font payer chaque départ. Des milliers d'embarcations prennent la mer chaque semaine.	In collapsed Libya, coastal militias charge for every departure. Thousands of boats put to sea each week.
+Patrouilles navales au large de Syrte	Naval patrols off Sirte
+Payer les milices pour les retenir	Pay the militias to hold them back
+Naufrage sous les yeux de la frégate	Shipwreck before the frigate's eyes
+Une frégate française arrive trop tard : trois cents migrants se noient au large de la Libye. La vidéo bouleverse l'Europe.	A French frigate arrives too late: three hundred migrants drown off Libya. The video shocks Europe.
+Ordonner le sauvetage systématique	Order systematic rescue
+Maintenir la ligne dissuasive	Hold the deterrent line
+Centrifugeuses dans le Hoggar	Centrifuges in the Hoggar
+Nos satellites repèrent un site d'enrichissement enterré dans le Hoggar. L'Algérie serait à quelques mois de la bombe.	Our satellites spot an enrichment site buried in the Hoggar. Algeria may be only months away from the bomb.
+Révéler les images à l'ONU	Reveal the images to the UN
+Négocier en secret avec Alger	Negotiate secretly with Algiers
+Alger expulse nos diplomates	Algiers expels our diplomats
+Humiliée, la junte algérienne expulse notre ambassadeur et menace de couper le gazoduc vers l'Europe.	Humiliated, the Algerian junta expels our ambassador and threatens to cut the gas pipeline to Europe.
+Riposter par des sanctions	Retaliate with sanctions
+Faire profil bas	Keep a low profile
+Le marché secret d'Alger	The secret bargain of Algiers
+Alger propose de geler l'enrichissement contre des usines de dessalement et des livraisons de blé français.	Algiers offers to freeze enrichment in exchange for desalination plants and deliveries of French wheat.
+Accepter l'eau contre l'atome	Accept water for the atom
+Rompre les pourparlers	Break off the talks
+Canicule sur un budget à sec	Heatwave on an empty budget
+Avec deux degrés de plus qu'en 1900, l'été 2042 dépasse 45 °C dans la vallée du Rhône. L'État n'a plus de quoi climatiser.	Two degrees warmer than in 1900, summer 2042 tops 45 °C in the Rhône valley. The state can no longer afford air conditioning.
+Climatiser écoles et hôpitaux à crédit	Cool schools and hospitals on credit
+Fermer les services l'après-midi	Close public services afternoons
+Pont aérien vers les Baltes encerclés	Airlift to the encircled Balts
+Les troupes boréales coupent la bande de terre entre Pologne et Lituanie. Vilnius n'est plus ravitaillée que par les airs.	Boreal troops cut the land strip between Poland and Lithuania. Vilnius can now be supplied only by air.
+Engager notre aviation de transport	Commit our transport aircraft
+Laisser la Pologne en première ligne	Leave Poland on the front line
+Partisans dans les forêts d'Estonie	Partisans in the Estonian forests
+La résistance balte harcèle les garnisons boréales. Ses chefs demandent à Paris des drones et des radios chiffrées.	The Baltic resistance harasses Boreal garrisons. Its leaders ask Paris for drones and encrypted radios.
+Armer les partisans	Arm the partisans
+Aide non létale seulement	Non-lethal aid only
+Gouvernement balte en exil à Strasbourg	Baltic government in exile in Strasbourg
+Les ministres baltes ayant fui l'occupation veulent siéger à Strasbourg. La Fédération Boréale menace quiconque les héberge.	Baltic ministers who fled the occupation want to sit in Strasbourg. The Boreal Federation threatens anyone who hosts them.
+Héberger le gouvernement en exil	Host the government in exile
+Le renvoyer vers Varsovie	Send it on to Warsaw
+Le tribut des juntes du Maghreb	The tribute of the Maghreb juntas
+Les juntes d'Alger et de Tunis exigent un milliard par an pour retenir les déplacés du Sahel. Sinon, elles ouvrent les côtes.	The juntas of Algiers and Tunis demand a billion a year to hold back the Sahel's displaced. Otherwise they open the coasts.
+Refuser et tenir la frontière	Refuse and hold the border
+La ville-camp du Roussillon	The camp-city of Roussillon
+Deux cent mille déplacés climatiques vivent sous des tentes près de Perpignan. Le camp est devenu la dixième ville de France.	Two hundred thousand climate refugees live in tents near Perpignan. The camp has become France's tenth largest city.
+Transformer le camp en ville	Turn the camp into a town
+Disperser dans les régions	Disperse them across the regions
+Premiers élus de la ville-camp	First elected officials of the camp-city
+Les habitants du camp élisent un conseil qui réclame le droit de vote local et des titres de séjour durables.	The camp's residents elect a council demanding local voting rights and lasting residence permits.
+Reconnaître le conseil	Recognise the council
+Dissoudre le conseil	Dissolve the council
+Cellules dormantes chez les dispersés	Sleeper cells among the dispersed
+Loin de tout encadrement, de jeunes déplacés isolés sont approchés par des recruteurs du Califat des Sables.	Far from any support, isolated young refugees are approached by recruiters from the Caliphate of the Sands.
+Rafles antiterroristes	Counter-terror sweeps
+Renseignement de proximité	Community intelligence
+La dette dépasse trois ans de recettes	Debt exceeds three years of revenue
+Les agences dégradent la France au rang spéculatif. Le service de la dette absorbe désormais un tiers du budget.	The agencies downgrade France to junk status. Debt service now swallows a third of the budget.
+Restructurer la dette	Restructure the debt
+Impôt de solidarité climatique	Climate solidarity tax
+Le Caire teste un missile balistique	Cairo tests a ballistic missile
+L'Égypte tire un missile de 3 000 km au-dessus de la Méditerranée. Son programme nucléaire de Qattara serait presque achevé.	Egypt fires a 3,000 km missile over the Mediterranean. Its Qattara nuclear programme is said to be nearly complete.
+Préparer une frappe sur Qattara	Prepare a strike on Qattara
+Négocier : l'eau contre la bombe	Negotiate: water for the bomb
+Raid sur la dépression de Qattara	Raid on the Qattara Depression
+Nos bombardiers sont prêts à frapper les centrifugeuses égyptiennes. Le Conseil de défense doit trancher cette nuit.	Our bombers are ready to strike the Egyptian centrifuges. The Defence Council must decide tonight.
+Lancer le raid	Launch the raid
+Le Nil contre l'uranium	The Nile for uranium
+Le Caire accepte des inspecteurs si la France finance des usines de dessalement pour le delta du Nil, rongé par la mer.	Cairo accepts inspectors if France funds desalination plants for the Nile delta, eaten away by the sea.
+Financer les usines du delta	Fund the delta plants
+Exiger d'abord les inspections	Demand inspections first
+Corridor humanitaire de Gabès	Gabès humanitarian corridor
+La junte tunisienne autorise un corridor de l'ONU vers les camps du sud, à condition que la France escorte les convois.	The Tunisian junta allows a UN corridor to the southern camps, provided France escorts the convoys.
+Escorter les convois	Escort the convoys
+Larguer l'aide par avion	Air-drop the aid
+L'exode des oasis algériennes	The exodus from the Algerian oases
+Les puits du Sahara sont à sec. Deux millions d'habitants marchent vers la côte et la junte fait tirer sur les colonnes.	The Sahara's wells have run dry. Two million people march towards the coast and the junta opens fire on the columns.
+Pont aérien pour les familles	Airlift for the families
+Financer des camps au Maroc	Fund camps in Morocco
+Un colonel promet l'ordre à Tripoli	A colonel promises order in Tripoli
+Un colonel libyen offre d'écraser les passeurs et le Califat si Paris reconnaît son pouvoir. Il a déjà fait fusiller des opposants.	A Libyan colonel offers to crush the smugglers and the Caliphate if Paris recognises his rule. He has already had opponents shot.
+Soutenir le colonel	Back the colonel
+Soutenir une transition civile	Back a civilian transition
+Les juntes vendent le soleil du Sahara	The juntas sell the Saharan sun
+Les juntes du Maghreb offrent à la France des concessions solaires géantes. En échange, elles exigent le silence sur les camps.	The Maghreb juntas offer France giant solar concessions. In return, they demand silence about the camps.
+Signer avec les juntes	Sign with the juntas

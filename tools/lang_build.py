@@ -12,7 +12,7 @@ import re
 import sys
 
 ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
-LANGS = ["en", "es", "de"]
+LANGS = ["en", "es", "de", "it", "pt"]
 FMT = re.compile(r"%[-+#0-9.]*[a-zA-Z%]")
 
 
