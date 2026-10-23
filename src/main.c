@@ -110,6 +110,7 @@ void LoadSettings(void)
         else if (strcmp(name, "rapports") == 0) showReports = v != 0;
         else if (strcmp(name, "son") == 0) Snd_SetEnabled(v != 0);
         else if (strcmp(name, "langue") == 0) gLang = v >= 0 && v < LANG_COUNT ? v : LANG_FR;
+        else if (strcmp(name, "zoom_interface") == 0) uiZoom = Clampf2(v / 100.0f, 1, 3);
         else OptionsSetting(name, v);
     }
     fclose(f);
@@ -120,6 +121,7 @@ void SaveSettings(void)
     FILE *f = fopen(SETTINGS_FILE, "w");
     if (!f) return;
     fprintf(f, "grande_interface=%d\nrapports=%d\nson=%d\nlangue=%d\n", bigUi ? 1 : 0, showReports ? 1 : 0, Snd_Enabled() ? 1 : 0, gLang);
+    fprintf(f, "zoom_interface=%d\n", (int)(uiZoom * 100 + 0.5f));
     OptionsWrite(f);
     fclose(f);
 }
@@ -466,7 +468,7 @@ static bool UiTestFrame(void)
 Rectangle CurrentRegion(void)
 {
     if (!bigUi) return REGIONS[VR_ALL];
-    if (screen == SCR_TITLE) return (Rectangle){ 320, 40, 640, 660 };
+    if (screen == SCR_TITLE) return (Rectangle){ 220, 40, 840, 660 };
     if (screen == SCR_HOTSEAT || screen == SCR_NET || screen == SCR_OPTIONS || screen == SCR_SAVES) return (Rectangle){ 180, 40, 920, 640 };
     if (screen != SCR_GAME) return REGIONS[VR_ALL];
     if (handoffFor >= 0) return REGIONS[VR_MODAL];
@@ -474,24 +476,69 @@ Rectangle CurrentRegion(void)
     return REGIONS[modal ? VR_MODAL : region];
 }
 
+/* zoom de la grande interface : au-dela de la taille qui fait tenir la region, on fait defiler au doigt */
+float uiZoom = 1;
+static float panY;          /* defilement vertical dans la region (pixels logiques) */
+static Rectangle lastRegion;
+static Vector2 pressPos;
+static float pressPan;
+static bool pressing, panDrag;
+static bool pannable;
+
+static bool RegionHasMap(void)
+{
+    if (screen != SCR_GAME || handoffFor >= 0) return false;
+    Rectangle r = CurrentRegion();
+    return r.width == REGIONS[VR_MAP].width && r.height == REGIONS[VR_MAP].height ? true
+         : r.width == REGIONS[VR_ALL].width && r.height == REGIONS[VR_ALL].height;
+}
+
 void UpdateView(void)
 {
     float sw = (float)GetScreenWidth(), sh = (float)GetScreenHeight();
-    navH = bigUi ? fmaxf(56, sh * 0.1f) : 0;
-    viewSrc = CurrentRegion();
-    float s = fminf(sw / viewSrc.width, (sh - navH) / viewSrc.height);
+    navH = bigUi ? fmaxf(64, sh * 0.12f) : 0;
+    Rectangle reg = CurrentRegion();
+    if (reg.x != lastRegion.x || reg.y != lastRegion.y || reg.width != lastRegion.width || reg.height != lastRegion.height) {
+        panY = 0;
+        pressing = panDrag = false;
+        lastRegion = reg;
+    }
+    float availH = sh - navH;
+    float s = fminf(sw / reg.width, availH / reg.height);
+    /* la carte a son propre zoom et se deplace au doigt : pas de zoom d'interface sur elle */
+    if (bigUi && uiZoom > 1 && !RegionHasMap()) s = fminf(s * uiZoom, sw / reg.width);
+    viewSrc = reg;
+    float visH = availH / s;
+    pannable = visH < reg.height - 1;
+    if (pannable) {
+        panY = Clampf2(panY, 0, reg.height - visH);
+        viewSrc.y = reg.y + panY;
+        viewSrc.height = visH;
+    } else panY = 0;
     if (s != viewScale) {
         bool integer = fabsf(s - roundf(s)) < 0.01f;
         SetTextureFilter(target.texture, integer ? TEXTURE_FILTER_POINT : TEXTURE_FILTER_BILINEAR);
     }
     viewScale = s;
-    viewOffset = (Vector2){ (sw - viewSrc.width * s) / 2, (sh - navH - viewSrc.height * s) / 2 };
+    viewOffset = (Vector2){ (sw - viewSrc.width * s) / 2, (availH - viewSrc.height * s) / 2 };
     Vector2 m = GetMousePosition();
     mouse = (Vector2){ viewSrc.x + (m.x - viewOffset.x) / s, viewSrc.y + (m.y - viewOffset.y) / s };
     clicked = IsMouseButtonPressed(MOUSE_BUTTON_LEFT);
     rclicked = IsMouseButtonPressed(MOUSE_BUTTON_RIGHT);
+    bool inNav = bigUi && m.y >= sh - navH;
+    if (pannable) {
+        /* un toucher glisse fait defiler ; un toucher bref clique, au moment ou on leve le doigt */
+        if (clicked && !inNav) { pressing = true; panDrag = false; pressPos = m; pressPan = panY; }
+        if (pressing && IsMouseButtonDown(MOUSE_BUTTON_LEFT)) {
+            if (fabsf(m.y - pressPos.y) > fmaxf(10, sh * 0.02f)) panDrag = true;
+            if (panDrag) panY = Clampf2(pressPan - (m.y - pressPos.y) / s, 0, reg.height - visH);
+        }
+        clicked = pressing && !panDrag && IsMouseButtonReleased(MOUSE_BUTTON_LEFT);
+        if (!IsMouseButtonDown(MOUSE_BUTTON_LEFT)) pressing = false;
+        if (panDrag) mouse = (Vector2){ -1000, -1000 };   /* pas d'infobulle ni de survol pendant le defilement */
+    }
     /* un toucher sur la barre de navigation ne traverse pas jusqu'au jeu */
-    if (bigUi && m.y >= sh - navH) { clicked = rclicked = false; mouse = (Vector2){ -1000, -1000 }; }
+    if (inNav) { clicked = rclicked = false; mouse = (Vector2){ -1000, -1000 }; }
 }
 
 /* barre de navigation de la grande interface, en pixels d'ecran */
@@ -499,26 +546,49 @@ void DrawNavBar(void)
 {
     if (!bigUi) return;
     float sw = (float)GetScreenWidth(), sh = (float)GetScreenHeight();
+    /* indicateur de defilement, a droite */
+    if (pannable) {
+        float availH = sh - navH, total = lastRegion.height;
+        float h = availH * viewSrc.height / total, y = availH * panY / total;
+        DrawRectangle((int)(sw - 8), 0, 8, (int)availH, Fade(C_PANEL, 0.8f));
+        DrawRectangle((int)(sw - 7), (int)y, 6, (int)h, C_ACCENT);
+    }
     DrawRectangle(0, (int)(sh - navH), (int)sw, (int)navH, C_PANEL);
     DrawLine(0, (int)(sh - navH), (int)sw, (int)(sh - navH), C_BORDER);
     static const ViewRegion order[] = { VR_MAP, VR_PANEL, VR_LOWER, VR_LOG, VR_TOPBAR, VR_ALL };
     int count = screen == SCR_GAME ? 6 : 0;
-    float bw = sw / (count + 1);
+    float zw = fminf(sw * 0.16f, navH * 2.2f);   /* boutons A- et A+ */
+    float bw = (sw - zw) / (count + 1);
     int fs = (int)(navH * 0.32f);
     Vector2 m = GetMousePosition();
     bool press = IsMouseButtonPressed(MOUSE_BUTTON_LEFT) && m.y >= sh - navH;
     for (int i = 0; i <= count; i++) {
         Rectangle r = { i * bw + 4, sh - navH + 6, bw - 8, navH - 12 };
-        const char *label = i < count ? REGION_NAMES[order[i]] : "Normal";
+        const char *label = Tr(i < count ? REGION_NAMES[order[i]] : "Normal");
         bool sel = i < count && region == order[i];
         DrawRectangleRec(r, sel ? (Color){ 44, 66, 96, 255 } : C_PANEL2);
         DrawRectangleLinesEx(r, 2, sel ? C_ACCENT : C_BORDER);
-        int tw = MeasureText(label, fs);
-        DrawText(label, (int)(r.x + (r.width - tw) / 2), (int)(r.y + (r.height - fs) / 2), fs, sel ? C_TEXT : C_DIM);
+        int f = fs;
+        while (f > 10 && MeasureText(label, f) > r.width - 8) f--;
+        int tw = MeasureText(label, f);
+        DrawText(label, (int)(r.x + (r.width - tw) / 2), (int)(r.y + (r.height - f) / 2), f, sel ? C_TEXT : C_DIM);
         if (press && CheckCollisionPointRec(m, r)) {
             if (i < count) region = order[i];
             else bigUi = false;
         }
+    }
+    static const float ZOOMS[] = { 1, 1.25f, 1.5f, 1.75f, 2, 2.5f, 3 };
+    int nz = (int)(sizeof(ZOOMS) / sizeof(ZOOMS[0])), zi = 0;
+    for (int k = 0; k < nz; k++) if (fabsf(ZOOMS[k] - uiZoom) < fabsf(ZOOMS[zi] - uiZoom)) zi = k;
+    for (int i = 0; i < 2; i++) {
+        Rectangle r = { sw - zw + i * zw / 2 + 4, sh - navH + 6, zw / 2 - 8, navH - 12 };
+        const char *label = i ? "A+" : "A-";
+        bool en = i ? zi < nz - 1 : zi > 0;
+        DrawRectangleRec(r, C_PANEL2);
+        DrawRectangleLinesEx(r, 2, en ? C_ACCENT : C_BORDER);
+        int tw = MeasureText(label, fs);
+        DrawText(label, (int)(r.x + (r.width - tw) / 2), (int)(r.y + (r.height - fs) / 2), fs, en ? C_TEXT : C_DIM);
+        if (press && en && CheckCollisionPointRec(m, r)) { uiZoom = ZOOMS[zi + (i ? 1 : -1)]; SaveSettings(); }
     }
 }
 
@@ -552,7 +622,8 @@ int main(int argc, char **argv)
 
     target = LoadRenderTexture(VW, VH);
 #if defined(PLATFORM_ANDROID)
-    bigUi = true;   /* sur telephone, la grande interface par defaut */
+    bigUi = true;   /* sur telephone, la grande interface par defaut, agrandie */
+    uiZoom = 1.5f;
 #endif
     ResetKeys();
     if (!uiTestDir) LoadSettings();

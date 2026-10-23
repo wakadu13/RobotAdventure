@@ -112,6 +112,7 @@ extern const char *REGION_NAMES[VR_COUNT];
 extern bool bigUi;
 extern ViewRegion region;
 extern Rectangle viewSrc;
+extern float uiZoom;
 extern float navH;
 extern char negoMsg[160];
 extern float zoom;

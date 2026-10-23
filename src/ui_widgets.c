@@ -83,6 +83,7 @@ bool Button(Rectangle r, const char *label, bool enabled, int size)
     DrawRectangleRec(r, fill);
     DrawRectangleLinesEx(r, 1, enabled ? (h ? C_ACCENT : C_BORDER) : (Color){ 45, 52, 62, 255 });
     int tw = TextW(label, size);
+    if (size >= 20 && tw > r.width - 6) { size = 10; tw = TextW(label, size); }   /* libelle trop long : taille inferieure */
     Text(label, r.x + (r.width - tw) / 2, r.y + (r.height - size) / 2, size, enabled ? C_TEXT : C_DIM);
     if (h && clicked) { clicked = false; Snd_Play(SFX_CLICK); return true; }
     return false;

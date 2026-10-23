@@ -179,6 +179,8 @@ belli. Les autres nations y recourent aussi, entre elles comme contre la France.
   (carte, panneau, bas du panneau, journal, barre des ressources), agrandie à toute la taille de
   l'écran ; une barre de navigation en bas passe de l'une à l'autre. Les fenêtres (dilemmes, rapports,
   négociations) s'affichent automatiquement en grand.
+  Les boutons A- et A+ de la barre agrandissent encore l'interface (x1,5 par défaut sur Android, jusqu'à
+  x3) : la partie affichée défile alors d'un glissement du doigt, un toucher bref reste un clic.
 - Rapport de fin de tour, désactivable.
 - Trois niveaux de difficulté.
 - Sauvegarde manuelle (`F5`, menu) et automatique tous les 4 tours ; chargement par `F9` ou par le

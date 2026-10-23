@@ -301,10 +301,13 @@ void DrawTooltip(void)
         int lw = TextW(lines[i], fs);
         h += (lw > wrap ? (lw / wrap + 1) : 1) * fs * 14 / 10;
     }
+    /* dans la partie visible de l'ecran (grande interface : region agrandie) */
+    float right = viewSrc.x + viewSrc.width, bottom = viewSrc.y + viewSrc.height;
     float x = mouse.x + 16, y = mouse.y + 16;
-    if (x + w + 20 > VW) x = VW - w - 20;
-    if (y + h + 12 > VH) y = mouse.y - h - 16;
-    if (y < 0) y = 0;
+    if (x + w + 20 > right) x = right - w - 20;
+    if (x < viewSrc.x) x = viewSrc.x;
+    if (y + h + 12 > bottom) y = mouse.y - h - 16;
+    if (y < viewSrc.y) y = viewSrc.y;
     Panel((Rectangle){ x, y, (float)w + 16, (float)h + 10 }, (Color){ 12, 16, 22, 245 });
     float yy = y + 6;
     for (int i = 0; i < n; i++)
