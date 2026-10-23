@@ -2114,3 +2114,53 @@ COMMERCE	HANDEL
 DÉGÂTS	SCHÄDEN
 Routes commerciales vers la France : vert = terrestre, bleu pointillé = maritime, rouge = menacée, gris = coupée.	Handelsrouten nach Frankreich: grün = Landweg, blau gepunktet = Seeweg, rot = bedroht, grau = unterbrochen.
 Dégâts (combats, bombardements, frappes) : jaune = légers, rouge = ruines ; points verts = contamination.	Schäden (Kämpfe, Bombardierungen, Angriffe): gelb = leicht, rot = Ruinen; grüne Punkte = Verseuchung.
+PARTIES	SPIELSTÄNDE
+Sauvegarder ou charger : emplacement rapide, sauvegarde automatique et six emplacements nommés.	Speichern oder laden: Schnellplatz, automatische Sicherung und sechs benannte Plätze.
+Reprendre la sauvegarde automatique (tous les 4 tours).	Automatische Sicherung fortsetzen (alle 4 Runden).
+OPTIONS	OPTIONEN
+Mode daltonien, infobulles agrandies, raccourcis clavier...	Farbenblindmodus, große Tooltips, Tastenkürzel...
+Mode de carte suivant	Nächster Kartenmodus
+Courbes de la partie	Verlaufskurven
+Centrer sur la France	Auf Frankreich zentrieren
+Vue d'ensemble	Übersicht
+Sauvegarde rapide	Schnellspeichern
+Chargement rapide	Schnellladen
+Enregistrer le rejeu	Wiederholung speichern
+Plein écran	Vollbild
+Grande interface	Große Oberfläche
+Origine	Pos1
+Fin	Ende
+Tab	Tab
+Inser	Einfg
+Suppr	Entf
+Page préc.	Bild auf
+Page suiv.	Bild ab
+Touche %d	Taste %d
+oui	ja
+non	nein
+AFFICHAGE ET ACCESSIBILITÉ	ANZEIGE UND BARRIEREFREIHEIT
+Mode daltonien	Farbenblindmodus
+Remplace le rouge et le vert des jauges, des alertes et des cartes par du vermillon, du bleu et du vert bleuté, distinguables quelle que soit la perception des couleurs.	Ersetzt Rot und Grün in Anzeigen, Warnungen und Karten durch Zinnoberrot, Blau und Blaugrün, die bei jeder Farbwahrnehmung unterscheidbar bleiben.
+Infobulles agrandies	Große Tooltips
+Texte des infobulles en taille double.	Tooltip-Text in doppelter Größe.
+Une partie de l'écran à la fois, agrandie, avec une barre de navigation : pour les téléphones et les petits écrans.	Jeweils ein Bildschirmteil, vergrößert, mit Navigationsleiste: für Telefone und kleine Bildschirme.
+Rapport à chaque tour	Bericht jede Runde
+Affiche le rapport du trimestre après chaque fin de tour.	Zeigt nach jedem Rundenende den Quartalsbericht.
+Son	Ton
+RACCOURCIS CLAVIER	TASTENKÜRZEL
+Cliquez sur une touche puis appuyez sur la nouvelle (Échap : annuler).	Eine Taste anklicken, dann die neue drücken (Esc: abbrechen).
+Touche déjà utilisée par une autre action.	Taste bereits von einer anderen Aktion belegt.
+Fixes : Entrée = fin du tour, 1-9 et 0 = onglets, flèches et +/- = carte.	Fest: Eingabe = Rundenende, 1-9 und 0 = Reiter, Pfeile und +/- = Karte.
+Touches par défaut	Standardtasten
+%s - %s - %s - score %d - enregistrée le %s	%s - %s - %s - Punkte %d - gespeichert am %s
+PARTIES SAUVEGARDÉES	GESPEICHERTE SPIELE
+Emplacement rapide (F5 / F9), automatique (tous les 4 tours) et six emplacements nommés.	Schnellplatz (F5 / F9), automatisch (alle 4 Runden) und sechs benannte Plätze.
+Sauvegarde automatique	Automatische Sicherung
+Emplacement %d	Platz %d
+Vide	Leer
+VALIDER	OK
+RENOMMER	UMBENENNEN
+CONFIRMER	SICHER?
+SUPPRIMER	LÖSCHEN
+SAUVER	SPEICHERN
+Partie sauvegardée.	Spiel gespeichert.

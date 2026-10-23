@@ -276,7 +276,7 @@ void DrawGraphs(void)
     s1[0] = game.histBudget;    c1[0] = C_TEXT;    LineChart(cell[7], "Budget", s1, c1, n1, 1, 0, 0, "%.0f");
 
     if (Button((Rectangle){ r.x + r.width - 180, r.y + r.height - 44, 160, 32 }, "FERMER", true, 20)
-        || IsKeyPressed(KEY_G) || IsKeyPressed(KEY_ESCAPE))
+        || KeyHit(KA_GRAPHS) || IsKeyPressed(KEY_ESCAPE))
         graphsOpen = false;
 }
 
@@ -293,12 +293,13 @@ void DrawTooltip(void)
         char *nl = strchr(s, '\n');
         if (nl) { *nl = 0; s = nl + 1; } else s = NULL;
     }
-    for (int i = 0; i < n; i++) { int lw = TextW(lines[i], 10); if (lw > w) w = lw; }
-    if (w > 420) w = 420;
+    int fs = bigTooltips ? 20 : 10, wrap = bigTooltips ? 760 : 420;
+    for (int i = 0; i < n; i++) { int lw = TextW(lines[i], fs); if (lw > w) w = lw; }
+    if (w > wrap) w = wrap;
     int h = 0;
     for (int i = 0; i < n; i++) {
-        int lw = TextW(lines[i], 10);
-        h += (lw > 420 ? (lw / 420 + 1) : 1) * 14;
+        int lw = TextW(lines[i], fs);
+        h += (lw > wrap ? (lw / wrap + 1) : 1) * fs * 14 / 10;
     }
     float x = mouse.x + 16, y = mouse.y + 16;
     if (x + w + 20 > VW) x = VW - w - 20;
@@ -307,7 +308,7 @@ void DrawTooltip(void)
     Panel((Rectangle){ x, y, (float)w + 16, (float)h + 10 }, (Color){ 12, 16, 22, 245 });
     float yy = y + 6;
     for (int i = 0; i < n; i++)
-        yy += TextWrap(lines[i], x + 8, yy, 420, 10, i == 0 ? C_ACCENT : C_TEXT);
+        yy += TextWrap(lines[i], x + 8, yy, (float)wrap, fs, i == 0 ? C_ACCENT : C_TEXT);
 }
 
 /* ------------------------------------------------------------------ */
@@ -620,7 +621,7 @@ void DrawGame(void)
     if (france) snprintf(lbl, sizeof(lbl), Tr("PC restants : %d"), game.commandPoints);
     else snprintf(lbl, sizeof(lbl), Tr("Trésor : %.0f Md"), game.nat[Me()].treasury);
     Text(lbl, RP_X + 10, VH - 32, 10, C_ACCENT);
-    if (activeLayer == 0 && (IsKeyPressed(KEY_SPACE) || IsKeyPressed(KEY_ENTER))) endTurn = true;
+    if (activeLayer == 0 && (KeyHit(KA_END_TURN) || IsKeyPressed(KEY_ENTER))) endTurn = true;
     if (endTurn && activeLayer == 0) {
         int turnBefore = game.turn, warsBefore = 0, nukesBefore = game.nukesUsed + game.tacticalUsed;
         int battlesBefore = game.statBattlesWon + game.statBattlesLost;
@@ -645,13 +646,13 @@ void DrawGame(void)
     if (activeLayer == 0 && france) {
         for (int i = 0; i < 9; i++) if (IsKeyPressed(KEY_ONE + i)) tab = (Tab)i;
         if (IsKeyPressed(KEY_ZERO)) tab = TAB_PROJETS;
-        if (IsKeyPressed(KEY_M)) mapMode = (MapMode)((mapMode + 1) % MAP_MODE_COUNT);
-        if (IsKeyPressed(KEY_G) && !graphsWasOpen) graphsOpen = true;
-        if (IsKeyPressed(KEY_F5)) SaveGame();
-        if (IsKeyPressed(KEY_F6))
+        if (KeyHit(KA_MAP_MODE)) mapMode = (MapMode)((mapMode + 1) % MAP_MODE_COUNT);
+        if (KeyHit(KA_GRAPHS) && !graphsWasOpen) graphsOpen = true;
+        if (KeyHit(KA_QUICKSAVE)) SaveGame();
+        if (KeyHit(KA_REPLAY))
             Toast(session.count && Replay_Save(&session, "bouclier2050.replay") ? "Rejeu enregistré (bouclier2050.replay)."
                                                                                : "Aucun rejeu à enregistrer (partie chargée ?).");
-        if (IsKeyPressed(KEY_F9) && FileExists(SAVE_FILE) && !netPlaying) LoadGame(SAVE_FILE);
+        if (KeyHit(KA_QUICKLOAD) && FileExists(SAVE_FILE) && !netPlaying) LoadGame(SAVE_FILE);
     }
 
     if (activeLayer == 0 && france) DrawTutorial();

@@ -2114,3 +2114,53 @@ COMMERCE	COMERCIO
 DÉGÂTS	DAÑOS
 Routes commerciales vers la France : vert = terrestre, bleu pointillé = maritime, rouge = menacée, gris = coupée.	Rutas comerciales hacia Francia: verde = terrestre, azul punteado = marítima, rojo = amenazada, gris = cortada.
 Dégâts (combats, bombardements, frappes) : jaune = légers, rouge = ruines ; points verts = contamination.	Daños (combates, bombardeos, ataques): amarillo = leves, rojo = ruinas; puntos verdes = contaminación.
+PARTIES	PARTIDAS
+Sauvegarder ou charger : emplacement rapide, sauvegarde automatique et six emplacements nommés.	Guardar o cargar: ranura rápida, guardado automático y seis ranuras con nombre.
+Reprendre la sauvegarde automatique (tous les 4 tours).	Reanudar el guardado automático (cada 4 turnos).
+OPTIONS	OPCIONES
+Mode daltonien, infobulles agrandies, raccourcis clavier...	Modo daltónico, descripciones ampliadas, atajos de teclado...
+Mode de carte suivant	Siguiente modo de mapa
+Courbes de la partie	Gráficas de la partida
+Centrer sur la France	Centrar en Francia
+Vue d'ensemble	Vista general
+Sauvegarde rapide	Guardado rápido
+Chargement rapide	Carga rápida
+Enregistrer le rejeu	Guardar la repetición
+Plein écran	Pantalla completa
+Grande interface	Interfaz grande
+Origine	Inicio
+Fin	Fin
+Tab	Tab
+Inser	Insert
+Suppr	Supr
+Page préc.	Re Pág
+Page suiv.	Av Pág
+Touche %d	Tecla %d
+oui	sí
+non	no
+AFFICHAGE ET ACCESSIBILITÉ	PANTALLA Y ACCESIBILIDAD
+Mode daltonien	Modo daltónico
+Remplace le rouge et le vert des jauges, des alertes et des cartes par du vermillon, du bleu et du vert bleuté, distinguables quelle que soit la perception des couleurs.	Sustituye el rojo y el verde de indicadores, alertas y mapas por bermellón, azul y verde azulado, distinguibles sea cual sea la percepción de los colores.
+Infobulles agrandies	Descripciones ampliadas
+Texte des infobulles en taille double.	Texto de las descripciones a doble tamaño.
+Une partie de l'écran à la fois, agrandie, avec une barre de navigation : pour les téléphones et les petits écrans.	Una parte de la pantalla cada vez, ampliada, con barra de navegación: para móviles y pantallas pequeñas.
+Rapport à chaque tour	Informe cada turno
+Affiche le rapport du trimestre après chaque fin de tour.	Muestra el informe trimestral tras cada fin de turno.
+Son	Sonido
+RACCOURCIS CLAVIER	ATAJOS DE TECLADO
+Cliquez sur une touche puis appuyez sur la nouvelle (Échap : annuler).	Haga clic en una tecla y pulse la nueva (Esc: cancelar).
+Touche déjà utilisée par une autre action.	Tecla ya usada por otra acción.
+Fixes : Entrée = fin du tour, 1-9 et 0 = onglets, flèches et +/- = carte.	Fijas: Intro = fin de turno, 1-9 y 0 = pestañas, flechas y +/- = mapa.
+Touches par défaut	Teclas por defecto
+%s - %s - %s - score %d - enregistrée le %s	%s - %s - %s - puntuación %d - guardada el %s
+PARTIES SAUVEGARDÉES	PARTIDAS GUARDADAS
+Emplacement rapide (F5 / F9), automatique (tous les 4 tours) et six emplacements nommés.	Ranura rápida (F5 / F9), automática (cada 4 turnos) y seis ranuras con nombre.
+Sauvegarde automatique	Guardado automático
+Emplacement %d	Ranura %d
+Vide	Vacía
+VALIDER	ACEPTAR
+RENOMMER	RENOMBRAR
+CONFIRMER	¿SEGURO?
+SUPPRIMER	BORRAR
+SAUVER	GUARDAR
+Partie sauvegardée.	Partida guardada.

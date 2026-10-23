@@ -16,7 +16,7 @@ CFLAGS  ?= -std=c99 -O2 -Wall -Wextra -ffp-contract=off   # pas de FMA : memes c
 BUILD   := build
 TARGET  := $(BUILD)/bouclier2050
 SIM     := src/game.c src/world.c src/society.c src/war.c src/war_ai.c src/war_diplo.c src/war_logistics.c src/military.c src/ops.c src/resources.c src/intl.c src/command.c src/economy.c src/politics.c src/nuclear.c src/map_data.c src/save_fields.c src/events.c src/cabinet.c src/lang.c src/lang_en.c src/lang_es.c src/lang_de.c
-SRC     := src/main.c src/ui_widgets.c src/ui_map.c src/ui_tabs_war.c src/ui_tabs_state.c src/ui_screens.c src/ui_net.c src/net.c src/sound.c $(SIM)
+SRC     := src/main.c src/ui_widgets.c src/ui_map.c src/ui_tabs_war.c src/ui_tabs_state.c src/ui_screens.c src/ui_net.c src/ui_options.c src/net.c src/sound.c $(SIM)
 
 ifeq ($(OS),Windows_NT)
     TARGET := $(TARGET).exe

@@ -96,16 +96,21 @@ Vector2  dragStart, dragCam;
 
 /* ------------------------------------------------------------------ */
 /* reglages de l'interface conserves d'une session a l'autre */
+/* lang:ignore-begin */
 void LoadSettings(void)
 {
+    ResetKeys();
     FILE *f = fopen(SETTINGS_FILE, "r");
     if (!f) return;
-    int big = bigUi, rep = showReports, snd = 1, lang = gLang;
-    if (fscanf(f, "grande_interface=%d\nrapports=%d\nson=%d\nlangue=%d", &big, &rep, &snd, &lang) >= 1) {
-        bigUi = big != 0;
-        showReports = rep != 0;
-        Snd_SetEnabled(snd != 0);
-        gLang = lang >= 0 && lang < LANG_COUNT ? lang : LANG_FR;
+    char line[96], name[64];
+    int v;
+    while (fgets(line, sizeof(line), f)) {
+        if (sscanf(line, "%63[^=]=%d", name, &v) != 2) continue;
+        if (strcmp(name, "grande_interface") == 0) bigUi = v != 0;
+        else if (strcmp(name, "rapports") == 0) showReports = v != 0;
+        else if (strcmp(name, "son") == 0) Snd_SetEnabled(v != 0);
+        else if (strcmp(name, "langue") == 0) gLang = v >= 0 && v < LANG_COUNT ? v : LANG_FR;
+        else OptionsSetting(name, v);
     }
     fclose(f);
 }
@@ -115,8 +120,10 @@ void SaveSettings(void)
     FILE *f = fopen(SETTINGS_FILE, "w");
     if (!f) return;
     fprintf(f, "grande_interface=%d\nrapports=%d\nson=%d\nlangue=%d\n", bigUi ? 1 : 0, showReports ? 1 : 0, Snd_Enabled() ? 1 : 0, gLang);
+    OptionsWrite(f);
     fclose(f);
 }
+/* lang:ignore-end */
 
 void ResetUi(void)
 {
@@ -198,9 +205,11 @@ void DrawTitle(void)
         if (Button((Rectangle){ bx, y, 280, 38 }, "SAUVEGARDER", true, 20)) SaveGame();
         y += 46;
     }
-    if (Button((Rectangle){ bx, y, 136, 38 }, "CHARGER", FileExists(SAVE_FILE) && !netPlaying, 20)) LoadGame(SAVE_FILE);
-    if (Button((Rectangle){ bx + 144, y, 136, 38 }, "AUTO", FileExists(AUTOSAVE_FILE) && !netPlaying, 20)) LoadGame(AUTOSAVE_FILE);
-    Tooltip((Rectangle){ bx + 144, y, 136, 38 }, "Sauvegarde automatique (tous les 4 tours).");
+    Rectangle pr = { bx, y, 182, 38 };
+    if (Button(pr, "PARTIES", true, 20)) OpenSaves();
+    Tooltip(pr, "Sauvegarder ou charger : emplacement rapide, sauvegarde automatique et six emplacements nommés.");
+    if (Button((Rectangle){ bx + 188, y, 92, 38 }, "AUTO", FileExists(AUTOSAVE_FILE) && !netPlaying, 10)) LoadGame(AUTOSAVE_FILE);
+    Tooltip((Rectangle){ bx + 188, y, 92, 38 }, "Reprendre la sauvegarde automatique (tous les 4 tours).");
     y += 46;
     if (Button((Rectangle){ bx, y, 182, 38 }, "NOUVELLE PARTIE", true, 20)) { NewGame(); tutorial = -1; }
     if (Button((Rectangle){ bx + 188, y, 92, 38 }, "TUTORIEL", true, 10)) { NewGame(); StartTutorial(); }
@@ -224,7 +233,10 @@ void DrawTitle(void)
     if (Button(sor, Snd_Enabled() ? "Son : activé" : "Son : coupé", true, 10)) { Snd_SetEnabled(!Snd_Enabled()); SaveSettings(); }
     Tooltip(sor, "Effets sonores et nappe d'ambiance, synthétisés par le jeu (aucun fichier audio).");
     y += 38;
-    Rectangle lr = { bx, y, 280, 30 };
+    Rectangle opr = { bx + 188, y, 92, 30 };
+    if (Button(opr, "OPTIONS", true, 10)) screen = SCR_OPTIONS;
+    Tooltip(opr, "Mode daltonien, infobulles agrandies, raccourcis clavier...");
+    Rectangle lr = { bx, y, 182, 30 };
     if (Button(lr, LANG_LABELS[gLang], true, 10)) {
         gLang = (gLang + 1) % LANG_COUNT;
         mapSignature = 0;
@@ -417,12 +429,16 @@ static void ShotGraphs(void)
 }
 static void ShotTrade(void)    { graphsOpen = false; mapMode = MAP_COMMERCE; }
 static void ShotDamage(void)   { mapMode = MAP_DEGATS; }
+static void ShotSaves(void)    { mapMode = MAP_POLITIQUE; SavesTestSetup(true); OpenSaves(); }
+static void ShotOptions(void)  { SavesTestSetup(false); screen = SCR_OPTIONS; }
+static void ShotColorBlind(void) { SetColorBlind(true); screen = SCR_GAME; mapMode = MAP_RELATIONS; tab = TAB_SOCIETE; }
 
 static const UiShot UI_SHOTS[] = {
     { "01_titre", ShotTitle }, { "02_carte", ShotMap }, { "03_armee", ShotArmy }, { "04_nations", ShotNations },
     { "05_economie", ShotEconomy }, { "06_gouvernement", ShotCabinet }, { "07_evenement", ShotEvent },
     { "08_rapport", ShotReport }, { "09_hotseat", ShotHotseat }, { "10_anglais", ShotEnglish }, { "11_espagnol", ShotSpanish }, { "12_allemand", ShotGerman }, { "13_aide", ShotHelp },
     { "14_courbes", ShotGraphs }, { "15_commerce", ShotTrade }, { "16_degats", ShotDamage },
+    { "17_parties", ShotSaves }, { "18_options", ShotOptions }, { "19_daltonien", ShotColorBlind },
 };
 #define UI_SHOT_COUNT ((int)(sizeof(UI_SHOTS) / sizeof(UI_SHOTS[0])))
 
@@ -451,7 +467,7 @@ Rectangle CurrentRegion(void)
 {
     if (!bigUi) return REGIONS[VR_ALL];
     if (screen == SCR_TITLE) return (Rectangle){ 320, 40, 640, 660 };
-    if (screen == SCR_HOTSEAT || screen == SCR_NET) return (Rectangle){ 180, 40, 920, 640 };
+    if (screen == SCR_HOTSEAT || screen == SCR_NET || screen == SCR_OPTIONS || screen == SCR_SAVES) return (Rectangle){ 180, 40, 920, 640 };
     if (screen != SCR_GAME) return REGIONS[VR_ALL];
     if (handoffFor >= 0) return REGIONS[VR_MODAL];
     bool modal = game.pendingDilemma >= 0 || treatyOpen || graphsOpen || (game.reportReady && showReports && game.state == GAME_RUNNING);
@@ -538,6 +554,7 @@ int main(int argc, char **argv)
 #if defined(PLATFORM_ANDROID)
     bigUi = true;   /* sur telephone, la grande interface par defaut */
 #endif
+    ResetKeys();
     if (!uiTestDir) LoadSettings();
     viewScale = 0;
     Image img = GenImageColor(MAP_VW, MAP_VH, C_SEA);
@@ -560,8 +577,8 @@ int main(int argc, char **argv)
         Snd_Update(screen == SCR_GAME);
         tooltip[0] = 0;
         inputLayer = activeLayer = 0;
-        if (IsKeyPressed(KEY_F11)) ToggleFullscreen();
-        if (IsKeyPressed(KEY_F2)) { bigUi = !bigUi; SaveSettings(); }
+        if (KeyHit(KA_FULLSCREEN)) ToggleFullscreen();
+        if (KeyHit(KA_BIG_UI)) { bigUi = !bigUi; SaveSettings(); }
 
         BeginTextureMode(target);
         switch (screen) {
@@ -571,6 +588,8 @@ int main(int argc, char **argv)
         case SCR_END:   DrawEnd(); break;
         case SCR_HOTSEAT: DrawHotseatSetup(); break;
         case SCR_NET:   DrawNetLobby(); break;
+        case SCR_OPTIONS: DrawOptions(); break;
+        case SCR_SAVES: DrawSaves(); break;
         }
         DrawTooltip();
         EndTextureMode();

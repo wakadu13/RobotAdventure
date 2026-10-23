@@ -2114,3 +2114,53 @@ COMMERCE	TRADE
 DÉGÂTS	DAMAGE
 Routes commerciales vers la France : vert = terrestre, bleu pointillé = maritime, rouge = menacée, gris = coupée.	Trade routes to France: green = overland, dotted blue = maritime, red = threatened, grey = cut.
 Dégâts (combats, bombardements, frappes) : jaune = légers, rouge = ruines ; points verts = contamination.	Damage (fighting, bombing, strikes): yellow = light, red = ruins; green dots = contamination.
+PARTIES	GAMES
+Sauvegarder ou charger : emplacement rapide, sauvegarde automatique et six emplacements nommés.	Save or load: quick slot, autosave and six named slots.
+Reprendre la sauvegarde automatique (tous les 4 tours).	Resume the autosave (every 4 turns).
+OPTIONS	OPTIONS
+Mode daltonien, infobulles agrandies, raccourcis clavier...	Colour-blind mode, larger tooltips, keyboard shortcuts...
+Mode de carte suivant	Next map mode
+Courbes de la partie	Game charts
+Centrer sur la France	Centre on France
+Vue d'ensemble	Overview
+Sauvegarde rapide	Quick save
+Chargement rapide	Quick load
+Enregistrer le rejeu	Save the replay
+Plein écran	Full screen
+Grande interface	Large interface
+Origine	Home
+Fin	End
+Tab	Tab
+Inser	Insert
+Suppr	Delete
+Page préc.	Page Up
+Page suiv.	Page Down
+Touche %d	Key %d
+oui	yes
+non	no
+AFFICHAGE ET ACCESSIBILITÉ	DISPLAY AND ACCESSIBILITY
+Mode daltonien	Colour-blind mode
+Remplace le rouge et le vert des jauges, des alertes et des cartes par du vermillon, du bleu et du vert bleuté, distinguables quelle que soit la perception des couleurs.	Replaces the red and green of gauges, alerts and maps with vermilion, blue and bluish green, which remain distinguishable whatever your colour perception.
+Infobulles agrandies	Larger tooltips
+Texte des infobulles en taille double.	Tooltip text at double size.
+Une partie de l'écran à la fois, agrandie, avec une barre de navigation : pour les téléphones et les petits écrans.	One part of the screen at a time, enlarged, with a navigation bar: for phones and small screens.
+Rapport à chaque tour	Report every turn
+Affiche le rapport du trimestre après chaque fin de tour.	Shows the quarterly report after each end of turn.
+Son	Sound
+RACCOURCIS CLAVIER	KEYBOARD SHORTCUTS
+Cliquez sur une touche puis appuyez sur la nouvelle (Échap : annuler).	Click a key, then press the new one (Esc: cancel).
+Touche déjà utilisée par une autre action.	Key already used by another action.
+Fixes : Entrée = fin du tour, 1-9 et 0 = onglets, flèches et +/- = carte.	Fixed: Enter = end turn, 1-9 and 0 = tabs, arrows and +/- = map.
+Touches par défaut	Default keys
+%s - %s - %s - score %d - enregistrée le %s	%s - %s - %s - score %d - saved on %s
+PARTIES SAUVEGARDÉES	SAVED GAMES
+Emplacement rapide (F5 / F9), automatique (tous les 4 tours) et six emplacements nommés.	Quick slot (F5 / F9), autosave (every 4 turns) and six named slots.
+Sauvegarde automatique	Autosave
+Emplacement %d	Slot %d
+Vide	Empty
+VALIDER	CONFIRM
+RENOMMER	RENAME
+CONFIRMER	SURE?
+SUPPRIMER	DELETE
+SAUVER	SAVE
+Partie sauvegardée.	Game saved.

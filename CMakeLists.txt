@@ -22,7 +22,7 @@ set(SIM_SOURCES src/game.c src/world.c src/society.c src/war.c src/war_ai.c src/
 if(NOT MSVC)
     add_compile_options(-ffp-contract=off)   # memes calculs flottants partout (jeu en reseau)
 endif()
-add_executable(bouclier2050 src/main.c src/ui_widgets.c src/ui_map.c src/ui_tabs_war.c src/ui_tabs_state.c src/ui_screens.c src/ui_net.c src/net.c src/sound.c ${SIM_SOURCES})
+add_executable(bouclier2050 src/main.c src/ui_widgets.c src/ui_map.c src/ui_tabs_war.c src/ui_tabs_state.c src/ui_screens.c src/ui_net.c src/ui_options.c src/net.c src/sound.c ${SIM_SOURCES})
 target_link_libraries(bouclier2050 raylib)
 if(WIN32)
     target_link_libraries(bouclier2050 ws2_32)

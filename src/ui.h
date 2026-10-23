@@ -26,9 +26,9 @@
 #define C_TEXT      (Color){ 222, 228, 235, 255 }
 #define C_DIM       (Color){ 138, 150, 165, 255 }
 #define C_ACCENT    (Color){  86, 170, 255, 255 }
-#define C_GOOD      (Color){  92, 200, 120, 255 }
-#define C_BAD       (Color){ 232,  84,  72, 255 }
-#define C_WARN      (Color){ 240, 170,  60, 255 }
+#define C_GOOD      uiGood        /* variables : palette daltonienne possible */
+#define C_BAD       uiBad
+#define C_WARN      uiWarn
 #define C_CLIMATE   (Color){ 240, 120,  40, 255 }
 #define C_EVENT     (Color){ 190, 140, 255, 255 }
 #define C_WAR       (Color){ 255, 110, 110, 255 }
@@ -48,7 +48,12 @@
 #define TUTO_COUNT ((int)(sizeof(TUTO) / sizeof(TUTO[0])))
 #define SETTINGS_FILE "bouclier2050.cfg"
 
-typedef enum { SCR_TITLE, SCR_HELP, SCR_GAME, SCR_END, SCR_HOTSEAT, SCR_NET } Screen;
+typedef enum { SCR_TITLE, SCR_HELP, SCR_GAME, SCR_END, SCR_HOTSEAT, SCR_NET, SCR_OPTIONS, SCR_SAVES } Screen;
+/* raccourcis configurables (ui_options.c) */
+typedef enum {
+    KA_END_TURN, KA_MAP_MODE, KA_GRAPHS, KA_CENTER, KA_OVERVIEW, KA_QUICKSAVE, KA_QUICKLOAD, KA_REPLAY, KA_FULLSCREEN, KA_BIG_UI,
+    KA_COUNT
+} KeyActionId;
 typedef enum {
     TAB_PROVINCE, TAB_ARMEE, TAB_ETATMAJOR, TAB_NATIONS, TAB_DEFENSE, TAB_HYBRIDE,
     TAB_SOCIETE, TAB_ECONOMIE, TAB_POLITIQUE, TAB_PROJETS, TAB_COUNT
@@ -199,6 +204,23 @@ void DeltaLine(float x, float y, const char *label, float before, float after, c
 void DrawReport(void);
 void DrawTooltip(void);
 void DrawGraphs(void);
+
+/* ui_options.c : accessibilite, raccourcis, emplacements de sauvegarde */
+extern Color uiGood, uiBad, uiWarn;
+extern bool colorBlind, bigTooltips;
+extern int keyBind[KA_COUNT];
+void SetColorBlind(bool on);
+Color CbColor(Color c);
+void ResetKeys(void);
+bool KeyHit(int action);
+const char *KeyName(int key);
+bool OptionsSetting(const char *name, int value);
+void OptionsWrite(FILE *f);
+void DrawOptions(void);
+void OpenSaves(void);
+void DrawSaves(void);
+const char *SlotPath(int slot);
+void SavesTestSetup(bool fill);
 int FrenchUnitCount(void);
 void StartTutorial(void);
 bool TutoDone(int step);

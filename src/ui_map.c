@@ -479,8 +479,8 @@ void MapInput(void)
         if (IsKeyDown(KEY_DOWN))  camY += step * 0.25f;
         if (IsKeyPressed(KEY_EQUAL) || IsKeyPressed(KEY_KP_ADD)) SetZoom(ZoomIndex() + 1, (Vector2){ MAP_X + MAP_VW / 2, MAP_Y + MAP_VH / 2 });
         if (IsKeyPressed(KEY_MINUS) || IsKeyPressed(KEY_KP_SUBTRACT)) SetZoom(ZoomIndex() - 1, (Vector2){ MAP_X + MAP_VW / 2, MAP_Y + MAP_VH / 2 });
-        if (IsKeyPressed(KEY_HOME)) { zoom = 1; camX = camY = 0; }
-        if (IsKeyPressed(KEY_F)) FocusProvince(PV_FR_IDF, 3);
+        if (KeyHit(KA_OVERVIEW)) { zoom = 1; camX = camY = 0; }
+        if (KeyHit(KA_CENTER)) FocusProvince(PV_FR_IDF, 3);
         ClampCamera();
     }
     /* glisser avec le bouton gauche ou celui du milieu pour deplacer la carte */

@@ -204,6 +204,10 @@ belli. Les autres nations y recourent aussi, entre elles comme contre la France.
 | Plein écran / menu | `F11` / `Échap` |
 | Grande interface | `F2` |
 
+Les raccourcis se changent dans **OPTIONS** (menu), avec le mode daltonien (vermillon, bleu et vert bleuté
+à la place du rouge et du vert) et les infobulles agrandies. **PARTIES** (menu) gère la sauvegarde rapide,
+la sauvegarde automatique et six emplacements nommés.
+
 ## Téléchargement
 
 Les releases GitHub fournissent des paquets prêts à jouer pour **Windows** (x64), **Linux** (x64),

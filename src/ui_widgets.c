@@ -147,6 +147,7 @@ Color Shade(Color c, float k)
 
 Color Lerp3(Color a, Color b, Color c, float t)
 {
+    a = CbColor(a); b = CbColor(b); c = CbColor(c);
     t = t < 0 ? 0 : (t > 1 ? 1 : t);
     Color x = t < 0.5f ? a : b, y = t < 0.5f ? b : c;
     float u = t < 0.5f ? t * 2 : (t - 0.5f) * 2;
