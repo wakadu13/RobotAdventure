@@ -64,7 +64,7 @@ void ResetKeys(void)
     for (int i = 0; i < KA_COUNT; i++) keyBind[i] = KEY_ACTIONS[i].key;
 }
 
-bool KeyHit(int action) { return keyBind[action] > 0 && IsKeyPressed(keyBind[action]); }
+bool KeyHit(int action) { return !chatTyping && keyBind[action] > 0 && IsKeyPressed(keyBind[action]); }
 
 const char *KeyName(int key)
 {

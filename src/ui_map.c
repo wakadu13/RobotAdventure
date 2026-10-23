@@ -471,7 +471,7 @@ void MapInput(void)
 #endif
     if (wheel > 0) SetZoom(ZoomIndex() + 1, mouse);
     if (wheel < 0) SetZoom(ZoomIndex() - 1, mouse);
-    if (inputLayer == activeLayer) {
+    if (inputLayer == activeLayer && !chatTyping) {
         float step = 12 / zoom;
         if (IsKeyDown(KEY_LEFT))  camX -= step * 0.25f;
         if (IsKeyDown(KEY_RIGHT)) camX += step * 0.25f;

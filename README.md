@@ -322,7 +322,11 @@ des clients puis les diffuse à tous : toutes les machines déroulent la même p
 de contrôle à chaque tour (un bandeau signale toute désynchronisation). Un joueur qui part rend sa nation à
 l'IA. Tous doivent avoir la même version du jeu ; la simulation est compilée sans contraction FMA
 (`-ffp-contract=off`) et n'utilise que des opérations flottantes exactes, pour des calculs identiques sur
-Windows, Linux, macOS et Android. `make net-test` joue une partie hôte-client sur la boucle locale.
+Windows, Linux, macOS et Android. Un joueur peut rejoindre une partie déjà commencée (il reçoit l'état
+complet de la partie, puis prend une nation encore dirigée par l'IA) ; l'hôte peut reprendre sa sauvegarde
+rapide avec les joueurs connectés (`REPRENDRE LA PARTIE`). Discussion entre joueurs : bouton `DISCUTER` ou
+touche `T`, puis Entrée. `make net-test` joue une partie avec un hôte et deux clients sur la boucle locale,
+dont un qui arrive en cours de partie.
 
 Toutes les actions de l'interface passent par des commandes sérialisables et validées, la
 simulation est déterministe et vérifiable par somme de contrôle, et une partie peut être rejouée :
@@ -368,7 +372,7 @@ tools/gen_save_fields.py générateur du registre de sauvegarde
 tools/gen_map.py    générateur de la carte depuis un GeoJSON des pays
 tools/autoplay.c    banc d'essai d'équilibrage
 tools/tests.c       tests des mécaniques
-tools/net_test.c    partie en réseau hôte-client sur la boucle locale
+tools/net_test.c    partie en réseau sur la boucle locale (arrivée en cours de partie, discussion)
 tools/ui_compare.c  comparaison des captures d'interface aux références (tests/ui)
 tools/lang_*.py     extraction et génération des traductions
 tools/release/      paquets Windows, Linux, macOS et Android

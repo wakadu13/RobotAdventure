@@ -6,7 +6,7 @@
 #   make test                 tests des mecaniques (nucleaire, decrets, elections...)
 #   make run                  compile et lance
 #   make ui-test              tests d'interface : captures comparees a tests/ui (xvfb-run sans ecran)
-#   make net-test             partie en reseau sur la boucle locale (hote + client, sommes de controle)
+#   make net-test             partie en reseau sur la boucle locale (hote, deux clients dont un en cours de partie)
 #   make ui-ref               regenere les captures de reference apres un changement voulu de l'interface
 #
 # Windows (MinGW/w64devkit) : make RAYLIB_PATH=C:/raylib/raylib/src

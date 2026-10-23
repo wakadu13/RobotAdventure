@@ -581,6 +581,7 @@ void DrawGame(void)
     if (!france || game.pendingDilemma >= 0 || report || treatyOpen) graphsOpen = false;
     bool graphsWasOpen = graphsOpen;
     activeLayer = ((france && game.pendingDilemma >= 0) || report || treatyOpen || graphsOpen) ? 1 : 0;
+    bool typing = chatTyping;   /* Entree et Echap servent alors a la discussion */
     inputLayer = 0;
 
     DrawMap();
@@ -624,7 +625,7 @@ void DrawGame(void)
     if (france) snprintf(lbl, sizeof(lbl), Tr("PC restants : %d"), game.commandPoints);
     else snprintf(lbl, sizeof(lbl), Tr("Trésor : %.0f Md"), game.nat[Me()].treasury);
     Text(lbl, RP_X + 10, VH - 32, 10, C_ACCENT);
-    if (activeLayer == 0 && (KeyHit(KA_END_TURN) || IsKeyPressed(KEY_ENTER))) endTurn = true;
+    if (activeLayer == 0 && !typing && (KeyHit(KA_END_TURN) || IsKeyPressed(KEY_ENTER))) endTurn = true;
     if (endTurn && activeLayer == 0) {
         int turnBefore = game.turn, warsBefore = 0, nukesBefore = game.nukesUsed + game.tacticalUsed;
         int battlesBefore = game.statBattlesWon + game.statBattlesLost;
@@ -647,7 +648,7 @@ void DrawGame(void)
         if (game.turn != turnBefore && game.turn % 4 == 0 && game.state == GAME_RUNNING) Game_Save(&game, AUTOSAVE_FILE);
         if (game.turn != turnBefore) AchCheck();
     }
-    if (activeLayer == 0 && france) {
+    if (activeLayer == 0 && france && !typing) {
         for (int i = 0; i < 9; i++) if (IsKeyPressed(KEY_ONE + i)) tab = (Tab)i;
         if (IsKeyPressed(KEY_ZERO)) tab = TAB_PROJETS;
         if (KeyHit(KA_MAP_MODE)) mapMode = (MapMode)((mapMode + 1) % MAP_MODE_COUNT);
@@ -680,5 +681,5 @@ void DrawGame(void)
     }
 
     if (game.state != GAME_RUNNING) { screen = SCR_END; inProgress = false; }
-    else if (activeLayer == 0 && IsKeyPressed(KEY_ESCAPE)) screen = SCR_TITLE;
+    else if (activeLayer == 0 && !typing && IsKeyPressed(KEY_ESCAPE)) screen = SCR_TITLE;
 }

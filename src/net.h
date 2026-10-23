@@ -1,5 +1,5 @@
 /*
- * BOUCLIER 2050 - reseau : TCP non bloquant, trames de 16 octets.
+ * BOUCLIER 2050 - reseau : TCP non bloquant, trames de 24 octets.
  *
  * Topologie en etoile : l'hote (la France) relaie les commandes des clients
  * (les commandants) a tous les autres. Chacun joue sa phase a son tour ; les
@@ -13,9 +13,9 @@
 #include <stdbool.h>
 
 #define NET_PORT      27050
-#define NET_VERSION   1
+#define NET_VERSION   2
 #define NET_MAX_PEERS 3
-#define NET_FRAME     16
+#define NET_FRAME     24
 
 typedef enum {
     MSG_HELLO,     /* client -> hote : a = version, b = nation souhaitee */
@@ -25,6 +25,9 @@ typedef enum {
     MSG_SUM,       /* a = tour, u = somme de controle */
     MSG_DESYNC,    /* hote -> tous : a = tour de la desynchronisation */
     MSG_BYE,
+    MSG_STATE,     /* hote -> client(s) : morceau de l'etat de la partie, u = position, a = longueur (12 au plus) */
+    MSG_STATE_END, /* hote -> client(s) : u = taille totale ; l'etat recu remplace la partie */
+    MSG_CHAT,      /* discussion : a = numero du morceau, b = nation de l'auteur, 12 octets de texte (0 final) */
 } NetMsgType;
 
 typedef struct {
@@ -47,5 +50,13 @@ bool        Net_Send(const NetMsg *m);         /* client : vers l'hote ; hote : 
 bool        Net_SendTo(int peer, const NetMsg *m);
 bool        Net_Relay(const NetMsg *m, int except);   /* hote : vers tous les clients sauf un */
 const char *Net_Error(void);
+
+/* transfert de l'etat d'une partie (fichier de sauvegarde) */
+bool        Net_SendFile(int peer, const char *path);   /* peer < 0 : a tous */
+bool        Net_ReceiveState(const NetMsg *m, const char *path);   /* vrai quand le fichier complet est ecrit */
+
+/* discussion : texte decoupe en morceaux de 12 octets */
+void        Net_SendChat(int peer, int nation, const char *text);   /* peer < 0 : a tous (client : a l'hote) */
+bool        Net_ReceiveChat(const NetMsg *m, char *out, int cap);   /* vrai quand un message est complet */
 
 #endif

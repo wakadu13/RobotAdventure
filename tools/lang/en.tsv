@@ -3458,3 +3458,12 @@ Soutenir une transition civile	Back a civilian transition
 Les juntes vendent le soleil du Sahara	The juntas sell the Saharan sun
 Les juntes du Maghreb offrent à la France des concessions solaires géantes. En échange, elles exigent le silence sur les camps.	The Maghreb juntas offer France giant solar concessions. In return, they demand silence about the camps.
 Signer avec les juntes	Sign with the juntas
+%s rejoint la partie.	%s joins the game.
+Nation déjà prise par un joueur.	Nation already taken by a player.
+Partie reçue de l'hôte.	Game received from the host.
+État de la partie illisible.	Game state unreadable.
+ANNULER	CANCEL
+DISCUTER	CHAT
+REPRENDRE LA PARTIE	RESUME GAME
+Reprendre la sauvegarde rapide (F5) avec les joueurs connectés : chacun retrouve sa nation, les nations des joueurs absents reviennent à l'IA.	Resume the quick save (F5) with the connected players: each gets their nation back, absent players' nations return to the AI.
+Une partie déjà commencée par l'hôte vous est envoyée dès votre arrivée.	A game already started by the host is sent to you as soon as you arrive.

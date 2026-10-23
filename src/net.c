@@ -142,16 +142,16 @@ int Net_PeerCount(void)
 
 bool Net_PeerConnected(int peer) { return peer >= 0 && peer <= NET_MAX_PEERS && peers[peer].s != BAD_SOCK; }
 
-/* trame : type, (emetteur), a, b, u et 12 octets de commande, petit-boutiste */
+/* trame : type, (emetteur), a, b, u puis 12 octets de donnees (commande, etat, discussion), petit-boutiste */
 static void Encode(const NetMsg *m, unsigned char o[NET_FRAME])
 {
     memset(o, 0, NET_FRAME);
     o[0] = m->type;
     o[1] = (unsigned char)m->peer;
-    if (m->type == MSG_CMD) { memcpy(o + 2, m->cmd, 12); return; }
     o[2] = (unsigned char)(m->a & 0xFF); o[3] = (unsigned char)((m->a >> 8) & 0xFF);
     o[4] = (unsigned char)(m->b & 0xFF); o[5] = (unsigned char)((m->b >> 8) & 0xFF);
     for (int k = 0; k < 4; k++) o[6 + k] = (unsigned char)((m->u >> (8 * k)) & 0xFF);
+    memcpy(o + 10, m->cmd, 12);
 }
 
 static void Decode(const unsigned char i[NET_FRAME], NetMsg *m)
@@ -159,10 +159,10 @@ static void Decode(const unsigned char i[NET_FRAME], NetMsg *m)
     memset(m, 0, sizeof(*m));
     m->type = i[0];
     m->peer = (signed char)i[1];
-    if (m->type == MSG_CMD) { memcpy(m->cmd, i + 2, 12); return; }
     m->a = (short)(i[2] | (i[3] << 8));
     m->b = (short)(i[4] | (i[5] << 8));
     for (int k = 0; k < 4; k++) m->u |= (unsigned)i[6 + k] << (8 * k);
+    memcpy(m->cmd, i + 10, 12);
 }
 
 static bool SendRaw(int peer, const NetMsg *m)
@@ -240,4 +240,88 @@ int Net_Poll(NetMsg *out, int max)
         c->inLen -= off;
     }
     return n;
+}
+
+/* ------------------------------------------------------------------ */
+/* Etat de la partie et discussion                                     */
+/* ------------------------------------------------------------------ */
+#include <stdlib.h>
+
+#define STATE_MAX (4 << 20)
+
+static bool SendMsg(int peer, const NetMsg *m) { return peer < 0 ? Net_Send(m) : Net_SendTo(peer, m); }
+
+bool Net_SendFile(int peer, const char *path)
+{
+    FILE *f = fopen(path, "rb");
+    if (!f) return false;
+    NetMsg m;
+    unsigned off = 0;
+    bool ok = true;
+    for (;;) {
+        memset(&m, 0, sizeof(m));
+        m.type = MSG_STATE;
+        size_t n = fread(m.cmd, 1, sizeof(m.cmd), f);
+        if (n == 0) break;
+        m.u = off;
+        m.a = (short)n;
+        ok &= SendMsg(peer, &m);
+        off += (unsigned)n;
+    }
+    fclose(f);
+    memset(&m, 0, sizeof(m));
+    m.type = MSG_STATE_END;
+    m.u = off;
+    return SendMsg(peer, &m) && ok;
+}
+
+static unsigned char *stateBuf;
+static unsigned stateLen;
+
+bool Net_ReceiveState(const NetMsg *m, const char *path)
+{
+    if (!stateBuf) stateBuf = malloc(STATE_MAX);
+    if (!stateBuf) return false;
+    if (m->type == MSG_STATE) {
+        if (m->a <= 0 || m->a > 12 || m->u + (unsigned)m->a > STATE_MAX) return false;
+        memcpy(stateBuf + m->u, m->cmd, (size_t)m->a);
+        if (m->u + (unsigned)m->a > stateLen) stateLen = m->u + (unsigned)m->a;
+        return false;
+    }
+    if (m->type != MSG_STATE_END) return false;
+    bool ok = m->u == stateLen && stateLen > 0;
+    stateLen = 0;
+    if (!ok) return false;
+    FILE *f = fopen(path, "wb");
+    if (!f) return false;
+    ok = fwrite(stateBuf, 1, m->u, f) == m->u;
+    fclose(f);
+    return ok;
+}
+
+void Net_SendChat(int peer, int nation, const char *text)
+{
+    int len = (int)strlen(text);
+    for (int k = 0; k * 12 <= len && k < 16; k++) {   /* le dernier morceau contient le 0 final */
+        NetMsg m;
+        memset(&m, 0, sizeof(m));
+        m.type = MSG_CHAT;
+        m.a = (short)k;
+        m.b = (short)nation;
+        int n = len + 1 - k * 12;
+        memcpy(m.cmd, text + k * 12, (size_t)(n > 12 ? 12 : n));
+        SendMsg(peer, &m);
+    }
+}
+
+bool Net_ReceiveChat(const NetMsg *m, char *out, int cap)
+{
+    static char buf[NET_MAX_PEERS + 1][16 * 12 + 1];
+    if (m->type != MSG_CHAT || m->a < 0 || m->a >= 16 || m->peer < 0 || m->peer > NET_MAX_PEERS) return false;
+    char *b = buf[(int)m->peer];
+    memcpy(b + m->a * 12, m->cmd, 12);
+    if (!memchr(m->cmd, 0, 12)) return false;
+    b[16 * 12] = 0;
+    snprintf(out, (size_t)cap, "%s", b);
+    return true;
 }

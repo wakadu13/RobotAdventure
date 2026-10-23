@@ -262,6 +262,8 @@ bool NetDo(const Command *cmd);
 void NetUpdate(void);
 void NetBanner(void);
 void NetLeave(void);
+bool NetHostResume(const char *path);
+extern bool chatTyping;   /* saisie d'un message : les raccourcis sont suspendus */
 void DrawNetLobby(void);
 void NetHostStart(void);
 bool NetJoin(const char *addr, int nation);
