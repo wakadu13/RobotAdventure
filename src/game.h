@@ -297,7 +297,7 @@ extern const char       *ALERT_DESC[3];
 #define DLM_AI_TRADE       107   /* une IA propose un accord commercial */
 #define DLM_PEACE_BLACKMAIL 108  /* chantage nucleaire en temps de paix */
 #define DLM_EVENT          200   /* evenements contextuels : DLM_EVENT + indice */
-#define EVENT_MAX          160
+#define EVENT_MAX          400
 #define EVENT_QUEUE        8
 
 /* ---- etat dynamique ---- */

@@ -1058,7 +1058,7 @@ void Game_EndTurn(Game *g)
         }
     }
     /* 9. evenement contextuel */
-    if (g->pendingDilemma < 0 && g->turn >= 2 && Randf(g) < 0.16f) Ev_Trigger(g);
+    if (g->pendingDilemma < 0 && g->turn >= 2 && Randf(g) < 0.22f) Ev_Trigger(g);
 }
 
 /* ------------------------------------------------------------------ */
