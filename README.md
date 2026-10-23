@@ -134,8 +134,10 @@ belli. Les autres nations y recourent aussi, entre elles comme contre la France.
   conquis ou occupés connaissent guérillas, attentats et sabotages : les divisions stationnées sur place
   aident à les neutraliser.
 - 8 grands projets de résilience et 16 dilemmes du Conseil de défense.
-- Plus de 60 événements contextuels (canicules, submersions, krachs, émeutes, rançongiciels, essais
-  nucléaires, sommets de l'OTAN...) qui ne surviennent que lorsque leurs conditions sont réunies
+- Plus de 300 événements contextuels (canicules, submersions, outre-mer, krachs, pénuries de terres
+  rares, réformes et scandales, émeutes, rançongiciels, débris orbitaux, essais nucléaires, sommets de
+  l'OTAN, traversées en Méditerranée, IA générale, bases lunaires, villes flottantes...), dont une
+  quarantaine de chaînes à suites différées, qui ne surviennent que lorsque leurs conditions sont réunies
   (température, guerre, régime, dette, chômage, factions, voisins...). Ils sont décrits par des données
   dans `src/events.c` : le texte de leurs effets est généré à partir de ce qui est appliqué.
 
@@ -276,8 +278,8 @@ ses deux options, ce qu'un joueur ne peut pas faire : ces chiffres sont un plafo
 | Stratégie | Facile | Normale | Difficile |
 |---|---|---|---|
 | Passive (ne fait rien) | 0 % | 0 % | 0 % |
-| Gestionnaire défensif | 100 % | 100 % | 38 % |
-| Stratège (régime autoritaire, groupes d'armées, opérations, missions aériennes, guerres choisies) | 100 % | 97 % | 42 % |
+| Gestionnaire défensif | 100 % | 100 % | 30 % |
+| Stratège (régime autoritaire, groupes d'armées, opérations, missions aériennes, guerres choisies) | 100 % | 93 % | 47 % |
 | Gestionnaire, crise de 2040 | 100 % | 88 % | 16 % |
 | Stratège, crise de 2040 | 100 % | 81 % | 12 % |
 | Conquérant total (junte, guerres en chaîne) | 0 % | 0 % : coalitions, révoltes, faillite | 0 % |
