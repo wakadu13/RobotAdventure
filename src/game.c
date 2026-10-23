@@ -1021,6 +1021,8 @@ void Game_EndTurn(Game *g)
     g->commandPoints = BASE_CP;
     for (int n = 0; n < N_COUNT; n++) g->nat[n].actedThisTurn = false;
     g->turn++;
+    if (War_AtWarAny(g, N_FRANCE)) g->everAtWar = true;
+    if (g->nat[N_FRANCE].regime != RG_DEMOCRATIE) g->leftDemocracy = true;
 
     for (int r = 0; r < R_COUNT; r++) g->lastDelta[r] = g->res[r] - before[r];
     if (g->turn < HISTORY_LEN) RecordHistory(g, g->turn);

@@ -645,6 +645,7 @@ void DrawGame(void)
         strikeArmed = false;
         for (int i = 0; i < MAX_UNITS; i++) if (!game.units[i].active) uiSel[i] = false;
         if (game.turn != turnBefore && game.turn % 4 == 0 && game.state == GAME_RUNNING) Game_Save(&game, AUTOSAVE_FILE);
+        if (game.turn != turnBefore) AchCheck();
     }
     if (activeLayer == 0 && france) {
         for (int i = 0; i < 9; i++) if (IsKeyPressed(KEY_ONE + i)) tab = (Tab)i;

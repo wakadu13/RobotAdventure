@@ -48,7 +48,13 @@
 #define TUTO_COUNT ((int)(sizeof(TUTO) / sizeof(TUTO[0])))
 #define SETTINGS_FILE "bouclier2050.cfg"
 
-typedef enum { SCR_TITLE, SCR_HELP, SCR_GAME, SCR_END, SCR_HOTSEAT, SCR_NET, SCR_OPTIONS, SCR_SAVES } Screen;
+typedef enum { SCR_TITLE, SCR_HELP, SCR_GAME, SCR_END, SCR_HOTSEAT, SCR_NET, SCR_OPTIONS, SCR_SAVES, SCR_ACHIEVEMENTS } Screen;
+/* succes (ui_achievements.c) */
+typedef enum {
+    ACH_WIN, ACH_HARD, ACH_TRANSITION, ACH_HEGEMONY, ACH_UTOPIA, ACH_ORDER, ACH_SC2040, ACH_BALKANS, ACH_SAHEL,
+    ACH_NO_LOSS, ACH_PEACE, ACH_DEMOCRACY, ACH_NO_NUKE, ACH_HYBRID, ACH_CONQUEROR, ACH_CHRONICLER, ACH_CLIMATE, ACH_SCORE,
+    ACH_COUNT
+} AchievementId;
 /* raccourcis configurables (ui_options.c) */
 typedef enum {
     KA_END_TURN, KA_MAP_MODE, KA_GRAPHS, KA_CENTER, KA_OVERVIEW, KA_QUICKSAVE, KA_QUICKLOAD, KA_REPLAY, KA_FULLSCREEN, KA_BIG_UI,
@@ -222,6 +228,10 @@ void OpenSaves(void);
 void DrawSaves(void);
 const char *SlotPath(int slot);
 void SavesTestSetup(bool fill);
+extern bool achUnlocked[ACH_COUNT];
+int AchCount(void);
+void AchCheck(void);
+void DrawAchievements(void);
 int FrenchUnitCount(void);
 void StartTutorial(void);
 bool TutoDone(int step);

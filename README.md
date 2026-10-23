@@ -173,6 +173,9 @@ hypervéloces, le rationnement énergétique et la guerre du vivant, la ruée ve
 dotée d'implants de compétences. Les textes, les noms et les situations sont originaux.
 
 ### Score et victoire
+- **Succès** (menu SUCCÈS) : dix-huit objectifs débloqués au fil des parties et conservés d'une session à
+  l'autre (victoire en Difficile, chaque scénario, chaque type de victoire, gagner sans bataille, sans perdre
+  de région, en restant une démocratie, sans la bombe, climat sous +2,4 °C, score de 2500...).
 - Score détaillé en neuf catégories : survie, population, prospérité, territoire, stabilité,
   résilience, puissance, réputation et pénalités.
 - Il est multiplié selon la difficulté et selon le type de victoire : survie, transition réussie,

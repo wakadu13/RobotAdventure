@@ -25,7 +25,8 @@ En réseau, tous les joueurs doivent avoir exactement le même fichier, sinon le
 `guerre`, `paix`, `democratie`, `autoritaire`, `otan`, `hors_otan`, `ue`, `mer_sup CM`, `dette_sup PCT`,
 `chomage_sup PCT`, `menaces_sup N`, `faction_hostile F V`, `nation_vivante N`, `relation_inf N V`,
 `relation_sup N V`, `strategique_inf S V`, `proliferation`, `projet_fini P`, `projet_absent P`,
-`boreale_en_guerre`, `militance_sup DIXIEMES`, `guerre_contre N`, `tech_sup T NIVEAU`.
+`boreale_en_guerre`, `militance_sup DIXIEMES`, `guerre_contre N`, `tech_sup T NIVEAU`,
+`scenario NUMERO` (0 : janvier 2030, 1 : crise de 2040, 2 : Balkans 2035, 3 : Sahel 2050).
 
 ## Effets
 

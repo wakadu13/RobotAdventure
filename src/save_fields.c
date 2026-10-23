@@ -235,6 +235,8 @@ const SaveField SAVE_FIELDS[] = {
     { "statDisasters", offsetof(Game, statDisasters), sizeof(((Game *)0)->statDisasters), 1, 0, sizeof(((Game *)0)->statDisasters) },
     { "statConquered", offsetof(Game, statConquered), sizeof(((Game *)0)->statConquered), 1, 0, sizeof(((Game *)0)->statConquered) },
     { "statLost", offsetof(Game, statLost), sizeof(((Game *)0)->statLost), 1, 0, sizeof(((Game *)0)->statLost) },
+    { "everAtWar", offsetof(Game, everAtWar), sizeof(((Game *)0)->everAtWar), 1, 0, sizeof(((Game *)0)->everAtWar) },
+    { "leftDemocracy", offsetof(Game, leftDemocracy), sizeof(((Game *)0)->leftDemocracy), 1, 0, sizeof(((Game *)0)->leftDemocracy) },
     { "statBattlesWon", offsetof(Game, statBattlesWon), sizeof(((Game *)0)->statBattlesWon), 1, 0, sizeof(((Game *)0)->statBattlesWon) },
     { "statBattlesLost", offsetof(Game, statBattlesLost), sizeof(((Game *)0)->statBattlesLost), 1, 0, sizeof(((Game *)0)->statBattlesLost) },
 };

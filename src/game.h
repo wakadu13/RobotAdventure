@@ -580,6 +580,8 @@ typedef struct {
     int statDisasters;
     int statConquered;
     int statLost;
+    bool everAtWar;            /* succes : la France a connu au moins une guerre */
+    bool leftDemocracy;        /* succes : la France a quitte la democratie liberale */
     int statBattlesWon;
     int statBattlesLost;
 } Game;

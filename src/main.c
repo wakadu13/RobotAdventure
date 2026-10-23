@@ -245,14 +245,19 @@ void DrawTitle(void)
         SaveSettings();
     }
     y += 38;
-    if (Button((Rectangle){ bx, y, 64, 38 }, "AIDE", true, 10)) screen = SCR_HELP;
-    Rectangle hr = { bx + 72, y, 64, 38 };
+    if (Button((Rectangle){ bx, y, 52, 38 }, "AIDE", true, 10)) screen = SCR_HELP;
+    Rectangle ar = { bx + 57, y, 52, 38 };
+    if (Button(ar, "SUCCÈS", true, 10)) screen = SCR_ACHIEVEMENTS;
+    char achTip[96];
+    snprintf(achTip, sizeof(achTip), Tr("Succès débloqués : %d sur %d."), AchCount(), ACH_COUNT);
+    Tooltip(ar, achTip);
+    Rectangle hr = { bx + 114, y, 52, 38 };
     if (Button(hr, "HOT-SEAT", true, 10)) screen = SCR_HOTSEAT;
     Tooltip(hr, "Partie à plusieurs sur le même appareil : la France et jusqu'à trois nations dirigées par d'autres joueurs.");
-    Rectangle nr = { bx + 144, y, 64, 38 };
+    Rectangle nr = { bx + 171, y, 52, 38 };
     if (Button(nr, "RÉSEAU", true, 10)) screen = SCR_NET;
     Tooltip(nr, "Partie à plusieurs en réseau local ou par Internet : l'hôte dirige la France, chaque autre joueur une nation.");
-    if (Button((Rectangle){ bx + 216, y, 64, 38 }, "QUITTER", true, 10)) quitRequested = true;
+    if (Button((Rectangle){ bx + 228, y, 52, 38 }, "QUITTER", true, 10)) quitRequested = true;
 
     const char *dom = "Terre - Mer - Air - Espace - Cyber - Informationnel - Electromagnétique";
     Text(dom, VW / 2 - TextW(dom, 10) / 2, 660, 10, C_DIM);
@@ -322,7 +327,9 @@ void DrawEnd(void)
 {
     activeLayer = graphsOpen ? 1 : 0;
     inputLayer = 0;
+    AchCheck();
     DrawBackdrop();
+    if (toastTime > 0) Text(toast, VW / 2 - TextW(toast, 10) / 2, 30, 10, C_SEL);
     bool won = game.state == GAME_WON;
     const char *title = won ? "LA FRANCE A TENU" : "DÉFAITE";
     Text(title, VW / 2 - TextW(title, 60) / 2, 50, 60, won ? C_GOOD : C_BAD);
@@ -450,6 +457,7 @@ static void ShotDamage(void)   { mapMode = MAP_DEGATS; }
 static void ShotSaves(void)    { mapMode = MAP_POLITIQUE; SavesTestSetup(true); OpenSaves(); }
 static void ShotOptions(void)  { SavesTestSetup(false); screen = SCR_OPTIONS; }
 static void ShotColorBlind(void) { SetColorBlind(true); screen = SCR_GAME; mapMode = MAP_RELATIONS; tab = TAB_SOCIETE; }
+static void ShotAchievements(void) { SetColorBlind(false); achUnlocked[ACH_WIN] = achUnlocked[ACH_CHRONICLER] = true; screen = SCR_ACHIEVEMENTS; }
 
 static const UiShot UI_SHOTS[] = {
     { "01_titre", ShotTitle }, { "02_carte", ShotMap }, { "03_armee", ShotArmy }, { "04_nations", ShotNations },
@@ -457,6 +465,7 @@ static const UiShot UI_SHOTS[] = {
     { "08_rapport", ShotReport }, { "09_hotseat", ShotHotseat }, { "10_anglais", ShotEnglish }, { "11_espagnol", ShotSpanish }, { "12_allemand", ShotGerman }, { "13_aide", ShotHelp },
     { "14_courbes", ShotGraphs }, { "15_commerce", ShotTrade }, { "16_degats", ShotDamage },
     { "17_parties", ShotSaves }, { "18_options", ShotOptions }, { "19_daltonien", ShotColorBlind },
+    { "20_succes", ShotAchievements },
 };
 #define UI_SHOT_COUNT ((int)(sizeof(UI_SHOTS) / sizeof(UI_SHOTS[0])))
 
@@ -485,7 +494,7 @@ Rectangle CurrentRegion(void)
 {
     if (!bigUi) return REGIONS[VR_ALL];
     if (screen == SCR_TITLE) return (Rectangle){ 220, 40, 840, 660 };
-    if (screen == SCR_HOTSEAT || screen == SCR_NET || screen == SCR_OPTIONS || screen == SCR_SAVES) return (Rectangle){ 180, 40, 920, 640 };
+    if (screen == SCR_HOTSEAT || screen == SCR_NET || screen == SCR_OPTIONS || screen == SCR_SAVES || screen == SCR_ACHIEVEMENTS) return (Rectangle){ 180, 40, 920, 640 };
     if (screen == SCR_END && graphsOpen) return REGIONS[VR_MODAL];
     if (screen != SCR_GAME) return REGIONS[VR_ALL];
     if (handoffFor >= 0) return REGIONS[VR_MODAL];
@@ -678,6 +687,7 @@ int main(int argc, char **argv)
         case SCR_NET:   DrawNetLobby(); break;
         case SCR_OPTIONS: DrawOptions(); break;
         case SCR_SAVES: DrawSaves(); break;
+        case SCR_ACHIEVEMENTS: DrawAchievements(); break;
         }
         DrawTooltip();
         EndTextureMode();

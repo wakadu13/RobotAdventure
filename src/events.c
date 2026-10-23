@@ -42,6 +42,7 @@ typedef enum {
     EC_MILITANCY_ABOVE, /* v : dixiemes */
     EC_WAR_WITH,       /* a : nation */
     EC_TECH_ABOVE,     /* a : domaine technologique, v : niveau */
+    EC_SCENARIO,       /* v : scenario de depart (0 : 2030, 1 : 2040, 2 : Balkans 2035, 3 : Sahel 2050) */
 } EvCond;
 
 typedef enum {
@@ -1671,6 +1672,7 @@ static bool CondOk(const Game *g, const EvTerm *c)
     case EC_MILITANCY_ABOVE: return FrenchMilitancy(g) * 10 > v;
     case EC_WAR_WITH:        return War_AtWar(g, N_FRANCE, a);
     case EC_TECH_ABOVE:      return fr->tech[a] >= v;
+    case EC_SCENARIO:        return g->scenario == v;
     default:                 return false;
     }
 }
@@ -1874,7 +1876,7 @@ static const ModKey MOD_CONDS[] = {
     { "strategique_inf", EC_STRAT_BELOW, ARG_STRAT, true }, { "proliferation", EC_PROLIFERATION, ARG_NONE, false },
     { "projet_fini", EC_PROJECT_DONE, ARG_PROJ, false }, { "projet_absent", EC_PROJECT_NONE, ARG_PROJ, false },
     { "boreale_en_guerre", EC_BOREALE_AT_WAR, ARG_NONE, false }, { "militance_sup", EC_MILITANCY_ABOVE, ARG_NONE, true },
-    { "guerre_contre", EC_WAR_WITH, ARG_NATION, false }, { "tech_sup", EC_TECH_ABOVE, ARG_TECH, true },
+    { "guerre_contre", EC_WAR_WITH, ARG_NATION, false }, { "tech_sup", EC_TECH_ABOVE, ARG_TECH, true }, { "scenario", EC_SCENARIO, ARG_NONE, true },
 };
 static const ModKey MOD_EFFECTS[] = {
     { "ressource", EE_RES, ARG_RES, true }, { "militance", EE_MIL, ARG_STRATA, true }, { "hostilite", EE_FAC, ARG_FAC, true },
