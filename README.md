@@ -134,10 +134,10 @@ belli. Les autres nations y recourent aussi, entre elles comme contre la France.
   conquis ou occupés connaissent guérillas, attentats et sabotages : les divisions stationnées sur place
   aident à les neutraliser.
 - 8 grands projets de résilience et 16 dilemmes du Conseil de défense.
-- Plus de 300 événements contextuels (canicules, submersions, outre-mer, krachs, pénuries de terres
+- Plus de 360 événements contextuels (canicules, submersions, outre-mer, krachs, pénuries de terres
   rares, réformes et scandales, émeutes, rançongiciels, débris orbitaux, essais nucléaires, sommets de
   l'OTAN, traversées en Méditerranée, IA générale, bases lunaires, villes flottantes...), dont une
-  quarantaine de chaînes à suites différées, qui ne surviennent que lorsque leurs conditions sont réunies
+  cinquantaine de chaînes à suites différées, qui ne surviennent que lorsque leurs conditions sont réunies
   (température, guerre, régime, dette, chômage, factions, voisins...). Ils sont décrits par des données
   dans `src/events.c` : le texte de leurs effets est généré à partir de ce qui est appliqué.
 
@@ -163,6 +163,14 @@ belli. Les autres nations y recourent aussi, entre elles comme contre la France.
 - **L'effondrement du Sahel (2050)** : +2,6°C, Maghreb aux mains de juntes, Égypte proche de la bombe,
   exode climatique, dette écrasante et inflation à 7 % ; dix ans à tenir.
 - Le scénario se choisit dans le menu.
+
+### Événements inspirés de la Red Team Défense
+Quarante événements s'inspirent librement des thèmes explorés par la
+[Red Team Défense](https://www.psl.eu/actualites/une-ultime-saison-pour-la-red-team-defense), la cellule
+de science-fiction du ministère des Armées (2019-2023) : une nation pirate sans territoire fixe, des
+sphères communautaires immersives et la guerre cognitive, des hyperforteresses contre les armes
+hypervéloces, le rationnement énergétique et la guerre du vivant, la ruée vers l'espace, une armée civile
+dotée d'implants de compétences. Les textes, les noms et les situations sont originaux.
 
 ### Score et victoire
 - Score détaillé en neuf catégories : survie, population, prospérité, territoire, stabilité,
@@ -278,10 +286,11 @@ ses deux options, ce qu'un joueur ne peut pas faire : ces chiffres sont un plafo
 | Stratégie | Facile | Normale | Difficile |
 |---|---|---|---|
 | Passive (ne fait rien) | 0 % | 0 % | 0 % |
-| Gestionnaire défensif | 100 % | 100 % | 30 % |
-| Stratège (régime autoritaire, groupes d'armées, opérations, missions aériennes, guerres choisies) | 100 % | 93 % | 47 % |
+| Gestionnaire défensif | 100 % | 100 % | 28 % |
+| Stratège (régime autoritaire, groupes d'armées, opérations, missions aériennes, guerres choisies) | 100 % | 96 % | 40 % |
 | Gestionnaire, crise de 2040 | 100 % | 88 % | 16 % |
 | Stratège, crise de 2040 | 100 % | 81 % | 12 % |
+| Stratège, effondrement du Sahel (2050) | 100 % | 80 % | 0 % |
 | Conquérant total (junte, guerres en chaîne) | 0 % | 0 % : coalitions, révoltes, faillite | 0 % |
 
 Le stratège utilise les groupes d'armées, les généraux, la reconnaissance et le brouillage, la guerre

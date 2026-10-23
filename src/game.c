@@ -259,10 +259,10 @@ bool Game_ApplyScenario(Game *g, int scenario)
         g->res[R_ENERGIE] = 46;
         g->res[R_EAU] = 40;
         g->res[R_ALIM] = 47;
-        g->res[R_COHESION] = 40;
+        g->res[R_COHESION] = 46;
         g->res[R_INFLUENCE] = 36;
-        g->res[R_SOUVERAINETE] = 55;
-        g->debt += 160;
+        g->res[R_SOUVERAINETE] = 66;
+        g->debt += 130;
         g->inflation = 7;
         g->priceLevel = 1.7f;
         g->credibility = 55;
@@ -283,8 +283,8 @@ bool Game_ApplyScenario(Game *g, int scenario)
         AddFac(g, F_NEBULA, 10, 15);
         AddImmigrants(g, 1.5f);
         for (int p = 0; p < PROV_COUNT; p++)
-            if (g->prov[p].owner == N_FRANCE) for (int s = 0; s < S_COUNT; s++) g->prov[p].mil[s] += 1.5f;
-        for (int i = 0; i < 6; i++) SpawnThreatFor(g, i % 2 ? F_SABLES : Rand(g) % F_COUNT);
+            if (g->prov[p].owner == N_FRANCE) for (int s = 0; s < S_COUNT; s++) g->prov[p].mil[s] += 1.0f;
+        for (int i = 0; i < 5; i++) SpawnThreatFor(g, i % 2 ? F_SABLES : Rand(g) % F_COUNT);
         ScenarioFinish(g);
         Game_Log(g, EV_EVENT, "Janvier 2050. +2,6°C. Le Maghreb s'effondre et des millions de déplacés marchent vers le nord.");
         return true;

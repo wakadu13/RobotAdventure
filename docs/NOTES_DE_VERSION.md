@@ -1,3 +1,16 @@
+## Nouveautés de la 1.2.0
+
+- **Plus de 360 événements** (contre une soixantaine), traduits dans les quatre langues, dont une cinquantaine de chaînes à suites différées : climat et outre-mer, société, économie et ressources stratégiques, défense et international, migrations en Méditerranée, avenir 2045-2060.
+- **Événements inspirés de la Red Team Défense** : nation pirate, sphères immersives et guerre cognitive, hyperforteresses, rationnement énergétique et guerre du vivant, ruée vers l'espace, armée civile à implants de compétences.
+- **Deux scénarios** : « La guerre des Balkans (2035) » et « L'effondrement du Sahel (2050) ».
+- **Espagnol et allemand**, en plus du français et de l'anglais.
+- **Multijoueur en réseau** (TCP, jusqu'à quatre joueurs) : l'hôte dirige la France, chaque joueur une nation ; contrôle de synchronisation à chaque tour. Traités entre joueurs, impôts et investissements des commandants.
+- **Mobile** : interface agrandie (boutons A- et A+, x1,5 par défaut) avec défilement au doigt ; mode de carte, ORDRE et zoom de la carte agrandis.
+- **Courbes de la partie** (touche G, clic sur le score ou écran de fin) : score, population, température, inflation, cohésion, popularité, lobbies, dette, budget.
+- **Modes de carte COMMERCE et DÉGÂTS**.
+- **OPTIONS** : mode daltonien, infobulles agrandies, raccourcis clavier modifiables. **PARTIES** : six emplacements de sauvegarde nommés en plus de la sauvegarde rapide et automatique.
+- **Mods** : événements supplémentaires dans `mods/evenements.txt` (voir docs/MODS.md).
+
 ## Nouveautés de la 1.1.0
 
 - **Grande interface pour téléphones** : une partie de l'écran à la fois, agrandie, avec une barre de navigation (F2 ou menu).
