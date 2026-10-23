@@ -998,6 +998,8 @@ const LangPair LANG_TABLE_EN[] = {
       "CONTINUE" },
     { "COURANTS POLITIQUES",
       "POLITICAL CURRENTS" },
+    { "COURBES",
+      "CHARTS" },
     { "COURBES DE LA PARTIE",
       "GAME CHARTS" },
     { "CULTURES",
@@ -4590,6 +4592,8 @@ const LangPair LANG_TABLE_EN[] = {
       "Quota for human-made works" },
     { "Quotas d'installation par commune",
       "Settlement quotas per town" },
+    { "RACCOURCIS (modifiables dans OPTIONS) : %s/Entrée = fin du tour, 1-9 et 0 = onglets, %s = mode de carte, %s = courbes, %s = sauvegarder, %s = charger, %s = plein écran, Échap = menu. Sur écran tactile : pincer pour zoomer, bouton ORDRE pour envoyer les unités, A- et A+ pour agrandir l'interface.",
+      "SHORTCUTS (can be changed in OPTIONS): %s/Enter = end turn, 1-9 and 0 = tabs, %s = map mode, %s = charts, %s = save, %s = load, %s = full screen, Esc = menu. On a touch screen: pinch to zoom, ORDER button to send units, A- and A+ to enlarge the interface." },
     { "RACCOURCIS : Espace/Entrée = fin du tour, 1-9 et 0 = onglets, M = mode de carte, F5 = sauvegarder, F9 = charger, F11 = plein écran, Échap = menu. Sur écran tactile : pincer pour zoomer, bouton ORDRE pour envoyer les unités.",
       "SHORTCUTS: Space/Enter = end turn, 1-9 and 0 = tabs, M = map mode, F5 = save, F9 = load, F11 = full screen, Esc = menu. On touchscreens: pinch to zoom, ORDER button to send units." },
     { "RACCOURCIS CLAVIER",
@@ -6235,4 +6239,4 @@ const LangPair LANG_TABLE_EN[] = {
     { "élites",
       "elites" },
 };
-const int LANG_TABLE_EN_COUNT = 3116;
+const int LANG_TABLE_EN_COUNT = 3118;

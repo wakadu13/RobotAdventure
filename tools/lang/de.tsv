@@ -3117,3 +3117,5 @@ Un navire d'ONG sous pavillon français	Ein NGO-Schiff unter französischer Flag
 Une ONG de sauvetage, privée de pavillon par Malte, demande à naviguer sous drapeau tricolore pour patrouiller au large de la Libye.	Eine Rettungs-NGO, der Malta die Flagge entzogen hat, will unter der Trikolore vor Libyen patrouillieren.
 Accorder le pavillon	Die Flagge gewähren
 Refuser poliment	Höflich ablehnen
+RACCOURCIS (modifiables dans OPTIONS) : %s/Entrée = fin du tour, 1-9 et 0 = onglets, %s = mode de carte, %s = courbes, %s = sauvegarder, %s = charger, %s = plein écran, Échap = menu. Sur écran tactile : pincer pour zoomer, bouton ORDRE pour envoyer les unités, A- et A+ pour agrandir l'interface.	TASTENKÜRZEL (in OPTIONEN änderbar): %s/Eingabe = Rundenende, 1-9 und 0 = Reiter, %s = Kartenmodus, %s = Verlauf, %s = speichern, %s = laden, %s = Vollbild, Esc = Menü. Auf Touchscreens: zum Zoomen zusammenziehen, Schaltfläche BEFEHL zum Senden der Einheiten, A- und A+ zum Vergrößern der Oberfläche.
+COURBES	VERLAUF

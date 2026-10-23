@@ -998,6 +998,8 @@ const LangPair LANG_TABLE_DE[] = {
       "WEITER" },
     { "COURANTS POLITIQUES",
       "POLITISCHE STRÖMUNGEN" },
+    { "COURBES",
+      "VERLAUF" },
     { "COURBES DE LA PARTIE",
       "VERLAUF DER PARTIE" },
     { "CULTURES",
@@ -4590,6 +4592,8 @@ const LangPair LANG_TABLE_DE[] = {
       "Quote für menschliche Werke" },
     { "Quotas d'installation par commune",
       "Ansiedlungsquoten pro Gemeinde" },
+    { "RACCOURCIS (modifiables dans OPTIONS) : %s/Entrée = fin du tour, 1-9 et 0 = onglets, %s = mode de carte, %s = courbes, %s = sauvegarder, %s = charger, %s = plein écran, Échap = menu. Sur écran tactile : pincer pour zoomer, bouton ORDRE pour envoyer les unités, A- et A+ pour agrandir l'interface.",
+      "TASTENKÜRZEL (in OPTIONEN änderbar): %s/Eingabe = Rundenende, 1-9 und 0 = Reiter, %s = Kartenmodus, %s = Verlauf, %s = speichern, %s = laden, %s = Vollbild, Esc = Menü. Auf Touchscreens: zum Zoomen zusammenziehen, Schaltfläche BEFEHL zum Senden der Einheiten, A- und A+ zum Vergrößern der Oberfläche." },
     { "RACCOURCIS : Espace/Entrée = fin du tour, 1-9 et 0 = onglets, M = mode de carte, F5 = sauvegarder, F9 = charger, F11 = plein écran, Échap = menu. Sur écran tactile : pincer pour zoomer, bouton ORDRE pour envoyer les unités.",
       "TASTEN: Leertaste/Enter = Runde beenden, 1-9 und 0 = Reiter, M = Kartenmodus, F5 = speichern, F9 = laden, F11 = Vollbild, Esc = Menü. Touchscreen: Zwei-Finger-Zoom, Taste BEFEHL zum Entsenden von Einheiten." },
     { "RACCOURCIS CLAVIER",
@@ -6235,4 +6239,4 @@ const LangPair LANG_TABLE_DE[] = {
     { "élites",
       "Eliten" },
 };
-const int LANG_TABLE_DE_COUNT = 3116;
+const int LANG_TABLE_DE_COUNT = 3118;

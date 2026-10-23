@@ -300,8 +300,16 @@ void DrawHelp(void)
         "RESSOURCES ET CLIMAT : terres rares, uranium et semi-conducteurs (gisements, fonderies, importations, crises mondiales) conditionnent les unités modernes, les SMR, la recherche et la dissuasion. La mer monte avec le réchauffement : deltas et côtes basses sont submergés peu à peu.",
         "LOGISTIQUE : une poche coupée de ses dépôts et de son territoire est encerclée et s'use ; fortifications (+15% par niveau) et dépôts se construisent depuis l'onglet PROV. Brouillard de guerre : on ne voit l'ennemi qu'au contact, à portée de l'aviation et des flottes, ou par reconnaissance satellitaire. Groupes d'armées (ÉT.-MAJ.) : tenir un front ou mener une offensive automatiquement. Missions navales : frappe à terre, guerre au commerce, escorte.",
         "MONDE : OTAN (article 5, cohésion), Conseil de sécurité (résolutions, vetos, sanctions, casques bleus), dette publique notée par les marchés (crise de la dette et plan de sauvetage).",
-        "RACCOURCIS : Espace/Entrée = fin du tour, 1-9 et 0 = onglets, M = mode de carte, F5 = sauvegarder, F9 = charger, F11 = plein écran, Échap = menu. Sur écran tactile : pincer pour zoomer, bouton ORDRE pour envoyer les unités.",
+        NULL,   /* raccourcis : remplis ci-dessous avec les touches choisies dans les options */
     };
+    static char keys[400];
+    char k[6][24];
+    static const int KA[6] = { KA_END_TURN, KA_MAP_MODE, KA_GRAPHS, KA_QUICKSAVE, KA_QUICKLOAD, KA_FULLSCREEN };
+    for (int i = 0; i < 6; i++) snprintf(k[i], sizeof(k[i]), "%s", KeyName(keyBind[KA[i]]));
+    snprintf(keys, sizeof(keys), Tr("RACCOURCIS (modifiables dans OPTIONS) : %s/Entrée = fin du tour, 1-9 et 0 = onglets, %s = mode de carte, "
+             "%s = courbes, %s = sauvegarder, %s = charger, %s = plein écran, Échap = menu. Sur écran tactile : pincer pour zoomer, "
+             "bouton ORDRE pour envoyer les unités, A- et A+ pour agrandir l'interface."), k[0], k[1], k[2], k[3], k[4], k[5]);
+    help[sizeof(help) / sizeof(help[0]) - 1] = keys;
     float y = 62;
     for (int i = 0; i < (int)(sizeof(help) / sizeof(help[0])); i++)
         y += TextWrap(help[i], 110, y, 1060, 10, i % 2 ? C_TEXT : (Color){ 200, 210, 220, 255 }) + 6;
@@ -312,6 +320,8 @@ void DrawHelp(void)
 
 void DrawEnd(void)
 {
+    activeLayer = graphsOpen ? 1 : 0;
+    inputLayer = 0;
     DrawBackdrop();
     bool won = game.state == GAME_WON;
     const char *title = won ? "LA FRANCE A TENU" : "DÉFAITE";
@@ -377,7 +387,13 @@ void DrawEnd(void)
         by += 14;
     }
     if (Button((Rectangle){ VW / 2 - 140, by, 280, 40 }, "REJOUER", true, 20)) NewGame();
-    if (Button((Rectangle){ VW / 2 - 140, by + 50, 280, 40 }, "MENU", true, 20)) screen = SCR_TITLE;
+    if (Button((Rectangle){ VW / 2 - 140, by + 50, 136, 40 }, "COURBES", true, 20)) graphsOpen = true;
+    if (Button((Rectangle){ VW / 2 + 4, by + 50, 136, 40 }, "MENU", true, 20)) screen = SCR_TITLE;
+    if (graphsOpen && activeLayer == 1) {
+        tooltip[0] = 0;
+        inputLayer = 1;
+        DrawGraphs();
+    }
 }
 
 /* ------------------------------------------------------------------ */
@@ -470,6 +486,7 @@ Rectangle CurrentRegion(void)
     if (!bigUi) return REGIONS[VR_ALL];
     if (screen == SCR_TITLE) return (Rectangle){ 220, 40, 840, 660 };
     if (screen == SCR_HOTSEAT || screen == SCR_NET || screen == SCR_OPTIONS || screen == SCR_SAVES) return (Rectangle){ 180, 40, 920, 640 };
+    if (screen == SCR_END && graphsOpen) return REGIONS[VR_MODAL];
     if (screen != SCR_GAME) return REGIONS[VR_ALL];
     if (handoffFor >= 0) return REGIONS[VR_MODAL];
     bool modal = game.pendingDilemma >= 0 || treatyOpen || graphsOpen || (game.reportReady && showReports && game.state == GAME_RUNNING);

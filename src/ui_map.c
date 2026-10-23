@@ -613,24 +613,56 @@ void DrawMap(void)
 
     static const char *modes[MAP_MODE_COUNT] = { "POLITIQUE", "CLIMAT", "MILITANCE", "POPULAT.", "CULTURES", "RELATIONS", "LOGISTIQUE",
                                                  "RESSOURC.", "COMMERCE", "DÉGÂTS" };
-    float mw = (MAP_VW - 62) / (float)MAP_MODE_COUNT;
-    for (int i = 0; i < MAP_MODE_COUNT; i++) {
-        Rectangle r = { MAP_X + 4 + i * mw, MAP_Y + MAP_VH - 24, mw - 2, 18 };
-        bool sel = mapMode == (MapMode)i;
-        DrawRectangleRec(r, sel ? (Color){ 44, 66, 96, 240 } : (Color){ 16, 22, 30, 220 });
-        DrawRectangleLinesEx(r, 1, sel ? C_ACCENT : C_BORDER);
-        Text(modes[i], r.x + (r.width - TextW(modes[i], 10)) / 2, r.y + 4, 10, sel ? C_TEXT : C_DIM);
+    bool big = bigUi;   /* grande interface : commandes de la carte agrandies pour le doigt */
+    static bool modeList;
+    if (!big) {
+        modeList = false;
+        float mw = (MAP_VW - 62) / (float)MAP_MODE_COUNT;
+        for (int i = 0; i < MAP_MODE_COUNT; i++) {
+            Rectangle r = { MAP_X + 4 + i * mw, MAP_Y + MAP_VH - 24, mw - 2, 18 };
+            bool sel = mapMode == (MapMode)i;
+            DrawRectangleRec(r, sel ? (Color){ 44, 66, 96, 240 } : (Color){ 16, 22, 30, 220 });
+            DrawRectangleLinesEx(r, 1, sel ? C_ACCENT : C_BORDER);
+            Text(modes[i], r.x + (r.width - TextW(modes[i], 10)) / 2, r.y + 4, 10, sel ? C_TEXT : C_DIM);
+            if (Hover(r)) {
+                tooltip[0] = 0;
+                if (IsMouseButtonPressed(MOUSE_BUTTON_LEFT)) { mapMode = (MapMode)i; mapPressed = false; }
+            }
+        }
+    } else {
+        /* un bouton qui deroule la liste des modes */
+        char label[64];
+        snprintf(label, sizeof(label), "%s %s", Tr(modes[mapMode]), modeList ? "v" : "^");
+        Rectangle r = { MAP_X + 4, MAP_Y + MAP_VH - 40, 190, 34 };
+        DrawRectangleRec(r, modeList ? (Color){ 44, 66, 96, 245 } : (Color){ 16, 22, 30, 230 });
+        DrawRectangleLinesEx(r, 2, C_ACCENT);
+        Text(label, r.x + (r.width - TextW(label, 20)) / 2, r.y + 7, 20, C_TEXT);
         if (Hover(r)) {
             tooltip[0] = 0;
-            if (IsMouseButtonPressed(MOUSE_BUTTON_LEFT)) { mapMode = (MapMode)i; mapPressed = false; }
+            if (IsMouseButtonPressed(MOUSE_BUTTON_LEFT)) { modeList = !modeList; mapPressed = false; }
+        }
+        if (modeList) {
+            for (int i = 0; i < MAP_MODE_COUNT; i++) {
+                Rectangle o = { MAP_X + 4, MAP_Y + MAP_VH - 40 - (MAP_MODE_COUNT - i) * 36, 190, 34 };
+                bool sel = mapMode == (MapMode)i;
+                DrawRectangleRec(o, sel ? (Color){ 44, 66, 96, 245 } : (Color){ 16, 22, 30, 240 });
+                DrawRectangleLinesEx(o, 1, sel ? C_ACCENT : C_BORDER);
+                Text(modes[i], o.x + (o.width - TextW(modes[i], 20)) / 2, o.y + 7, 20, sel ? C_TEXT : C_DIM);
+                if (Hover(o)) {
+                    tooltip[0] = 0;
+                    if (IsMouseButtonPressed(MOUSE_BUTTON_LEFT)) { mapMode = (MapMode)i; modeList = false; mapPressed = false; }
+                }
+            }
         }
     }
     /* ordre tactile : le prochain toucher sur la carte envoie les unites selectionnees */
     {
-        Rectangle r = { MAP_X + MAP_VW - 52, MAP_Y + MAP_VH - 46, 44, 18 };
+        Rectangle r = big ? (Rectangle){ MAP_X + MAP_VW - 104, MAP_Y + MAP_VH - 80, 96, 34 }
+                          : (Rectangle){ MAP_X + MAP_VW - 52, MAP_Y + MAP_VH - 46, 44, 18 };
+        int fs = big ? 20 : 10;
         DrawRectangleRec(r, orderMode ? (Color){ 150, 60, 50, 240 } : Hover(r) ? (Color){ 44, 66, 96, 240 } : (Color){ 16, 22, 30, 220 });
-        DrawRectangleLinesEx(r, 1, orderMode ? C_WAR : C_BORDER);
-        Text("ORDRE", r.x + 6, r.y + 4, 10, C_TEXT);
+        DrawRectangleLinesEx(r, big ? 2 : 1, orderMode ? C_WAR : C_BORDER);
+        Text("ORDRE", r.x + (r.width - TextW("ORDRE", fs)) / 2, r.y + (r.height - fs) / 2, fs, C_TEXT);
         if (Hover(r)) {
             snprintf(tooltip, sizeof(tooltip), "%s", Tr("Ordre au prochain toucher\nSur écran tactile (sans clic droit) : activez, puis touchez la "
                      "destination des unités sélectionnées."));
@@ -639,10 +671,12 @@ void DrawMap(void)
     }
     /* boutons de zoom */
     for (int i = 0; i < 2; i++) {
-        Rectangle r = { MAP_X + MAP_VW - 52 + i * 24, MAP_Y + MAP_VH - 24, 20, 18 };
+        Rectangle r = big ? (Rectangle){ MAP_X + MAP_VW - 104 + i * 50, MAP_Y + MAP_VH - 40, 46, 34 }
+                          : (Rectangle){ MAP_X + MAP_VW - 52 + i * 24, MAP_Y + MAP_VH - 24, 20, 18 };
+        int fs = big ? 20 : 10;
         DrawRectangleRec(r, Hover(r) ? (Color){ 44, 66, 96, 240 } : (Color){ 16, 22, 30, 220 });
-        DrawRectangleLinesEx(r, 1, C_BORDER);
-        Text(i ? "+" : "-", r.x + 7, r.y + 4, 10, C_TEXT);
+        DrawRectangleLinesEx(r, big ? 2 : 1, C_BORDER);
+        Text(i ? "+" : "-", r.x + (r.width - TextW("+", fs)) / 2, r.y + (r.height - fs) / 2, fs, C_TEXT);
         if (Hover(r)) {
             tooltip[0] = 0;
             snprintf(tooltip, sizeof(tooltip), Tr("Zoom x%.1f\nMolette ou +/- : zoomer. Glisser : déplacer. Flèches : défiler.\n"

@@ -998,6 +998,8 @@ const LangPair LANG_TABLE_ES[] = {
       "CONTINUAR" },
     { "COURANTS POLITIQUES",
       "CORRIENTES POLÍTICAS" },
+    { "COURBES",
+      "GRÁFICAS" },
     { "COURBES DE LA PARTIE",
       "GRÁFICAS DE LA PARTIDA" },
     { "CULTURES",
@@ -4590,6 +4592,8 @@ const LangPair LANG_TABLE_ES[] = {
       "Cuota de obras humanas" },
     { "Quotas d'installation par commune",
       "Cuotas de instalación por municipio" },
+    { "RACCOURCIS (modifiables dans OPTIONS) : %s/Entrée = fin du tour, 1-9 et 0 = onglets, %s = mode de carte, %s = courbes, %s = sauvegarder, %s = charger, %s = plein écran, Échap = menu. Sur écran tactile : pincer pour zoomer, bouton ORDRE pour envoyer les unités, A- et A+ pour agrandir l'interface.",
+      "ATAJOS (modificables en OPCIONES): %s/Intro = fin de turno, 1-9 y 0 = pestañas, %s = modo de mapa, %s = gráficas, %s = guardar, %s = cargar, %s = pantalla completa, Esc = menú. En pantalla táctil: pellizcar para hacer zoom, botón ORDEN para enviar las unidades, A- y A+ para ampliar la interfaz." },
     { "RACCOURCIS : Espace/Entrée = fin du tour, 1-9 et 0 = onglets, M = mode de carte, F5 = sauvegarder, F9 = charger, F11 = plein écran, Échap = menu. Sur écran tactile : pincer pour zoomer, bouton ORDRE pour envoyer les unités.",
       "ATAJOS: Espacio/Intro = fin de turno, 1-9 y 0 = pestañas, M = modo de mapa, F5 = guardar, F9 = cargar, F11 = pantalla completa, Esc = menú. En pantalla táctil: pellizcar para zoom, botón ORDEN para enviar unidades." },
     { "RACCOURCIS CLAVIER",
@@ -6235,4 +6239,4 @@ const LangPair LANG_TABLE_ES[] = {
     { "élites",
       "élites" },
 };
-const int LANG_TABLE_ES_COUNT = 3116;
+const int LANG_TABLE_ES_COUNT = 3118;
